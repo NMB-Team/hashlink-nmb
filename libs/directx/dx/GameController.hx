@@ -4,11 +4,11 @@ package dx;
 typedef GameControllerPtr = hl.Abstract<"dx_gctrl_device">;
 
 private class DInputButton {
-	var num : Int;
-	var mask : Int;
-	var axis : Int;
+	var num:Int;
+	var mask:Int;
+	var axis:Int;
 
-	public function new( num : Int, mask : Int, axis : Int ){
+	public function new(num:Int, mask:Int, axis:Int) {
 		this.num = num;
 		this.mask = mask;
 		this.axis = axis;
@@ -16,69 +16,77 @@ private class DInputButton {
 }
 
 private class DInputMapping {
-	var guid : Int;
-	var name : hl.Bytes;
-	var button : hl.NativeArray<DInputButton>;
+	var guid:Int;
+	var name:hl.Bytes;
+	var button:hl.NativeArray<DInputButton>;
 
-	function new( s : String ){
+	function new(s:String) {
 		var a = s.split(",");
 		var suid = a.shift();
-		var vendor = Std.parseInt( "0x" + suid.substr(8,4) );
-		var product = Std.parseInt( "0x" + suid.substr(16,4) );
-		guid = (product&0xFF)<<24 | (product&0xFF00)<<8 | (vendor&0xFF)<<8 | (vendor&0xFF00)>>8;
+		var vendor = Std.parseInt("0x" + suid.substr(8, 4));
+		var product = Std.parseInt("0x" + suid.substr(16, 4));
+		guid = (product & 0xFF) << 24 | (product & 0xFF00) << 8 | (vendor & 0xFF) << 8 | (vendor & 0xFF00) >> 8;
 		name = @:privateAccess a.shift().toUtf8();
 		button = new hl.NativeArray(20);
 
-		for( e in a ){
+		for (e in a) {
 			var p = e.split(":");
-			if( p.length != 2 ) continue;
+			if (p.length != 2)
+				continue;
 
-			var btn : DInputButton = switch( p[1].charCodeAt(0) ){
+			var btn:DInputButton = switch (p[1].charCodeAt(0)) {
 				case 'b'.code: new DInputButton(Std.parseInt(p[1].substr(1)), 0, -1);
 				case 'h'.code: {
-					var ba = p[1].substr(1).split(".");
-					if( ba == null ) 
-						null;
-					else
-						new DInputButton(Std.parseInt(ba[0]), Std.parseInt(ba[1]), -1);
-				}
+						var ba = p[1].substr(1).split(".");
+						if (ba == null)
+							null;
+						else
+							new DInputButton(Std.parseInt(ba[0]), Std.parseInt(ba[1]), -1);
+					}
 				case 'a'.code:
-					new DInputButton(-1,-1,Std.parseInt(p[1].substr(1)));
+					new DInputButton(-1, -1, Std.parseInt(p[1].substr(1)));
 				default: null;
 			}
-			if( btn == null ) continue;
+			if (btn == null)
+				continue;
 
-			switch( p[0] ){
-				case "leftx":        button[0] = btn;
-				case "lefty":        button[1] = btn;
-				case "rightx":       button[2] = btn;
-				case "righty":       button[3] = btn;
-				case "lefttrigger":  button[4] = btn;
-				case "righttrigger": button[5] = btn;
+			switch (p[0]) {
+				case "leftx":
+					button[0] = btn;
+				case "lefty":
+					button[1] = btn;
+				case "rightx":
+					button[2] = btn;
+				case "righty":
+					button[3] = btn;
+				case "lefttrigger":
+					button[4] = btn;
+				case "righttrigger":
+					button[5] = btn;
 				default:
-					var idx = switch( p[0] ){
-						case "dpup":          Btn_DPadUp;
-						case "dpdown":        Btn_DPadDown;
-						case "dpleft":        Btn_DPadLeft;
-						case "dpright":       Btn_DPadRight;
-						case "start":         Btn_Start;
-						case "back":          Btn_Back;
-						case "leftstick":     Btn_LeftStick;
-						case "rightstick":    Btn_RightStick;
-						case "leftshoulder":  Btn_LB;
+					var idx = switch (p[0]) {
+						case "dpup": Btn_DPadUp;
+						case "dpdown": Btn_DPadDown;
+						case "dpleft": Btn_DPadLeft;
+						case "dpright": Btn_DPadRight;
+						case "start": Btn_Start;
+						case "back": Btn_Back;
+						case "leftstick": Btn_LeftStick;
+						case "rightstick": Btn_RightStick;
+						case "leftshoulder": Btn_LB;
 						case "rightshoulder": Btn_RB;
-						case "a":             Btn_A;
-						case "b":             Btn_B;
-						case "x":             Btn_X;
-						case "y":             Btn_Y;
+						case "a": Btn_A;
+						case "b": Btn_B;
+						case "x": Btn_X;
+						case "y": Btn_Y;
 						default: null;
 					}
-					if( idx != null )
-						button[6+Type.enumIndex(idx)] = btn;
+					if (idx != null)
+						button[6 + Type.enumIndex(idx)] = btn;
 			}
 		}
 	}
-	
+
 	// Default DInput mappings based on libSDL ( https://www.libsdl.org/ )
 	static var DEFAULTS = [
 		"03000000022000000090000000000000,8Bitdo NES30 Pro,a:b1,b:b0,back:b10,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b6,leftstick:b13,lefttrigger:b8,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b14,righttrigger:b9,rightx:a3,righty:a4,start:b11,x:b4,y:b3,",
@@ -97,7 +105,8 @@ private class DInputMapping {
 		"030000008f0e00001330000000000000,HuiJia SNES Controller,a:b2,b:b1,back:b8,dpdown:+a1,dpleft:-a0,dpright:+a0,dpup:-a1,leftshoulder:b6,rightshoulder:b7,start:b9,x:b3,y:b0,",
 		"030000006d04000016c2000000000000,Logitech Dual Action,a:b1,b:b2,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b4,leftstick:b10,lefttrigger:b6,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b11,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b0,y:b3,",
 		"030000006d04000018c2000000000000,Logitech F510 Gamepad,a:b1,b:b2,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b4,leftstick:b10,lefttrigger:b6,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b11,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b0,y:b3,",
-		"030000006d04000019c2000000000000,Logitech F710 Gamepad,a:b1,b:b2,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b4,leftstick:b10,lefttrigger:b6,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b11,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b0,y:b3,", /* Guide button doesn't seem to be sent in DInput mode. */
+		"030000006d04000019c2000000000000,Logitech F710 Gamepad,a:b1,b:b2,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b4,leftstick:b10,lefttrigger:b6,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b11,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b0,y:b3,",
+		/* Guide button doesn't seem to be sent in DInput mode. */
 		"03000000380700005032000000000000,Mad Catz FightPad PRO (PS3),a:b1,b:b2,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b12,leftshoulder:b4,leftstick:b10,lefttrigger:b6,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b11,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b0,y:b3,",
 		"03000000380700005082000000000000,Mad Catz FightPad PRO (PS4),a:b1,b:b2,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b12,leftshoulder:b4,leftstick:b10,lefttrigger:a3,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b11,righttrigger:a4,rightx:a2,righty:a5,start:b9,x:b0,y:b3,",
 		"03000000790000004418000000000000,Mayflash GameCube Controller,a:b1,b:b2,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,lefttrigger:a3,leftx:a0,lefty:a1,rightshoulder:b7,righttrigger:a4,rightx:a5,righty:a2,start:b9,x:b0,y:b3,",
@@ -117,10 +126,11 @@ private class DInputMapping {
 		"03000000830500006020000000000000,iBuffalo SNES Controller,a:b1,b:b0,back:b6,dpdown:+a1,dpleft:-a0,dpright:+a0,dpup:-a1,leftshoulder:b4,rightshoulder:b5,start:b7,x:b3,y:b2,",
 	];
 
-	public static function parseDefaults() : hl.NativeArray<DInputMapping> {
-		var a = [for( s in DEFAULTS ) new DInputMapping(s)];
+	public static function parseDefaults():hl.NativeArray<DInputMapping> {
+		var a = [for (s in DEFAULTS) new DInputMapping(s)];
 		var n = new hl.NativeArray(a.length);
-		for( i in 0...a.length ) n[i] = a[i];
+		for (i in 0...a.length)
+			n[i] = a[i];
 		return n;
 	}
 }
@@ -145,91 +155,91 @@ enum GameControllerButton {
 @:keep @:hlNative("directx")
 class GameController {
 	public static var CONFIG = {
-		analogX : 14,
-		analogY : 15,
-		ranalogX : 16,
-		ranalogY : 17,
-		LT : 18,
-		RT : 19,
-
-		dpadUp : 0,
-		dpadDown : 1,
-		dpadLeft : 2,
-		dpadRight : 3,
-		start : 4,
-		back : 5,
-		analogClick : 6,
-		ranalogClick : 7,
-		LB : 8,
-		RB : 9,
-		A : 10,
-		B : 11,
-		X : 12,
-		Y : 13,
-
-		names : ["DUp","DDown","DLeft","DRight","Start","Back","LCLK","RCLK","LB","RB","A","B","X","Y","LX","LY","RX","RY","LT","RT"],
+		analogX: 14,
+		analogY: 15,
+		ranalogX: 16,
+		ranalogY: 17,
+		LT: 18,
+		RT: 19,
+		dpadUp: 0,
+		dpadDown: 1,
+		dpadLeft: 2,
+		dpadRight: 3,
+		start: 4,
+		back: 5,
+		analogClick: 6,
+		ranalogClick: 7,
+		LB: 8,
+		RB: 9,
+		A: 10,
+		B: 11,
+		X: 12,
+		Y: 13,
+		names: [
+			"DUp", "DDown", "DLeft", "DRight", "Start", "Back", "LCLK", "RCLK", "LB", "RB", "A", "B", "X", "Y", "LX", "LY", "RX", "RY", "LT", "RT"
+		],
 	};
 
 	public static var NUM_BUTTONS = 14;
 	public static var NUM_AXES = 6;
-	
-	var ptr(default,null) : GameControllerPtr;
-	public var index : Int;
-	public var name(default,null) : String;
-	public var buttons : haxe.EnumFlags<GameControllerButton>;
-	public var axes : hl.Bytes;
-	var rumbleEnd : Null<Float>;
 
-	function new(){
-	}
+	var ptr(default, null):GameControllerPtr;
 
-	public inline function update(){
+	public var index:Int;
+	public var name(default, null):String;
+	public var buttons:haxe.EnumFlags<GameControllerButton>;
+	public var axes:hl.Bytes;
+
+	var rumbleEnd:Null<Float>;
+
+	function new() {}
+
+	public inline function update() {
 		gctrlUpdate(this);
-		if( rumbleEnd != null && haxe.Timer.stamp() > rumbleEnd ){
-			gctrlSetVibration(ptr,0.);
+		if (rumbleEnd != null && haxe.Timer.stamp() > rumbleEnd) {
+			gctrlSetVibration(ptr, 0.);
 			rumbleEnd = null;
 		}
 	}
 
-	public inline function rumble( strength : Float, time_s : Float ){
-		gctrlSetVibration(ptr,strength);
+	public inline function rumble(strength:Float, time_s:Float) {
+		gctrlSetVibration(ptr, strength);
 		rumbleEnd = strength <= 0 ? null : haxe.Timer.stamp() + time_s;
 	}
 
-	public inline function getAxis( i : Int ) {
-		return (i<0 || i>=NUM_AXES) ? 0. : axes.getF64(i*8);
+	public inline function getAxis(i:Int) {
+		return (i < 0 || i >= NUM_AXES) ? 0. : axes.getF64(i * 8);
 	}
 
-	public inline function getButtons(){
+	public inline function getButtons() {
 		return buttons.toInt();
 	}
 
-	// 
-
+	//
 	static var UID = 0;
 	static var ALL = [];
 
-	public static function init(){
+	public static function init() {
 		var mappings = DInputMapping.parseDefaults();
-		gctrlInit( mappings );
+		gctrlInit(mappings);
 	}
 
-	public static function detect( onDetect : GameController -> Bool -> Void ){
-		gctrlDetect(function(ptr:GameControllerPtr, name:hl.Bytes){
-			if( name != null ){
+	public static function detect(onDetect:GameController->Bool->Void) {
+		gctrlDetect(function(ptr:GameControllerPtr, name:hl.Bytes) {
+			if (name != null) {
 				var d = new GameController();
 				d.ptr = ptr;
 				d.name = @:privateAccess String.fromUTF8(name);
 				d.index = UID++;
-				d.axes = new hl.Bytes(NUM_AXES*8);
+				d.axes = new hl.Bytes(NUM_AXES * 8);
 				d.update();
 				ALL.push(d);
-				onDetect(d,true);
-			}else{
-				for( d in ALL ){
-					if( d.ptr == ptr ){
+				onDetect(d, true);
+			} else {
+				for (d in ALL) {
+					if (d.ptr == ptr) {
 						ALL.remove(d);
-						onDetect(d,false);
+						onDetect(d, false);
 						break;
 					}
 				}
@@ -237,10 +247,11 @@ class GameController {
 		});
 	}
 
-	static function gctrlInit( mappings : hl.NativeArray<DInputMapping> ){}
-	static function gctrlDetect( onDetect : GameControllerPtr -> hl.Bytes -> Void ){}
-	static function gctrlUpdate( pad : GameController ){}
-	static function gctrlSetVibration( ptr : GameControllerPtr, strength : Float ){}
+	static function gctrlInit(mappings:hl.NativeArray<DInputMapping>) {}
 
+	static function gctrlDetect(onDetect:GameControllerPtr->hl.Bytes->Void) {}
 
+	static function gctrlUpdate(pad:GameController) {}
+
+	static function gctrlSetVibration(ptr:GameControllerPtr, strength:Float) {}
 }

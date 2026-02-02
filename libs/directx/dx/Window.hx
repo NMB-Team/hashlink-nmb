@@ -1,21 +1,22 @@
 package dx;
+
 import haxe.EntryPoint;
 
 private typedef WinPtr = hl.Abstract<"dx_window">;
 typedef MonitorHandle = String;
 
 typedef Monitor = {
-	name : MonitorHandle,
-	left : Int,
-	right : Int,
-	top : Int,
-	bottom : Int
+	name:MonitorHandle,
+	left:Int,
+	right:Int,
+	top:Int,
+	bottom:Int
 }
 
 typedef DisplaySetting = {
-	width : Int,
-	height : Int,
-	framerate : Int
+	width:Int,
+	height:Int,
+	framerate:Int
 }
 
 enum abstract DisplayMode(Int) {
@@ -26,35 +27,36 @@ enum abstract DisplayMode(Int) {
 
 @:hlNative("directx")
 class Window {
-
-	static var windows : Array<Window> = [];
+	static var windows:Array<Window> = [];
 
 	public static inline var CW_USEDEFAULT = 0x80000000;
 
-	public static inline var HIDDEN    = 0x000001;
+	public static inline var HIDDEN = 0x000001;
 	public static inline var RESIZABLE = 0x000002;
 
 	static var _UID = 0;
-	var win : WinPtr;
-	public var id(default,null) : Int;
-	public var title(default, set) : String;
-	public var width(get, never) : Int;
-	public var height(get, never) : Int;
-	public var minWidth(get, never) : Int;
-	public var minHeight(get, never) : Int;
-	public var maxWidth(get, never) : Int;
-	public var maxHeight(get, never) : Int;
-	public var x(get, never) : Int;
-	public var y(get, never) : Int;
-	public var displayMode(default, set) : DisplayMode;
-	public var visible(default, set) : Bool = true;
-	public var opacity(get, set) : Float;
-	public var displaySetting : DisplaySetting;
-	public var selectedMonitor : MonitorHandle;
-	public var vsync : Bool;
-	public var dragAndDropEnabled(default, set) : Bool;
 
-	public function new( title : String, width : Int, height : Int, x : Int = CW_USEDEFAULT, y : Int = CW_USEDEFAULT, windowFlags : Int = RESIZABLE ) {
+	var win:WinPtr;
+
+	public var id(default, null):Int;
+	public var title(default, set):String;
+	public var width(get, never):Int;
+	public var height(get, never):Int;
+	public var minWidth(get, never):Int;
+	public var minHeight(get, never):Int;
+	public var maxWidth(get, never):Int;
+	public var maxHeight(get, never):Int;
+	public var x(get, never):Int;
+	public var y(get, never):Int;
+	public var displayMode(default, set):DisplayMode;
+	public var visible(default, set):Bool = true;
+	public var opacity(get, set):Float;
+	public var displaySetting:DisplaySetting;
+	public var selectedMonitor:MonitorHandle;
+	public var vsync:Bool;
+	public var dragAndDropEnabled(default, set):Bool;
+
+	public function new(title:String, width:Int, height:Int, x:Int = CW_USEDEFAULT, y:Int = CW_USEDEFAULT, windowFlags:Int = RESIZABLE) {
 		win = winCreateEx(x, y, width, height, windowFlags);
 		this.title = title;
 		windows.push(this);
@@ -69,61 +71,59 @@ class Window {
 
 	function set_displayMode(mode) {
 		displayMode = mode;
-		if(mode == Windowed) {
+		if (mode == Windowed) {
 			dx.Window.winChangeDisplaySetting(selectedMonitor != null ? @:privateAccess selectedMonitor.bytes : null, null);
 			winSetFullscreen(win, false);
-		}
-		else if(mode == Borderless) {
+		} else if (mode == Borderless) {
 			dx.Window.winChangeDisplaySetting(selectedMonitor != null ? @:privateAccess selectedMonitor.bytes : null, null);
-			winSetFullscreen(win,true);
-		}
-		else {
+			winSetFullscreen(win, true);
+		} else {
 			var r = dx.Window.winChangeDisplaySetting(selectedMonitor != null ? @:privateAccess selectedMonitor.bytes : null, displaySetting);
-			winSetFullscreen(win,true);
+			winSetFullscreen(win, true);
 		}
 		return mode;
 	}
 
 	function set_visible(b) {
-		if( visible == b )
+		if (visible == b)
 			return b;
 		winResize(win, b ? 4 : 3);
 		return visible = b;
 	}
 
-	public function resize( width : Int, height : Int ) {
+	public function resize(width:Int, height:Int) {
 		winSetSize(win, width, height);
 	}
 
-	public function setMinSize( width : Int, height : Int ) {
+	public function setMinSize(width:Int, height:Int) {
 		winSetMinSize(win, width, height);
 	}
 
-	public function setMaxSize( width : Int, height : Int ) {
+	public function setMaxSize(width:Int, height:Int) {
 		winSetMaxSize(win, width, height);
 	}
 
-	public function setPosition( x : Int, y : Int ) {
+	public function setPosition(x:Int, y:Int) {
 		winSetPosition(win, x, y);
 	}
 
-	public function setCursorPosition( x : Int, y : Int ) {
+	public function setCursorPosition(x:Int, y:Int) {
 		return winSetCursorPos(win, x, y);
 	}
 
-	public static function setCursorPositionGlobal( x : Int, y : Int ) {
+	public static function setCursorPositionGlobal(x:Int, y:Int) {
 		return setCursorPos(x, y);
 	}
 
-	public function setRelativeMouseMode( enabled : Bool ) : Bool {
+	public function setRelativeMouseMode(enabled:Bool):Bool {
 		return winSetRelativeMouseMode(win, enabled);
 	}
 
-	public function getRelativeMouseMode() : Bool {
+	public function getRelativeMouseMode():Bool {
 		return winGetRelativeMouseMode();
 	}
 
-	public function center( centerPrimary : Bool = true ) {
+	public function center(centerPrimary:Bool = true) {
 		winCenter(win, centerPrimary);
 	}
 
@@ -149,32 +149,40 @@ class Window {
 		winSetFocus(win);
 	}
 
-	public function getNextEvent( e : Event ) : Bool {
+	public function getNextEvent(e:Event):Bool {
 		return winGetNextEvent(win, e);
 	}
 
-	public function clipCursor( enable : Bool ) : Void {
+	public function clipCursor(enable:Bool):Void {
 		winClipCursor(win, enable);
 	}
 
-	public static function getDisplaySettings(monitor : MonitorHandle) : Array<DisplaySetting> {
-		var a : Array<DisplaySetting> = [for(s in winGetDisplaySettings(monitor != null ? @:privateAccess monitor.bytes : null)) s];
+	public static function getDisplaySettings(monitor:MonitorHandle):Array<DisplaySetting> {
+		var a:Array<DisplaySetting> = [
+			for (s in winGetDisplaySettings(monitor != null ? @:privateAccess monitor.bytes : null)) s
+		];
 		a.sort((a, b) -> {
-			if(b.width > a.width) 1;
-			else if(b.width < a.width) -1;
-			else if(b.height > a.height) 1;
-			else if(b.height < a.height) -1;
-			else if(b.framerate > a.framerate) 1;
-			else if(b.framerate < a.framerate) -1;
-			else 0;
+			if (b.width > a.width)
+				1;
+			else if (b.width < a.width)
+				-1;
+			else if (b.height > a.height)
+				1;
+			else if (b.height < a.height)
+				-1;
+			else if (b.framerate > a.framerate)
+				1;
+			else if (b.framerate < a.framerate)
+				-1;
+			else
+				0;
 		});
 		var last = null;
 		return a.filter(function(e) {
-			if(last == null) {
+			if (last == null) {
 				last = e;
 				return true;
-			}
-			else if(last.width == e.width && last.height == e.height && last.framerate == e.framerate) {
+			} else if (last.width == e.width && last.height == e.height && last.framerate == e.framerate) {
 				return false;
 			}
 			last = e;
@@ -182,16 +190,25 @@ class Window {
 		});
 	}
 
-	public static function getCurrentDisplaySetting(monitor : MonitorHandle, registry : Bool = false) : DisplaySetting {
+	public static function getCurrentDisplaySetting(monitor:MonitorHandle, registry:Bool = false):DisplaySetting {
 		return winGetCurrentDisplaySetting(monitor != null ? @:privateAccess monitor.bytes : null, registry);
 	}
 
-	public static function getMonitors() : Array<Monitor> {
+	public static function getMonitors():Array<Monitor> {
 		var last = null;
-		return [for(m in winGetMonitors()) @:privateAccess { name: String.fromUCS2(m.name), left: m.left, right: m.right, top: m.top, bottom: m.bottom } ];
+		return [
+			for (m in winGetMonitors()) @:privateAccess
+				{
+					name: String.fromUCS2(m.name),
+					left: m.left,
+					right: m.right,
+					top: m.top,
+					bottom: m.bottom
+				}
+		];
 	}
 
-	public function getCurrentMonitor() : MonitorHandle {
+	public function getCurrentMonitor():MonitorHandle {
 		return @:privateAccess String.fromUCS2(winGetMonitorFromWindow(win));
 	}
 
@@ -258,88 +275,74 @@ class Window {
 	}
 
 	@:hlNative("?directx", "win_get_display_settings")
-	static function winGetDisplaySettings(monitor : hl.Bytes) : hl.NativeArray<Dynamic> {
+	static function winGetDisplaySettings(monitor:hl.Bytes):hl.NativeArray<Dynamic> {
 		return null;
 	}
 
 	@:hlNative("?directx", "win_get_current_display_setting")
-	static function winGetCurrentDisplaySetting(monitor : hl.Bytes, registry : Bool) : Dynamic {
+	static function winGetCurrentDisplaySetting(monitor:hl.Bytes, registry:Bool):Dynamic {
 		return null;
 	}
 
 	@:hlNative("?directx", "win_change_display_setting")
-	public static function winChangeDisplaySetting(monitor : hl.Bytes, ds : Dynamic) : Int {
+	public static function winChangeDisplaySetting(monitor:hl.Bytes, ds:Dynamic):Int {
 		return 0;
 	}
 
 	@:hlNative("?directx", "win_get_monitors")
-	static function winGetMonitors() : hl.NativeArray<Dynamic> {
+	static function winGetMonitors():hl.NativeArray<Dynamic> {
 		return null;
 	}
 
 	@:hlNative("?directx", "win_get_monitor_from_window")
-	static function winGetMonitorFromWindow( win : WinPtr ) : hl.Bytes {
+	static function winGetMonitorFromWindow(win:WinPtr):hl.Bytes {
 		return null;
 	}
 
-	static function winCreateEx( x : Int, y : Int, width : Int, height : Int, windowFlags : Int ) : WinPtr {
+	static function winCreateEx(x:Int, y:Int, width:Int, height:Int, windowFlags:Int):WinPtr {
 		return null;
 	}
 
-	static function winCreate( width : Int, height : Int ) : WinPtr {
+	static function winCreate(width:Int, height:Int):WinPtr {
 		return null;
 	}
 
-	static function winSetTitle( win : WinPtr, title : hl.Bytes ) {
-	}
+	static function winSetTitle(win:WinPtr, title:hl.Bytes) {}
 
-	static function winSetFullscreen( win : WinPtr, fs : Bool ) {
-	}
+	static function winSetFullscreen(win:WinPtr, fs:Bool) {}
 
-	static function winSetSize( win : WinPtr, width : Int, height : Int ) {
-	}
+	static function winSetSize(win:WinPtr, width:Int, height:Int) {}
 
-	static function winSetMinSize( win : WinPtr, width : Int, height : Int ) {
-	}
+	static function winSetMinSize(win:WinPtr, width:Int, height:Int) {}
 
-	static function winSetMaxSize( win : WinPtr, width : Int, height : Int ) {
-	}
+	static function winSetMaxSize(win:WinPtr, width:Int, height:Int) {}
 
-	static function winSetPosition( win : WinPtr, x : Int, y : Int ) {
-	}
+	static function winSetPosition(win:WinPtr, x:Int, y:Int) {}
 
-	static function winCenter( win : WinPtr, centerPrimary : Bool ) {
-	}
+	static function winCenter(win:WinPtr, centerPrimary:Bool) {}
 
-	static function winResize( win : WinPtr, mode : Int ) {
-	}
+	static function winResize(win:WinPtr, mode:Int) {}
 
-	static function winGetSize( win : WinPtr, width : hl.Ref<Int>, height : hl.Ref<Int> ) {
-	}
+	static function winGetSize(win:WinPtr, width:hl.Ref<Int>, height:hl.Ref<Int>) {}
 
-	static function winGetMinSize( win : WinPtr, width : hl.Ref<Int>, height : hl.Ref<Int> ) {
-	}
+	static function winGetMinSize(win:WinPtr, width:hl.Ref<Int>, height:hl.Ref<Int>) {}
 
-	static function winGetMaxSize( win : WinPtr, width : hl.Ref<Int>, height : hl.Ref<Int> ) {
-	}
+	static function winGetMaxSize(win:WinPtr, width:hl.Ref<Int>, height:hl.Ref<Int>) {}
 
-	static function winGetPosition( win : WinPtr, x : hl.Ref<Int>, y : hl.Ref<Int> ) {
-	}
+	static function winGetPosition(win:WinPtr, x:hl.Ref<Int>, y:hl.Ref<Int>) {}
 
 	@:hlNative("?directx", "win_set_focus")
-	static function winSetFocus( win: WinPtr ) {
-	}
+	static function winSetFocus(win:WinPtr) {}
 
-	static function winGetOpacity( win : WinPtr ) : Float {
+	static function winGetOpacity(win:WinPtr):Float {
 		return 0.0;
 	}
 
-	static function winSetOpacity( win : WinPtr, opacity : Float ) : Bool {
+	static function winSetOpacity(win:WinPtr, opacity:Float):Bool {
 		return false;
 	}
 
-	static function winDestroy( win : WinPtr ) {
-	}
+	static function winDestroy(win:WinPtr) {}
 
 	public static function getScreenWidth() {
 		return 0;
@@ -349,40 +352,37 @@ class Window {
 		return 0;
 	}
 
-	static function winGetNextEvent( win : WinPtr, event : Dynamic ) : Bool {
+	static function winGetNextEvent(win:WinPtr, event:Dynamic):Bool {
 		return false;
 	}
 
-	static function winClipCursor( win : WinPtr, enable : Bool ) : Void {
-	}
+	static function winClipCursor(win:WinPtr, enable:Bool):Void {}
 
-	static function setCursorPos( x : Int, y : Int ) : Bool {
+	static function setCursorPos(x:Int, y:Int):Bool {
 		return false;
 	}
 
-	static function winSetCursorPos( win : WinPtr, x : Int, y : Int ) : Bool {
+	static function winSetCursorPos(win:WinPtr, x:Int, y:Int):Bool {
 		return false;
 	}
 
-	static function winSetRelativeMouseMode( win : WinPtr, enable : Bool ) : Bool {
+	static function winSetRelativeMouseMode(win:WinPtr, enable:Bool):Bool {
 		return false;
 	}
 
-	static function winGetRelativeMouseMode() : Bool {
+	static function winGetRelativeMouseMode():Bool {
 		return false;
 	}
 
 	@:hlNative("?directx", "win_set_drag_accept_files")
-	static function winSetDragAcceptFiles( win : WinPtr, enable: Bool ) : Void {
-	}
+	static function winSetDragAcceptFiles(win:WinPtr, enable:Bool):Void {}
 
 	public static function detectKeyboardLayout() @:privateAccess {
-		return String.fromUTF8( dxDetectKeyboardLayout() );
+		return String.fromUTF8(dxDetectKeyboardLayout());
 	}
 
 	@:hlNative("directx", "detect_keyboard_layout")
-	static function dxDetectKeyboardLayout() : hl.Bytes {
+	static function dxDetectKeyboardLayout():hl.Bytes {
 		return null;
 	}
-
 }

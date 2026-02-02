@@ -1,20 +1,16 @@
-package ;
+package;
 
 import haxe.unit.TestCase;
 import sys.FileSystem;
-
 import sys.db.Connection;
 import sys.db.Sqlite;
 import sys.db.ResultSet;
 
+class ResultSetTestCase extends TestCase {
+	var file:String;
+	var cnx:Connection;
 
-class ResultSetTestCase extends TestCase
-{
-	var file : String;
-	var cnx : Connection;
-
-	override public function setup( ) : Void
-	{
+	override public function setup():Void {
 		super.setup();
 
 		file = '${currentTest.classname}-${currentTest.method}.sqlite';
@@ -28,25 +24,23 @@ class ResultSetTestCase extends TestCase
 		cnx.request('INSERT INTO  t1 VALUES(3, 0.000000003, "Привет!", "\x111111", 1)');
 	}
 
-	override public function tearDown( ) : Void
-	{
+	override public function tearDown():Void {
 		super.tearDown();
 
 		cnx.close();
 		FileSystem.deleteFile(file);
 	}
 
-	public function testLength( ) : Void
-	{
-		var res : ResultSet = cnx.request('SELECT * FROM t1');
+	public function testLength():Void {
+		var res:ResultSet = cnx.request('SELECT * FROM t1');
 		assertFalse(res == null);
 		assertTrue(res.hasNext());
 
 		assertEquals(3, res.length);
 	}
-	public function testFieldsLen( ) : Void
-	{
-		var res : ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 1');
+
+	public function testFieldsLen():Void {
+		var res:ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 1');
 		assertFalse(res == null);
 		assertTrue(res.hasNext());
 
@@ -56,9 +50,8 @@ class ResultSetTestCase extends TestCase
 		assertEquals(res.nfields, fields.length);
 	}
 
-	public function testFieldsName( ) : Void
-	{
-		var res : ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 1');
+	public function testFieldsName():Void {
+		var res:ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 1');
 		assertFalse(res == null);
 		assertTrue(res.hasNext());
 
@@ -71,9 +64,8 @@ class ResultSetTestCase extends TestCase
 		assertEquals('bo', fields[4]);
 	}
 
-	public function testGetResult( ) : Void
-	{
-		var res : ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 1');
+	public function testGetResult():Void {
+		var res:ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 1');
 		assertFalse(res == null);
 		assertTrue(res.hasNext());
 
@@ -84,9 +76,8 @@ class ResultSetTestCase extends TestCase
 		assertEquals(1, res.getIntResult(4));
 	}
 
-	public function testFieldsVal1( ) : Void
-	{
-		var res : ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 1');
+	public function testFieldsVal1():Void {
+		var res:ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 1');
 		assertFalse(res == null);
 		assertTrue(res.hasNext());
 
@@ -99,9 +90,8 @@ class ResultSetTestCase extends TestCase
 		assertEquals(true, vals.bo);
 	}
 
-	public function testFieldsVal2( ) : Void
-	{
-		var res : ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 2');
+	public function testFieldsVal2():Void {
+		var res:ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 2');
 		assertFalse(res == null);
 		assertTrue(res.hasNext());
 
@@ -114,9 +104,8 @@ class ResultSetTestCase extends TestCase
 		assertEquals(false, vals.bo);
 	}
 
-	public function testFieldsVal3( ) : Void
-	{
-		var res : ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 3');
+	public function testFieldsVal3():Void {
+		var res:ResultSet = cnx.request('SELECT * FROM t1 WHERE i = 3');
 		assertFalse(res == null);
 		assertTrue(res.hasNext());
 

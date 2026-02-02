@@ -8,24 +8,23 @@ enum abstract CursorKind(Int) {
 	var Wait = 32514;
 	var CrossHair = 32515;
 	var WaitArrow = 32650;
-    var SizeNWSE = 32642;
-    var SizeNESW = 32643;
-    var SizeWE = 32644;
-    var SizeNS = 32645;
+	var SizeNWSE = 32642;
+	var SizeNESW = 32643;
+	var SizeWE = 32644;
+	var SizeNS = 32645;
 	var SizeALL = 32646;
 	var No = 32648;
 	var Hand = 32649;
 }
 
 abstract Cursor(CursorPtr) {
-
-	@:hlNative("directx","load_cursor")
-	public static function createSystem( kind : CursorKind ) : Cursor {
+	@:hlNative("directx", "load_cursor")
+	public static function createSystem(kind:CursorKind):Cursor {
 		return null;
 	}
 
-	@:hlNative("directx","create_cursor")
-	public static function createCursor( width : Int, height : Int, pixels : hl.Bytes, hotX : Int, hotY : Int ) : Cursor {
+	@:hlNative("directx", "create_cursor")
+	public static function createCursor(width:Int, height:Int, pixels:hl.Bytes, hotX:Int, hotY:Int):Cursor {
 		return null;
 	}
 
@@ -37,21 +36,17 @@ abstract Cursor(CursorPtr) {
 		setCursor(this);
 	}
 
-	@:hlNative("directx","show_cursor")
-	public static function show( v : Bool ) {
-	}
+	@:hlNative("directx", "show_cursor")
+	public static function show(v:Bool) {}
 
-	@:hlNative("directx","is_cursor_visible")
-	public static function isVisible() : Bool {
+	@:hlNative("directx", "is_cursor_visible")
+	public static function isVisible():Bool {
 		return false;
 	}
 
-	@:hlNative("directx","set_cursor")
-	static function setCursor( k : CursorPtr ) {
-	}
+	@:hlNative("directx", "set_cursor")
+	static function setCursor(k:CursorPtr) {}
 
-	@:hlNative("directx","destroy_cursor")
-	static function destroyCursor( ptr : CursorPtr ) {
-	}
-
+	@:hlNative("directx", "destroy_cursor")
+	static function destroyCursor(ptr:CursorPtr) {}
 }

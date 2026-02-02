@@ -12,10 +12,9 @@ defaults:
     shell: bash
 
 jobs:
-
   ###########################################################
   build:
-  ###########################################################
+    ###########################################################
     runs-on: ${{ matrix.runner }}
 
     strategy:
@@ -119,279 +118,302 @@ jobs:
             build_system: cmake-mingw
 
     steps:
-    - name: "SCM Checkout"
-      uses: actions/checkout@v6
+      - name: 'SCM Checkout'
+        uses: actions/checkout@v6
 
-    - name: "Add msbuild to PATH"
-      if: matrix.build_system == 'vs2019'
-      uses: microsoft/setup-msbuild@v2
+      - name: 'Add msbuild to PATH'
+        if: matrix.build_system == 'vs2019'
+        uses: microsoft/setup-msbuild@v2
 
-    - name: "Mac homebrew workaround"
-      if: matrix.target == 'darwin'
-      run: |
-        # see https://github.com/Homebrew/homebrew-core/issues/165793#issuecomment-1989441193
-        # see https://github.com/Homebrew/brew/blob/master/.github/workflows/tests.yml
-        brew unlink python && brew link --overwrite python
+      - name: 'Mac homebrew workaround'
+        if: matrix.target == 'darwin'
+        run: |
+          # see https://github.com/Homebrew/homebrew-core/issues/165793#issuecomment-1989441193
+          # see https://github.com/Homebrew/brew/blob/master/.github/workflows/tests.yml
+          brew unlink python && brew link --overwrite python
 
-    - name: "Install: Required Dev Packages"
-      run: |
-        set -eux
+      - name: 'Install: Required Dev Packages'
+        run: |
+          set -eux
 
-        case "${{ matrix.target }}${{ matrix.architecture }}" in
-          linux64)
-            echo "MARCH=64" >> $GITHUB_ENV
-            sudo apt-get update -y
-            sudo apt-get install --no-install-recommends -y \
-              libmbedtls-dev \
-              libopenal-dev \
-              libpng-dev \
-              libsdl2-dev \
-              libturbojpeg-dev \
-              libuv1-dev \
-              libvorbis-dev \
-              libsqlite3-dev
-            ;;
+          case "${{ matrix.target }}${{ matrix.architecture }}" in
+            linux64)
+              echo "MARCH=64" >> $GITHUB_ENV
+              sudo apt-get update -y
+              sudo apt-get install --no-install-recommends -y \
+                libmbedtls-dev \
+                libopenal-dev \
+                libpng-dev \
+                libturbojpeg-dev \
+                libuv1-dev \
+                libvorbis-dev \
+                libsqlite3-dev
 
-          darwin*)
-            if [ "${{matrix.build_system}}" != "cmake" ]; then
-              brew update
-              brew bundle
-            fi
-            ;;
+              sudo apt-get install --no-install-recommends -y \
+                libasound2-dev \
+                libpulse-dev \
+                libaudio-dev \
+                libjack-dev \
+                libsndio-dev \
+                libx11-dev \
+                libxext-dev \
+                libxrandr-dev \
+                libxcursor-dev \
+                libxfixes-dev \
+                libxi-dev \
+                libxss-dev \
+                libxtst-dev \
+                libxkbcommon-dev \
+                libdrm-dev \
+                libgbm-dev \
+                libgl1-mesa-dev \
+                libgles2-mesa-dev \
+                libegl1-mesa-dev \
+                libdbus-1-dev \
+                libibus-1.0-dev \
+                libudev-dev \
+                libpipewire-0.3-dev \
+                libwayland-dev \
+                libdecor-0-dev \
+                liburing-dev
+              ;;
 
-          windows*)
-            if [[ ${{ matrix.build_system }} == cmake-mingw ]]; then
-              SDL_SUFFIX=mingw
-            else
-              SDL_SUFFIX=VC
-            fi
-            curl -fsSL --retry 3 --retry-delay 5 -o /tmp/sdl.zip https://www.libsdl.org/release/SDL2-devel-2.30.2-${SDL_SUFFIX}.zip
-            curl -fsSL --retry 3 --retry-delay 5 -o /tmp/openal.zip https://github.com/kcat/openal-soft/releases/download/1.23.1/openal-soft-1.23.1-bin.zip
-            curl -fsSL --retry 3 --retry-delay 5 -o /tmp/ffmpeg.zip ${{ matrix.ffmpeg_url }}
-            7z x /tmp/sdl.zip    -oinclude; mv include/SDL2*   include/sdl
-            7z x /tmp/openal.zip -oinclude; mv include/openal* include/openal
-            7z x /tmp/ffmpeg.zip -oinclude; mv include/ffmpeg* include/ffmpeg
-            ;;
-        esac
+            darwin*)
+              if [ "${{matrix.build_system}}" != "cmake" ]; then
+                brew update
+                brew bundle
+              fi
+              ;;
 
-    - name: "Download: DirectX binaries for windows + make"
-      if: matrix.target == 'windows' && matrix.build_system != 'cmake' && matrix.build_system != 'cmake-mingw'
-      run: |
-        curl -fsSL --retry 3 --retry-delay 5 -o /tmp/dx.zip https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2505.1/dxc_2025_07_14.zip
-        7z x /tmp/dx.zip -oinclude/dx
+            windows*)
+              if [[ ${{ matrix.build_system }} == cmake-mingw ]]; then
+                SDL_SUFFIX=mingw
+              else
+                SDL_SUFFIX=VC
+              fi
+              curl -fsSL --retry 3 --retry-delay 5 -o /tmp/sdl.zip https://github.com/libsdl-org/SDL/releases/download/release-3.4.0/SDL3-devel-3.4.0-VC.zip
+              curl -fsSL --retry 3 --retry-delay 5 -o /tmp/openal.zip https://github.com/kcat/openal-soft/releases/download/1.23.1/openal-soft-1.23.1-bin.zip
+              curl -fsSL --retry 3 --retry-delay 5 -o /tmp/ffmpeg.zip ${{ matrix.ffmpeg_url }}
+              7z x /tmp/sdl.zip    -oinclude; mv include/SDL3*   include/sdl
+              7z x /tmp/openal.zip -oinclude; mv include/openal* include/openal
+              7z x /tmp/ffmpeg.zip -oinclude; mv include/ffmpeg* include/ffmpeg
+              ;;
+          esac
 
-    - name: "Install: GCC 14"
-      if: matrix.build_system == 'makegcc14'
-      run: |
+      - name: 'Download: DirectX binaries for windows + make'
+        if: matrix.target == 'windows' && matrix.build_system != 'cmake' && matrix.build_system != 'cmake-mingw'
+        run: |
+          curl -fsSL --retry 3 --retry-delay 5 -o /tmp/dx.zip https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2505.1/dxc_2025_07_14.zip
+          7z x /tmp/dx.zip -oinclude/dx
+
+      - name: 'Install: GCC 14'
+        if: matrix.build_system == 'makegcc14'
+        run: |
           sudo add-apt-repository universe
           sudo apt update
           sudo apt install -y gcc-14 g++-14
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 60 --slave /usr/bin/g++ g++ /usr/bin/g++-14
           gcc --version
 
-    - name: Install haxe
-      uses: krdlab/setup-haxe@v2
-      with:
-        haxe-version: latest
+      - name: Install haxe
+        uses: krdlab/setup-haxe@v2
+        with:
+          haxe-version: latest
 
-    - name: "Configure: Haxelib"
-      run: |
-        set -eux
+      - name: 'Configure: Haxelib'
+        run: |
+          set -eux
 
-        haxelib setup ~/haxelib
-        haxelib install hashlink
-        haxelib list
+          haxelib setup ~/haxelib
+          haxelib install hashlink
+          haxelib list
 
+      - name: 'Build: HashLink'
+        run: |
+          set -eux
 
-    - name: "Build: HashLink"
-      run: |
-        set -eux
-
-        case "${{ matrix.build_system }}" in
-          cmake)
-            case "${{ matrix.target }}${{ matrix.architecture }}" in
-              windows*)
-                cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
-                  -G "${{ matrix.cmake_generator }}" \
-                  -A ${{ matrix.architecture_string }}
-                ;;
-              darwin64)
-                cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
-                  -DDOWNLOAD_DEPENDENCIES=ON \
-                  -DCMAKE_OSX_ARCHITECTURES=x86_64 \
-                  -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
-                  -DFLAT_INSTALL_TREE=ON
-                ;;
-              darwinarm64)
-                cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
-                  -DDOWNLOAD_DEPENDENCIES=ON \
-                  -DCMAKE_OSX_ARCHITECTURES=arm64 \
-                  -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-                  -DFLAT_INSTALL_TREE=ON
-                ;;
-              linux64)
-                cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} ;;
-            esac
-
-            cmake --build build --config ${{ matrix.cmake_configuration }}
-            BUILD_FOLDER=build/bin
-            ;;
-
-          cmake-mingw)
-            cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
-              -DWITH_DX12=OFF
-
-            cmake --build build --config ${{ matrix.cmake_configuration }} --parallel
-            BUILD_FOLDER=build/bin
-            ;;
-
-          vs2019)
-            MSBuild.exe hl.sln //nologo //m //clp:ErrorsOnly \
-              //p:Configuration=${{ matrix.msbuild_configuration }} \
-              //p:Platform=${{ matrix.architecture_string }}
-
-            case "${{ matrix.architecture }}" in
-              64) BUILD_FOLDER=x64/${{ matrix.msbuild_configuration }} ;;
-              32) BUILD_FOLDER=${{ matrix.msbuild_configuration }} ;;
-            esac
-            echo "WINDOWS_BUILD_FOLDER=$BUILD_FOLDER" >> $GITHUB_ENV
-            ;;
-
-          make*)
-            make
-            sudo make install
-            if [[ ${{ matrix.target }} == linux ]]; then
-              sudo ldconfig
-            fi
-            BUILD_FOLDER=.
-            ;;
-
-        esac
-
-        ls -l $BUILD_FOLDER
-
-    - name: "Test"
-      run: |
-        set -eux
-
-        case "${{ matrix.build_system }}" in
-          cmake*)
-            case "${{matrix.target}}" in
-              linux)
-                cmake --install build --prefix /tmp/hashlink
-                /tmp/hashlink/bin/hl --version
-                ;;
-              darwin)
-                cmake --install build --prefix /tmp/hashlink
-                if [ -f /tmp/hashlink/hl ]; then /tmp/hashlink/hl --version; fi
-                ;;
-              windows)
-                export PATH=$(pwd)/build/bin:$PATH
-                ;;
-            esac
-            cd build && ctest --verbose --build-config ${{ matrix.cmake_configuration }}
-            ;;
-          vs2019)
-            ${{ env.WINDOWS_BUILD_FOLDER }}/hl.exe --version
-            ;;
-          make*)
-            if [[ ${{ matrix.architecture }} != arm64 ]]; then
-              ./hl --version
-              case ${{ matrix.target }} in
-                linux)  ldd -v ./hl ;;
-                darwin) otool -L ./hl ;;
+          case "${{ matrix.build_system }}" in
+            cmake)
+              case "${{ matrix.target }}${{ matrix.architecture }}" in
+                windows*)
+                  cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
+                    -G "${{ matrix.cmake_generator }}" \
+                    -A ${{ matrix.architecture_string }}
+                  ;;
+                darwin64)
+                  cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
+                    -DDOWNLOAD_DEPENDENCIES=ON \
+                    -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
+                    -DFLAT_INSTALL_TREE=ON
+                  ;;
+                darwinarm64)
+                  cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
+                    -DDOWNLOAD_DEPENDENCIES=ON \
+                    -DCMAKE_OSX_ARCHITECTURES=arm64 \
+                    -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+                    -DFLAT_INSTALL_TREE=ON
+                  ;;
+                linux64)
+                  cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} ;;
               esac
 
-              haxe -hl hello.hl -cp other/tests -main HelloWorld -D interp
-              ./hl hello.hl
+              cmake --build build --config ${{ matrix.cmake_configuration }}
+              BUILD_FOLDER=build/bin
+              ;;
 
-              # ensure the executable still works when installed globally
-              cp hello.hl /tmp
-              pushd /tmp
-              hl hello.hl
-              popd
-            fi
+            cmake-mingw)
+              cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
+                -DWITH_DX12=OFF
 
-            haxe -hl src/_main.c -cp other/tests -main HelloWorld
-            make hlc
-            ./hlc
-            ;;
-        esac
+              cmake --build build --config ${{ matrix.cmake_configuration }} --parallel
+              BUILD_FOLDER=build/bin
+              ;;
 
-    - name: "Test haxelib build"
-      run: |
-        haxelib git format https://github.com/HaxeFoundation/format
-        cd other/haxelib
-        haxe memory.hxml
-        haxe profiler.hxml
-        cd ../..
+            vs2019)
+              MSBuild.exe hl.sln //nologo //m //clp:ErrorsOnly \
+                //p:Configuration=${{ matrix.msbuild_configuration }} \
+                //p:Platform=${{ matrix.architecture_string }}
 
-    - name: "Package"
-      run: |
-        set -eux
+              case "${{ matrix.architecture }}" in
+                64) BUILD_FOLDER=x64/${{ matrix.msbuild_configuration }} ;;
+                32) BUILD_FOLDER=${{ matrix.msbuild_configuration }} ;;
+              esac
+              echo "WINDOWS_BUILD_FOLDER=$BUILD_FOLDER" >> $GITHUB_ENV
+              ;;
 
-        case "${{ matrix.target }}${{matrix.architecture}}" in
-          darwinarm64)   platform_name=darwin-arm64 ;;
-          darwin64)   platform_name=darwin ;;
-          windows*)  platform_name=win${{matrix.architecture}} ;;
-          linux64)   platform_name=linux-amd64 ;;
-        esac
+            make*)
+              make
+              sudo make install
+              if [[ ${{ matrix.target }} == linux ]]; then
+                sudo ldconfig
+              fi
+              BUILD_FOLDER=.
+              ;;
 
-        short_commit=$(git rev-parse --short HEAD)
+          esac
 
-        case "${{ matrix.build_system }}" in
-          cmake*)
-            dist_folder=hashlink-${short_commit}-${platform_name}-${{ matrix.build_system }}
-            cd build && cpack -D CPACK_PACKAGE_FILE_NAME=$dist_folder -C ${{ matrix.cmake_configuration }}
+          ls -l $BUILD_FOLDER
 
-            echo "HASHLINK_DISTRIBUTION=build/bin/$dist_folder.${{ matrix.archive_ext }}" >> $GITHUB_ENV
-            ;;
-          *)
-            dist_folder=hashlink-${short_commit}-${platform_name}
-            make PACKAGE_NAME=$dist_folder MARCH=${{ matrix.architecture }} release
+      - name: 'Test'
+        run: |
+          set -eux
 
-            echo "HASHLINK_DISTRIBUTION=$dist_folder.${{ matrix.archive_ext }}" >> $GITHUB_ENV
-            ;;
-        esac
+          case "${{ matrix.build_system }}" in
+            cmake*)
+              case "${{matrix.target}}" in
+                linux)
+                  cmake --install build --prefix /tmp/hashlink
+                  /tmp/hashlink/bin/hl --version
+                  ;;
+                darwin)
+                  cmake --install build --prefix /tmp/hashlink
+                  if [ -f /tmp/hashlink/hl ]; then /tmp/hashlink/hl --version; fi
+                  ;;
+                windows)
+                  export PATH=$(pwd)/build/bin:$PATH
+                  ;;
+              esac
+              cd build && ctest --verbose --build-config ${{ matrix.cmake_configuration }}
+              ;;
+            vs2019)
+              ${{ env.WINDOWS_BUILD_FOLDER }}/hl.exe --version
+              ;;
+            make*)
+              if [[ ${{ matrix.architecture }} != arm64 ]]; then
+                ./hl --version
+                case ${{ matrix.target }} in
+                  linux)  ldd -v ./hl ;;
+                  darwin) otool -L ./hl ;;
+                esac
 
+                haxe -hl hello.hl -cp other/tests -main HelloWorld -D interp
+                ./hl hello.hl
 
-    - name: "Share: build artifact"
-      uses: actions/upload-artifact@v6
-      with:
-        name: ${{ matrix.target }}-${{ matrix.build_system }}-${{ matrix.architecture }}
-        path: ${{ env.HASHLINK_DISTRIBUTION }}
+                # ensure the executable still works when installed globally
+                cp hello.hl /tmp
+                pushd /tmp
+                hl hello.hl
+                popd
+              fi
 
+              haxe -hl src/_main.c -cp other/tests -main HelloWorld
+              make hlc
+              ./hlc
+              ;;
+          esac
+
+      - name: 'Test haxelib build'
+        run: |
+          haxelib git format https://github.com/HaxeFoundation/format
+          cd other/haxelib
+          haxe memory.hxml
+          haxe profiler.hxml
+          cd ../..
+
+      - name: 'Package'
+        run: |
+          set -eux
+
+          case "${{ matrix.target }}${{matrix.architecture}}" in
+            darwinarm64)   platform_name=darwin-arm64 ;;
+            darwin64)   platform_name=darwin ;;
+            windows*)  platform_name=win${{matrix.architecture}} ;;
+            linux64)   platform_name=linux-amd64 ;;
+          esac
+
+          short_commit=$(git rev-parse --short HEAD)
+
+          case "${{ matrix.build_system }}" in
+            cmake*)
+              dist_folder=hashlink-${short_commit}-${platform_name}-${{ matrix.build_system }}
+              cd build && cpack -D CPACK_PACKAGE_FILE_NAME=$dist_folder -C ${{ matrix.cmake_configuration }}
+
+              echo "HASHLINK_DISTRIBUTION=build/bin/$dist_folder.${{ matrix.archive_ext }}" >> $GITHUB_ENV
+              ;;
+            *)
+              dist_folder=hashlink-${short_commit}-${platform_name}
+              make PACKAGE_NAME=$dist_folder MARCH=${{ matrix.architecture }} release
+
+              echo "HASHLINK_DISTRIBUTION=$dist_folder.${{ matrix.archive_ext }}" >> $GITHUB_ENV
+              ;;
+          esac
+
+      - name: 'Share: build artifact'
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}-${{ matrix.build_system }}-${{ matrix.architecture }}
+          path: ${{ env.HASHLINK_DISTRIBUTION }}
 
   build-android:
     runs-on: ubuntu-latest
     steps:
+      - name: 'SCM Checkout'
+        uses: actions/checkout@v6
 
-    - name: "SCM Checkout"
-      uses: actions/checkout@v6
+      - name: Install haxe
+        uses: krdlab/setup-haxe@v2
+        with:
+          haxe-version: latest
 
-    - name: Install haxe
-      uses: krdlab/setup-haxe@v2
-      with:
-        haxe-version: latest
+      - name: 'Configure: Haxelib'
+        run: |
+          set -eux
 
-    - name: "Configure: Haxelib"
-      run: |
-        set -eux
+          haxelib setup ~/haxelib
+          haxelib install hashlink
+          haxelib list
 
-        haxelib setup ~/haxelib
-        haxelib install hashlink
-        haxelib list
-
-    - name: "Build: Hashlink"
-      run: |
-        set -ex
-        cmake -B build -G Ninja --toolchain $ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-          -DANDROID_PLATFORM=24 -DANDROID_ABI=arm64-v8a -DBUILD_SHARED_LIBS=OFF -DWITH_VM=OFF
-        cmake --build build
+      - name: 'Build: Hashlink'
+        run: |
+          set -ex
+          cmake -B build -G Ninja --toolchain $ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+            -DANDROID_PLATFORM=24 -DANDROID_ABI=arm64-v8a -DBUILD_SHARED_LIBS=OFF -DWITH_VM=OFF
+          cmake --build build
 
   ###########################################################
   publish-latest-release:
-  ###########################################################
+    ###########################################################
     runs-on: ubuntu-latest
     needs:
       - build
@@ -399,36 +421,35 @@ jobs:
     concurrency: publish-latest-release # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idconcurrency
 
     steps:
+      - name: 'SCM Checkout'
+        uses: actions/checkout@v6
 
-    - name: "SCM Checkout"
-      uses: actions/checkout@v6
+      - name: 'Get: all build artifacts'
+        uses: actions/download-artifact@v7
 
-    - name: "Get: all build artifacts"
-      uses: actions/download-artifact@v7
+      - name: "Delete previous 'latest' release"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          gh release delete latest --cleanup-tag --yes || true
 
-    - name: "Delete previous 'latest' release"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        set -eu
-        gh release delete latest --cleanup-tag --yes || true
+      - name: "Create 'latest' Release"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eux
 
-    - name: "Create 'latest' Release"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        set -eux
+          # https://hub.github.com/hub-release.1.html
 
-        # https://hub.github.com/hub-release.1.html
+          short_commit=$(git rev-parse --short HEAD)
 
-        short_commit=$(git rev-parse --short HEAD)
-
-        gh release create latest \
-          --prerelease \
-          --title "HashLink Nightly Build" \
-          "darwin-cmake-64/hashlink-${short_commit}-darwin-cmake.tar.gz#hashlink-latest-darwin.tar.gz" \
-          "darwin-cmake-arm64/hashlink-${short_commit}-darwin-arm64-cmake.tar.gz#hashlink-latest-darwin-arm64.tar.gz" \
-          "linux-make-64/hashlink-${short_commit}-linux-amd64.tar.gz#hashlink-latest-linux-amd64.tar.gz" \
-          "windows-vs2019-32/hashlink-${short_commit}-win32.zip#hashlink-latest-win32.zip" \
-          "windows-vs2019-64/hashlink-${short_commit}-win64.zip#hashlink-latest-win64.zip" \
-          "windows-cmake-mingw-64/hashlink-${short_commit}-win64-cmake-mingw.zip#hashlink-latest-win64-mingw.zip"
+          gh release create latest \
+            --prerelease \
+            --title "HashLink Nightly Build" \
+            "darwin-cmake-64/hashlink-${short_commit}-darwin-cmake.tar.gz#hashlink-latest-darwin.tar.gz" \
+            "darwin-cmake-arm64/hashlink-${short_commit}-darwin-arm64-cmake.tar.gz#hashlink-latest-darwin-arm64.tar.gz" \
+            "linux-make-64/hashlink-${short_commit}-linux-amd64.tar.gz#hashlink-latest-linux-amd64.tar.gz" \
+            "windows-vs2019-32/hashlink-${short_commit}-win32.zip#hashlink-latest-win32.zip" \
+            "windows-vs2019-64/hashlink-${short_commit}-win64.zip#hashlink-latest-win64.zip" \
+            "windows-cmake-mingw-64/hashlink-${short_commit}-win64-cmake-mingw.zip#hashlink-latest-win64-mingw.zip"

@@ -1,9 +1,7 @@
 package dx;
 
 #if !dx12
-
 typedef DriverInstance = hl.Abstract<"dx_driver">;
-
 typedef Pointer = hl.Abstract<"dx_pointer">;
 
 abstract Shader(Pointer) {
@@ -61,8 +59,11 @@ abstract ShaderResourceView(Pointer) {
 }
 
 abstract DxBool(Int) {
-	@:to public inline function toBool() : Bool return cast this;
-	@:from static function fromBool( b : Bool ) : DxBool return cast b;
+	@:to public inline function toBool():Bool
+		return cast this;
+
+	@:from static function fromBool(b:Bool):DxBool
+		return cast b;
 }
 
 enum abstract DriverInitFlags(Int) {
@@ -76,7 +77,8 @@ enum abstract DriverInitFlags(Int) {
 	var PreventAlteringLayerSettingsFromRegistry = 128;
 	var DisableGpuTimeout = 256;
 	var VideoSupport = 2048;
-	@:op(a | b) static function or(a:DriverInitFlags, b:DriverInitFlags) : DriverInitFlags;
+
+	@:op(a | b) static function or(a:DriverInitFlags, b:DriverInitFlags):DriverInitFlags;
 }
 
 enum abstract ResourceUsage(Int) {
@@ -98,14 +100,16 @@ enum abstract ResourceBind(Int) {
 	var UnorderedAccess = 128;
 	var Decoder = 512;
 	var VideoDecoder = 1024;
-	@:op(a | b) static function or(a:ResourceBind, b:ResourceBind) : ResourceBind;
+
+	@:op(a | b) static function or(a:ResourceBind, b:ResourceBind):ResourceBind;
 }
 
 enum abstract ResourceAccess(Int) {
 	var None = 0;
 	var CpuWrite = 0x10000;
 	var CpuRead = 0x20000;
-	@:op(a | b) static function or(a:ResourceAccess, b:ResourceAccess) : ResourceAccess;
+
+	@:op(a | b) static function or(a:ResourceAccess, b:ResourceAccess):ResourceAccess;
 }
 
 enum abstract ResourceMisc(Int) {
@@ -127,7 +131,8 @@ enum abstract ResourceMisc(Int) {
 	var TilePool = 0x20000;
 	var Tiled = 0x40000;
 	var HWProtected = 0x80000;
-	@:op(a | b) static function or(a:ResourceMisc, b:ResourceMisc) : ResourceMisc;
+
+	@:op(a | b) static function or(a:ResourceMisc, b:ResourceMisc):ResourceMisc;
 }
 
 enum abstract ShaderFlags(Int) {
@@ -154,7 +159,8 @@ enum abstract ShaderFlags(Int) {
 	var ResourcesMayAlias = 0x80000;
 	var EnableUnboundedDescriptorTables = 0x100000;
 	var AllResourcesBound = 0x200000;
-	@:op(a | b) static function or(a:ShaderFlags, b:ShaderFlags) : ShaderFlags;
+
+	@:op(a | b) static function or(a:ShaderFlags, b:ShaderFlags):ShaderFlags;
 }
 
 enum abstract PrimitiveTopology(Int) {
@@ -167,7 +173,9 @@ enum abstract PrimitiveTopology(Int) {
 	var LineListAdj = 10;
 	var TriangleListAdj = 12;
 	var TriangleStripAdj = 13;
-	static inline function controlPointPatchList(count:Int) : PrimitiveTopology return cast (count + 32);
+
+	static inline function controlPointPatchList(count:Int):PrimitiveTopology
+		return cast(count + 32);
 }
 
 enum abstract DisassembleFlags(Int) {
@@ -180,7 +188,8 @@ enum abstract DisassembleFlags(Int) {
 	var EnableInstructionOffset = 0x20;
 	var InstructionOnly = 0x40;
 	var PrintHexLiterals = 0x80;
-	@:op(a | b) static function or(a:DisassembleFlags, b:DisassembleFlags) : DisassembleFlags;
+
+	@:op(a | b) static function or(a:DisassembleFlags, b:DisassembleFlags):DisassembleFlags;
 }
 
 enum abstract LayoutClassification(Int) {
@@ -190,15 +199,15 @@ enum abstract LayoutClassification(Int) {
 
 @:keep
 class LayoutElement {
-	public var semanticName : hl.Bytes;
-	public var semanticIndex : Int;
-	public var format : Format;
-	public var inputSlot : Int;
-	public var alignedByteOffset : Int;
-	public var inputSlotClass : LayoutClassification;
-	public var instanceDataStepRate : Int;
-	public function new() {
-	}
+	public var semanticName:hl.Bytes;
+	public var semanticIndex:Int;
+	public var format:Format;
+	public var inputSlot:Int;
+	public var alignedByteOffset:Int;
+	public var inputSlotClass:LayoutClassification;
+	public var instanceDataStepRate:Int;
+
+	public function new() {}
 }
 
 enum abstract ResourceDimension(Int) {
@@ -218,25 +227,32 @@ enum abstract ResourceDimension(Int) {
 
 @:keep
 class RenderTargetDesc {
-	public var format : Format;
-	public var dimension : ResourceDimension;
-	public var mipMap : Int;
-	public var firstSlice : Int;
-	public var sliceCount : Int;
+	public var format:Format;
+	public var dimension:ResourceDimension;
+	public var mipMap:Int;
+	public var firstSlice:Int;
+	public var sliceCount:Int;
 
 	// for buffer
-	public var firstElement(get, set) : Int;
-	public var elementCount(get, set) : Int;
+	public var firstElement(get, set):Int;
+	public var elementCount(get, set):Int;
 
 	public function new(format, dimension = Unknown) {
 		this.format = format;
 		this.dimension = dimension;
 	}
 
-	inline function get_firstElement() return mipMap;
-	inline function set_firstElement(m) return mipMap = m;
-	inline function get_elementCount() return firstSlice;
-	inline function set_elementCount(m) return firstSlice = m;
+	inline function get_firstElement()
+		return mipMap;
+
+	inline function set_firstElement(m)
+		return mipMap = m;
+
+	inline function get_elementCount()
+		return firstSlice;
+
+	inline function set_elementCount(m)
+		return firstSlice = m;
 }
 
 enum abstract FillMode(Int) {
@@ -252,37 +268,39 @@ enum abstract CullMode(Int) {
 
 @:keep
 class RasterizerDesc {
-	public var fillMode : FillMode;
-	public var cullMode : CullMode;
-	public var frontCounterClockwise : DxBool;
-	public var depthBias : Int;
-	public var depthBiasClamp : hl.F32;
-	public var slopeScaledDepthBias : hl.F32;
-	public var depthClipEnable : DxBool;
-	public var scissorEnable : DxBool;
-	public var multisampleEnable : DxBool;
-	public var antialiasedLineEnable : DxBool;
-	public function new() {
-	}
+	public var fillMode:FillMode;
+	public var cullMode:CullMode;
+	public var frontCounterClockwise:DxBool;
+	public var depthBias:Int;
+	public var depthBiasClamp:hl.F32;
+	public var slopeScaledDepthBias:hl.F32;
+	public var depthClipEnable:DxBool;
+	public var scissorEnable:DxBool;
+	public var multisampleEnable:DxBool;
+	public var antialiasedLineEnable:DxBool;
+
+	public function new() {}
 }
 
 @:keep
 class Texture2dDesc {
-	public var width : Int;
-	public var height : Int;
-	public var mipLevels : Int;
-	public var arraySize : Int;
-	public var format : Format;
-	public var sampleCount : Int;
-	public var sampleQuality : Int;
-	public var usage : ResourceUsage;
-	public var bind : ResourceBind;
-	public var access : ResourceAccess;
-	public var misc : ResourceMisc;
+	public var width:Int;
+	public var height:Int;
+	public var mipLevels:Int;
+	public var arraySize:Int;
+	public var format:Format;
+	public var sampleCount:Int;
+	public var sampleQuality:Int;
+	public var usage:ResourceUsage;
+	public var bind:ResourceBind;
+	public var access:ResourceAccess;
+	public var misc:ResourceMisc;
+
 	#if hlxbo
-	var esramOffset : Int;
-	var esramUsage : Int;
+	var esramOffset:Int;
+	var esramUsage:Int;
 	#end
+
 	public function new() {
 		mipLevels = arraySize = sampleCount = 1;
 	}
@@ -312,42 +330,41 @@ enum abstract StencilOp(Int) {
 
 @:keep
 class DepthStencilDesc {
-	public var depthEnable : DxBool;
-	public var depthWrite : DxBool;
-	public var depthFunc : ComparisonFunc;
+	public var depthEnable:DxBool;
+	public var depthWrite:DxBool;
+	public var depthFunc:ComparisonFunc;
 
-	public var stencilEnable : DxBool;
-	public var stencilReadMask : hl.UI8;
-	public var stencilWriteMask : hl.UI8;
+	public var stencilEnable:DxBool;
+	public var stencilReadMask:hl.UI8;
+	public var stencilWriteMask:hl.UI8;
 
-	public var frontFaceFail : StencilOp;
-	public var frontFaceDepthFail : StencilOp;
-	public var frontFacePass : StencilOp;
-	public var frontFaceFunc : ComparisonFunc;
+	public var frontFaceFail:StencilOp;
+	public var frontFaceDepthFail:StencilOp;
+	public var frontFacePass:StencilOp;
+	public var frontFaceFunc:ComparisonFunc;
 
-	public var backFaceFail : StencilOp;
-	public var backFaceDepthFail : StencilOp;
-	public var backFacePass : StencilOp;
-	public var backFaceFunc : ComparisonFunc;
+	public var backFaceFail:StencilOp;
+	public var backFaceDepthFail:StencilOp;
+	public var backFacePass:StencilOp;
+	public var backFaceFunc:ComparisonFunc;
 
 	#if hlxbo
-	public var backfaceEnable : DxBool;
-	public var depthBoundsEnable : DxBool;
-	public var colorWritesOnDepthFailEnable : DxBool;
-	public var colorWritesOnDepthPassDisable : DxBool;
+	public var backfaceEnable:DxBool;
+	public var depthBoundsEnable:DxBool;
+	public var colorWritesOnDepthFailEnable:DxBool;
+	public var colorWritesOnDepthPassDisable:DxBool;
 
-	public var stencilReadMaskBack : hl.UI8;
-	public var stencilWriteMaskBack : hl.UI8;
+	public var stencilReadMaskBack:hl.UI8;
+	public var stencilWriteMaskBack:hl.UI8;
 
-	public var stencilTestRefValueFront : hl.UI8;
-	public var stencilTestRefValueBack : hl.UI8;
+	public var stencilTestRefValueFront:hl.UI8;
+	public var stencilTestRefValueBack:hl.UI8;
 
-	public var stencilOpRefValueFront : hl.UI8;
-	public var stencilOpRefValueBack : hl.UI8;
+	public var stencilOpRefValueFront:hl.UI8;
+	public var stencilOpRefValueBack:hl.UI8;
 	#end
 
-	public function new() {
-	}
+	public function new() {}
 }
 
 enum abstract Blend(Int) {
@@ -380,18 +397,16 @@ enum abstract BlendOp(Int) {
 
 @:keep
 class RenderTargetBlendDesc {
+	public var blendEnable:DxBool;
+	public var srcBlend:Blend;
+	public var destBlend:Blend;
+	public var blendOp:BlendOp;
+	public var srcBlendAlpha:Blend;
+	public var destBlendAlpha:Blend;
+	public var blendOpAlpha:BlendOp;
+	public var renderTargetWriteMask:hl.UI8;
 
-	public var blendEnable : DxBool;
-	public var srcBlend : Blend;
-	public var destBlend : Blend;
-	public var blendOp : BlendOp;
-	public var srcBlendAlpha : Blend;
-	public var destBlendAlpha : Blend;
-	public var blendOpAlpha : BlendOp;
-	public var renderTargetWriteMask : hl.UI8;
-
-	public function new() {
-	}
+	public function new() {}
 }
 
 enum abstract Filter(Int) {
@@ -443,33 +458,33 @@ enum abstract AddressMode(Int) {
 
 @:keep
 class SamplerDesc {
-	public var filter : Filter;
-	public var addressU : AddressMode;
-	public var addressV : AddressMode;
-	public var addressW : AddressMode;
-	public var mipLodBias : hl.F32;
-	public var maxAnisotropy : Int;
-	public var comparisonFunc : ComparisonFunc;
-	public var borderColorR : hl.F32;
-	public var borderColorG : hl.F32;
-	public var borderColorB : hl.F32;
-	public var borderColorA : hl.F32;
-	public var minLod : hl.F32;
-	public var maxLod : hl.F32;
-	public function new() {
-	}
+	public var filter:Filter;
+	public var addressU:AddressMode;
+	public var addressV:AddressMode;
+	public var addressW:AddressMode;
+	public var mipLodBias:hl.F32;
+	public var maxAnisotropy:Int;
+	public var comparisonFunc:ComparisonFunc;
+	public var borderColorR:hl.F32;
+	public var borderColorG:hl.F32;
+	public var borderColorB:hl.F32;
+	public var borderColorA:hl.F32;
+	public var minLod:hl.F32;
+	public var maxLod:hl.F32;
+
+	public function new() {}
 }
 
 @:keep
 class ShaderResourceViewDesc {
-	public var format : Format;
-	public var dimension : ResourceDimension;
-	public var start : Int;
-	public var count : Int;
-	public var firstArraySlice : Int;
-	public var arraySize : Int;
-	public function new() {
-	}
+	public var format:Format;
+	public var dimension:ResourceDimension;
+	public var start:Int;
+	public var count:Int;
+	public var firstArraySlice:Int;
+	public var arraySize:Int;
+
+	public function new() {}
 }
 
 enum abstract PresentFlags(Int) {
@@ -483,13 +498,13 @@ enum abstract PresentFlags(Int) {
 	var StereoTemporaryMono = 0x40;
 	var UseDuration = 0x100;
 	var AllowTearing = 0x200;
-	@:op(a | b) static function or(a:PresentFlags, b:PresentFlags) : PresentFlags;
+
+	@:op(a | b) static function or(a:PresentFlags, b:PresentFlags):PresentFlags;
 }
 
 @:hlNative("directx")
 class Driver {
-
-	public static var fullScreen(get, set) : Bool;
+	public static var fullScreen(get, set):Bool;
 
 	/**
 		Setup an error handler instead of getting String exceptions:
@@ -498,62 +513,54 @@ class Driver {
 		The third parameter is the line in directx.cpp sources where was triggered the error.
 		Allocation methods will return null if an error handler is setup and does not raise exception.
 	**/
-	public static function setErrorHandler( f : Int -> Int -> Int -> Void ) {
-	}
+	public static function setErrorHandler(f:Int->Int->Int->Void) {}
 
-	public static function create( win : Window, format : Format, flags : DriverInitFlags = None, restrictLevel = 0 ) {
+	public static function create(win:Window, format:Format, flags:DriverInitFlags = None, restrictLevel = 0) {
 		return dxCreate(@:privateAccess win.win, format, flags, restrictLevel);
 	}
 
-	public static function disposeDriver( driver : DriverInstance ) {
-	}
+	public static function disposeDriver(driver:DriverInstance) {}
 
-	public static function resize( width : Int, height : Int, format : Format ) : Bool {
+	public static function resize(width:Int, height:Int, format:Format):Bool {
 		return false;
 	}
 
-	public static function getBackBuffer() : Resource {
+	public static function getBackBuffer():Resource {
 		return null;
 	}
 
-	public static function createRenderTargetView( r : Resource, ?desc : RenderTargetDesc ) : RenderTargetView {
-		return dxCreateRenderTargetView(r,desc);
+	public static function createRenderTargetView(r:Resource, ?desc:RenderTargetDesc):RenderTargetView {
+		return dxCreateRenderTargetView(r, desc);
 	}
 
-	public static function omSetRenderTargets( count : Int, arr : hl.Ref<RenderTargetView>, ?depth : DepthStencilView ) {
-	}
+	public static function omSetRenderTargets(count:Int, arr:hl.Ref<RenderTargetView>, ?depth:DepthStencilView) {}
 
-	public static function createRasterizerState( desc : RasterizerDesc ) : RasterState {
+	public static function createRasterizerState(desc:RasterizerDesc):RasterState {
 		return dxCreateRasterizerState(desc);
 	}
 
-	public static function rsSetState( r : RasterState ) {
-	}
+	public static function rsSetState(r:RasterState) {}
 
-	public static function rsSetViewports( count : Int, bytes : hl.BytesAccess<hl.F32> ) {
-	}
+	public static function rsSetViewports(count:Int, bytes:hl.BytesAccess<hl.F32>) {}
 
-	public static function rsSetScissorRects( count : Int, rects : hl.BytesAccess<Int> ) {
-	}
+	public static function rsSetScissorRects(count:Int, rects:hl.BytesAccess<Int>) {}
 
-	public static function clearColor( rt : RenderTargetView, r : Float, g : Float, b : Float, a : Float ) {
-	}
+	public static function clearColor(rt:RenderTargetView, r:Float, g:Float, b:Float, a:Float) {}
 
-	public static function present( intervals : Int, flags : PresentFlags ) {
-	}
+	public static function present(intervals:Int, flags:PresentFlags) {}
 
 	public static function getDeviceName() {
 		return @:privateAccess String.fromUCS2(dxGetDeviceName());
 	}
 
-	public static function getSupportedVersion() : Float {
+	public static function getSupportedVersion():Float {
 		return 0.;
 	}
 
-	public static function compileShader( data : String, source : String, entryPoint : String, target : String, flags : ShaderFlags ) : haxe.io.Bytes @:privateAccess {
+	public static function compileShader(data:String, source:String, entryPoint:String, target:String, flags:ShaderFlags):haxe.io.Bytes @:privateAccess {
 		var isError = false, size = 0;
 		var out = dxCompileShader(data.toUtf8(), data.length, source.toUtf8(), entryPoint.toUtf8(), target.toUtf8(), flags, isError, size);
-		if( isError )
+		if (isError)
 			throw String.fromUTF8(out);
 		#if (haxe_ver < 4)
 		throw "Haxe 4.x required";
@@ -562,121 +569,106 @@ class Driver {
 		#end
 	}
 
-	public static function disassembleShader( data : haxe.io.Bytes, flags : DisassembleFlags, ?comments : String ) : String {
+	public static function disassembleShader(data:haxe.io.Bytes, flags:DisassembleFlags, ?comments:String):String {
 		var size = 0;
 		var out = dxDisassembleShader(data, data.length, flags, comments == null ? null : @:privateAccess comments.toUtf8(), size);
-		if( out == null )
+		if (out == null)
 			throw "Could not disassemble shader";
 		return @:privateAccess String.fromUTF8(out);
 	}
 
-	public static function releasePointer( p : Pointer ) {
-	}
+	public static function releasePointer(p:Pointer) {}
 
-	public static function createVertexShader( bytes : haxe.io.Bytes ) {
+	public static function createVertexShader(bytes:haxe.io.Bytes) {
 		return dxCreateVertexShader(bytes, bytes.length);
 	}
 
-	public static function createPixelShader( bytes : haxe.io.Bytes ) {
+	public static function createPixelShader(bytes:haxe.io.Bytes) {
 		return dxCreatePixelShader(bytes, bytes.length);
 	}
 
-	public static function drawIndexed( indexCount : Int, startIndex : Int, baseVertex : Int ) : Void {
-	}
+	public static function drawIndexed(indexCount:Int, startIndex:Int, baseVertex:Int):Void {}
 
-	public static function drawIndexedInstanced( indexCountPerInstance : Int, instanceCount : Int, startIndexLocation : Int, baseVertexLocation : Int, startInstanceLocation : Int ) {
-	}
+	public static function drawIndexedInstanced(indexCountPerInstance:Int, instanceCount:Int, startIndexLocation:Int, baseVertexLocation:Int,
+		startInstanceLocation:Int) {}
 
-	public static function drawIndexedInstancedIndirect( buffer : Resource, offset : Int ) : Void {
-	}
+	public static function drawIndexedInstancedIndirect(buffer:Resource, offset:Int):Void {}
 
-	public static function vsSetShader( shader : Shader ) : Void {
-	}
+	public static function vsSetShader(shader:Shader):Void {}
 
-	public static function vsSetConstantBuffers( start : Int, count : Int, buffers : hl.Ref<Resource> ) : Void {
-	}
+	public static function vsSetConstantBuffers(start:Int, count:Int, buffers:hl.Ref<Resource>):Void {}
 
-	public static function psSetShader( shader : Shader ) : Void {
-	}
+	public static function psSetShader(shader:Shader):Void {}
 
-	public static function psSetConstantBuffers( start : Int, count : Int, buffers : hl.Ref<Resource> ) : Void {
-	}
+	public static function psSetConstantBuffers(start:Int, count:Int, buffers:hl.Ref<Resource>):Void {}
 
-	public static function iaSetPrimitiveTopology( topology : PrimitiveTopology ) : Void {
-	}
+	public static function iaSetPrimitiveTopology(topology:PrimitiveTopology):Void {}
 
-	public static function iaSetIndexBuffer( buffer : Resource, is32Bits : Bool, offset : Int ) : Void {
-	}
+	public static function iaSetIndexBuffer(buffer:Resource, is32Bits:Bool, offset:Int):Void {}
 
-	public static function iaSetVertexBuffers( start : Int, count : Int, buffers : hl.Ref<Resource>, strides : hl.BytesAccess<Int>, offsets : hl.BytesAccess<Int> ) : Void {
-	}
+	public static function iaSetVertexBuffers(start:Int, count:Int, buffers:hl.Ref<Resource>, strides:hl.BytesAccess<Int>, offsets:hl.BytesAccess<Int>):Void {}
 
-	public static function iaSetInputLayout( layout : Layout ) : Void {
-	}
+	public static function iaSetInputLayout(layout:Layout):Void {}
 
-	public static function createInputLayout( elements : hl.NativeArray<LayoutElement>, shaderBytes : hl.Bytes, shaderSize : Int ) : Layout {
+	public static function createInputLayout(elements:hl.NativeArray<LayoutElement>, shaderBytes:hl.Bytes, shaderSize:Int):Layout {
 		return null;
 	}
 
-	public static function createBuffer( size : Int, usage : ResourceUsage, bind : ResourceBind, access : ResourceAccess, misc : ResourceMisc, stride : Int, data : hl.Bytes ) : Resource {
+	public static function createBuffer(size:Int, usage:ResourceUsage, bind:ResourceBind, access:ResourceAccess, misc:ResourceMisc, stride:Int,
+			data:hl.Bytes):Resource {
 		return null;
 	}
 
-	public static function createTexture2d( desc : Texture2dDesc, ?data : hl.Bytes ) : Resource {
-		return dxCreateTexture2d(desc,data);
+	public static function createTexture2d(desc:Texture2dDesc, ?data:hl.Bytes):Resource {
+		return dxCreateTexture2d(desc, data);
 	}
 
-	public static function createDepthStencilView( texture : Resource, format : Format, readOnly : Bool ) : DepthStencilView {
+	public static function createDepthStencilView(texture:Resource, format:Format, readOnly:Bool):DepthStencilView {
 		return null;
 	}
 
-	public static function omSetDepthStencilState( state : DepthStencilState, ref : Int ) : Void {
-	}
+	public static function omSetDepthStencilState(state:DepthStencilState, ref:Int):Void {}
 
-	public static function clearDepthStencilView( view : DepthStencilView, depth : Null<Float>, stencil : Null<Int> ) {
-	}
+	public static function clearDepthStencilView(view:DepthStencilView, depth:Null<Float>, stencil:Null<Int>) {}
 
-	public static function createDepthStencilState( desc : DepthStencilDesc ) : DepthStencilState {
+	public static function createDepthStencilState(desc:DepthStencilDesc):DepthStencilState {
 		return dxCreateDepthStencilState(desc);
 	}
 
-	public static function createBlendState( alphaToCoverage : Bool, independentBlend : Bool, blendDesc : hl.NativeArray<RenderTargetBlendDesc>, count : Int ) : BlendState {
+	public static function createBlendState(alphaToCoverage:Bool, independentBlend:Bool, blendDesc:hl.NativeArray<RenderTargetBlendDesc>,
+			count:Int):BlendState {
 		return null;
 	}
 
-	public static function omSetBlendState( state : BlendState, factors : hl.BytesAccess<hl.F32>, sampleMask : Int ) {
-	}
+	public static function omSetBlendState(state:BlendState, factors:hl.BytesAccess<hl.F32>, sampleMask:Int) {}
 
-	public static function createSamplerState( state : SamplerDesc ) : SamplerState {
+	public static function createSamplerState(state:SamplerDesc):SamplerState {
 		return dxCreateSamplerState(state);
 	}
 
-	public static function createShaderResourceView( res : Resource, desc : ShaderResourceViewDesc ) : ShaderResourceView {
+	public static function createShaderResourceView(res:Resource, desc:ShaderResourceViewDesc):ShaderResourceView {
 		return dxCreateShaderResourceView(res, desc);
 	}
 
-	public static function psSetSamplers( start : Int, count : Int, arr : hl.Ref<SamplerState> ) {
-	}
+	public static function psSetSamplers(start:Int, count:Int, arr:hl.Ref<SamplerState>) {}
 
-	public static function vsSetSamplers( start : Int, count : Int, arr : hl.Ref<SamplerState> ) {
-	}
+	public static function vsSetSamplers(start:Int, count:Int, arr:hl.Ref<SamplerState>) {}
 
-	public static function psSetShaderResources( start : Int, count : Int, arr : hl.Ref<ShaderResourceView> ) {
-	}
+	public static function psSetShaderResources(start:Int, count:Int, arr:hl.Ref<ShaderResourceView>) {}
 
-	public static function vsSetShaderResources( start : Int, count : Int, arr : hl.Ref<ShaderResourceView> ) {
-	}
+	public static function vsSetShaderResources(start:Int, count:Int, arr:hl.Ref<ShaderResourceView>) {}
 
-	public static function generateMips( res : ShaderResourceView ) {
-	}
+	public static function generateMips(res:ShaderResourceView) {}
 
-	public static function debugPrint( v : Dynamic ) {
+	public static function debugPrint(v:Dynamic) {
 		dxDebugPrint(@:privateAccess Std.string(v).bytes);
 	}
 
-	static function get_fullScreen() return getFullscreenState();
+	static function get_fullScreen()
+		return getFullscreenState();
+
 	static function set_fullScreen(b) {
-		if( !setFullscreenState(b) )
+		if (!setFullscreenState(b))
 			return false;
 		return b;
 	}
@@ -685,81 +677,83 @@ class Driver {
 		return false;
 	}
 
-	static function setFullscreenState( b : Bool ) {
+	static function setFullscreenState(b:Bool) {
 		return false;
 	}
 
 	@:hlNative("directx", "create_depth_stencil_state")
-	static function dxCreateDepthStencilState( desc : Dynamic ) : DepthStencilState {
+	static function dxCreateDepthStencilState(desc:Dynamic):DepthStencilState {
 		return null;
 	}
 
 	@:hlNative("directx", "create_rasterizer_state")
-	static function dxCreateRasterizerState( desc : Dynamic ) : RasterState {
+	static function dxCreateRasterizerState(desc:Dynamic):RasterState {
 		return null;
 	}
 
 	@:hlNative("directx", "create_render_target_view")
-	static function dxCreateRenderTargetView( r : Resource, desc : Dynamic ) : RenderTargetView {
+	static function dxCreateRenderTargetView(r:Resource, desc:Dynamic):RenderTargetView {
 		return null;
 	}
 
-	@:hlNative("directx","create")
-	static function dxCreate( win : hl.Abstract<"dx_window">, format : Format, flags : DriverInitFlags, restrictLevel : Int ) : DriverInstance { return null; }
+	@:hlNative("directx", "create")
+	static function dxCreate(win:hl.Abstract<"dx_window">, format:Format, flags:DriverInitFlags, restrictLevel:Int):DriverInstance {
+		return null;
+	}
 
-	@:hlNative("directx","get_device_name")
-	static function dxGetDeviceName() : hl.Bytes { return null; }
+	@:hlNative("directx", "get_device_name")
+	static function dxGetDeviceName():hl.Bytes {
+		return null;
+	}
 
-	@:hlNative("directx","compile_shader")
-	static function dxCompileShader( data : hl.Bytes, size : Int, source : hl.Bytes, entry : hl.Bytes, target : hl.Bytes, flags : ShaderFlags, error : hl.Ref<Bool>, outSize : hl.Ref<Int> ) : hl.Bytes {
+	@:hlNative("directx", "compile_shader")
+	static function dxCompileShader(data:hl.Bytes, size:Int, source:hl.Bytes, entry:hl.Bytes, target:hl.Bytes, flags:ShaderFlags, error:hl.Ref<Bool>,
+			outSize:hl.Ref<Int>):hl.Bytes {
 		return null;
 	}
 
 	@:hlNative("directx", "disassemble_shader")
-	static function dxDisassembleShader( data : hl.Bytes, size : Int, flags : DisassembleFlags, comments : hl.Bytes, outSize : hl.Ref<Int> ) : hl.Bytes {
+	static function dxDisassembleShader(data:hl.Bytes, size:Int, flags:DisassembleFlags, comments:hl.Bytes, outSize:hl.Ref<Int>):hl.Bytes {
 		return null;
 	}
 
-	@:hlNative("directx","create_vertex_shader")
-	static function dxCreateVertexShader( data : hl.Bytes, size : Int ) : Shader {
+	@:hlNative("directx", "create_vertex_shader")
+	static function dxCreateVertexShader(data:hl.Bytes, size:Int):Shader {
 		return null;
 	}
 
-	@:hlNative("directx","create_pixel_shader")
-	static function dxCreatePixelShader( data : hl.Bytes, size : Int ) : Shader {
+	@:hlNative("directx", "create_pixel_shader")
+	static function dxCreatePixelShader(data:hl.Bytes, size:Int):Shader {
 		return null;
 	}
 
-	@:hlNative("directx","create_texture_2d")
-	static function dxCreateTexture2d( desc : Dynamic, data : hl.Bytes ) : Resource {
+	@:hlNative("directx", "create_texture_2d")
+	static function dxCreateTexture2d(desc:Dynamic, data:hl.Bytes):Resource {
 		return null;
 	}
 
-	@:hlNative("directx","create_sampler_state")
-	static function dxCreateSamplerState( desc : Dynamic ) : SamplerState {
+	@:hlNative("directx", "create_sampler_state")
+	static function dxCreateSamplerState(desc:Dynamic):SamplerState {
 		return null;
 	}
 
-	@:hlNative("directx","create_shader_resource_view")
-	static function dxCreateShaderResourceView( res : Resource, desc : Dynamic ) : ShaderResourceView {
+	@:hlNative("directx", "create_shader_resource_view")
+	static function dxCreateShaderResourceView(res:Resource, desc:Dynamic):ShaderResourceView {
 		return null;
 	}
 
-	@:hlNative("directx","debug_print")
-	static function dxDebugPrint( str : hl.Bytes ) {
-	}
+	@:hlNative("directx", "debug_print")
+	static function dxDebugPrint(str:hl.Bytes) {}
 
 	@:deprecated("dx.Driver.detectKeyboardLayout is deprecated. Use dx.Window.detectKeyboardLayout instead.")
 	public static function detectKeyboardLayout() @:privateAccess {
-		return String.fromUTF8( dxDetectKeyboardLayout() );
+		return String.fromUTF8(dxDetectKeyboardLayout());
 	}
 
 	@:deprecated("dx.Driver.dxDetectKeyboardLayout is deprecated. Use dx.Window.dxDetectKeyboardLayout instead.")
 	@:hlNative("directx", "detect_keyboard_layout")
-	static function dxDetectKeyboardLayout() : hl.Bytes {
+	static function dxDetectKeyboardLayout():hl.Bytes {
 		return null;
 	}
-
 }
-
 #end
