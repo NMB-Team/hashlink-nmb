@@ -200,6 +200,22 @@ jobs:
               ;;
           esac
 
+      - name: 'Build and install SDL3 from source'
+        if: matrix.target == 'linux'
+        run: |
+          set -eux
+          curl -fsSL --retry 3 --retry-delay 5 -o /tmp/sdl3.tar.gz \
+            https://github.com/libsdl-org/SDL/releases/download/release-3.4.0/SDL3-3.4.0.tar.gz
+          tar xf /tmp/sdl3.tar.gz -C /tmp
+          cmake -S /tmp/SDL3-3.4.0 -B /tmp/sdl3-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSDL_TEST=OFF \
+            -DSDL_STATIC=OFF \
+            -DSDL_SHARED=ON
+          cmake --build /tmp/sdl3-build --parallel
+          sudo cmake --install /tmp/sdl3-build
+          sudo ldconfig
+
       - name: 'Download: DirectX binaries for windows + make'
         if: matrix.target == 'windows' && matrix.build_system != 'cmake' && matrix.build_system != 'cmake-mingw'
         run: |

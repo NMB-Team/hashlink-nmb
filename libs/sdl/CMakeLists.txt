@@ -6,8 +6,8 @@ add_library(sdl.hdll
 if ((NOT WIN32) AND DOWNLOAD_DEPENDENCIES)
     FetchContent_Declare(
         SDL3
-        URL https://github.com/libsdl-org/SDL/releases/download/release-3.4.0/SDL3-devel-3.4.0-VC.zip
-        URL_HASH SHA256=4489ba0070b8ce047b8717e4b71fa7e35ac71362e7a6bb2a90a7a27f624b3d5d
+        URL https://github.com/libsdl-org/SDL/releases/download/release-3.4.0/SDL3-3.4.0.tar.gz
+        URL_HASH SHA256=082cbf5f429e0d80820f68dc2b507a94d4cc1b4e70817b119bbb8ec6a69584b8
         EXCLUDE_FROM_ALL
     )
     set(SDL_TEST OFF CACHE INTERNAL "")
