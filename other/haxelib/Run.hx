@@ -59,40 +59,52 @@ class Build {
 				};
 				Sys.command("haxelib", ["--cwd", targetDir, "run", "hxcpp", "Build.xml"].concat(config.defines.exists("debug") ? ["-Ddebug"] : []).concat(platformArgs));
 			case "vs2019", "vs2022", "vs2026":
-				var version = switch (tpl) {
-					case "vs2019": "[16.0,17.0]";
-					case "vs2022": "[17.0,18.0]";
-					case "vs2026": "[18.0,19.0]";
+				var versions = switch (tpl) {
+					case "vs2019": ["[16.0,17.0]"];
+					case "vs2022": ["[17.0,18.0]", "[18.0,19.0]"];
+					case "vs2026": ["[18.0,19.0]"];
 					default: null;
 				}
-				var vswhereProc = new sys.io.Process("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe", ["-requires", "Microsoft.Component.MSBuild", "-find", "MSBuild",
-					"-version", version
-				]);
 				var code = 0;
-				if( vswhereProc.exitCode() == 0 ) {
-					var msbuildPath = StringTools.trim(try vswhereProc.stdout.readLine().toString() catch (e:haxe.io.Eof) "");
-					if( msbuildPath.length > 0 ) {
-						var prevCwd = Sys.getCwd();
-						var msbuild = '$msbuildPath\\Current\\Bin\\MSBuild.exe';
-						var platform = switch config.defines.get("hlgen.build.architecture") {
-							case 'x86_32': 'x86';
-							case _: 'x64';
-						};
-						var configuration = config.defines.exists("debug") ? "Debug" : "Release";
-						var msbuildArgs = ['$name.sln', '-t:$name', "-nologo", "-verbosity:minimal", '-property:Configuration=$configuration', '-property:Platform=$platform'];
-						log('"$msbuild"' + " " + msbuildArgs.join(" "));
-						Sys.setCwd(targetDir);
-						code = Sys.command(msbuild, msbuildArgs);
-						Sys.setCwd(prevCwd);
+				var msbuild = "";
+				var selectedVersion = "";
+				var vswhereError = "";
+				for( version in versions ) {
+					var vswhereProc = new sys.io.Process("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe", ["-requires", "Microsoft.Component.MSBuild", "-products", "*", "-latest", "-find", "MSBuild\\Current\\Bin\\MSBuild.exe",
+						"-version", version
+					]);
+					if( vswhereProc.exitCode() == 0 ) {
+						msbuild = StringTools.trim(try vswhereProc.stdout.readLine().toString() catch (e:haxe.io.Eof) "");
+						if( msbuild.length > 0 ) {
+							selectedVersion = version;
+							vswhereProc.close();
+							break;
+						}
 					} else {
-						log('Failed to find a valid MSbuild installation for template $tpl.');
-						code = 1;
+						vswhereError += vswhereProc.stdout.readAll().toString() + vswhereProc.stderr.readAll().toString();
 					}
-				} else {
-					log("vswhere error: " + vswhereProc.stdout.readAll().toString() + vswhereProc.stderr.readAll().toString());
-					code = vswhereProc.exitCode();
+					vswhereProc.close();
 				}
-				vswhereProc.close();
+				if( msbuild.length > 0 ) {
+					var prevCwd = Sys.getCwd();
+					var platform = switch config.defines.get("hlgen.build.architecture") {
+						case 'x86_32': 'x86';
+						case _: 'x64';
+					};
+					var configuration = config.defines.exists("debug") ? "Debug" : "Release";
+					var msbuildArgs = ['$name.sln', '-t:$name', "-nologo", "-verbosity:minimal", '-property:Configuration=$configuration', '-property:Platform=$platform'];
+					if( tpl == "vs2022" && selectedVersion == "[18.0,19.0]" )
+						msbuildArgs.push("-property:PlatformToolset=v145");
+					log('"$msbuild"' + " " + msbuildArgs.join(" "));
+					Sys.setCwd(targetDir);
+					code = Sys.command(msbuild, msbuildArgs);
+					Sys.setCwd(prevCwd);
+				} else {
+					log('Failed to find a valid MSbuild installation for template $tpl.');
+					if( vswhereError.length > 0 )
+						log("vswhere error: " + vswhereError);
+					code = 1;
+				}
 				code;
 			case null:
 				log('Set -D hlgen.makefile for automatic native compilation');
