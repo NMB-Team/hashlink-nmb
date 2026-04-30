@@ -20,12 +20,18 @@
 #define TGL _ABSTRACT(sdl_gl)
 #define _SURF _ABSTRACT(sdl_surface)
 
+#if defined(HL_WIN_DESKTOP)
+#	define HL_SDL_WIN32_BORDERLESS
+#	define HL_SDL_BORDERLESS_SAVE_PROP "hashlink.borderless_save"
+#endif
+
 typedef struct {
 	int x;
 	int y;
 	int w;
 	int h;
 	int style;
+	int maximized;
 } wsave_pos;
 
 typedef enum {
@@ -89,6 +95,7 @@ typedef struct {
 	ws_change state;
 	int keyCode;
 	int scanCode;
+	int modifier;
 	bool keyRepeat;
 	int reference;
 	int value;
@@ -212,6 +219,12 @@ HL_PRIM bool HL_NAME(hint_value)( vbyte* name, vbyte* value) {
 	return SDL_SetHint((char*)name, (char*)value) == true;
 }
 
+static void sync_window_state( SDL_Window *win ) {
+#if SDL_VERSION_ATLEAST(3,2,0)
+	SDL_SyncWindow(win);
+#endif
+}
+
 HL_PRIM int HL_NAME(event_poll)( SDL_Event *e ) {
 	return SDL_PollEvent(e);
 }
@@ -291,6 +304,7 @@ HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
 			event->window = e.key.windowID;
 			event->keyCode = e.key.key;
 			event->scanCode = e.key.scancode;
+			event->modifier = e.key.mod;
 			event->keyRepeat = e.key.repeat != 0;
 			break;
 		case SDL_EVENT_KEY_UP:
@@ -298,6 +312,7 @@ HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
 			event->window = e.key.windowID;
 			event->keyCode = e.key.key;
 			event->scanCode = e.key.scancode;
+			event->modifier = e.key.mod;
 			break;
 		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 			event->type = MouseDown;
@@ -676,7 +691,7 @@ HL_PRIM SDL_Window *HL_NAME(win_create_ex)(int x, int y, int width, int height, 
 #endif
 #	ifdef HL_WIN
 	// force window to show even if the debugger force process windows to be hidden
-	if( (SDL_GetWindowFlags(win) & SDL_WINDOW_INPUT_FOCUS) == 0 ) {
+	if( !(sdlFlags & SDL_WINDOW_HIDDEN) && (SDL_GetWindowFlags(win) & SDL_WINDOW_INPUT_FOCUS) == 0 ) {
 		SDL_HideWindow(win);
 		SDL_ShowWindow(win);
 	}
@@ -698,23 +713,90 @@ HL_PRIM SDL_GLContext HL_NAME(win_get_glcontext)(SDL_Window *win) {
 }
 
 HL_PRIM bool HL_NAME(win_set_fullscreen)(SDL_Window *win, int mode) {
+#ifdef HL_SDL_WIN32_BORDERLESS
+	SDL_PropertiesID props = SDL_GetWindowProperties(win);
+	wsave_pos *save = (wsave_pos*)SDL_GetPointerProperty(props, HL_SDL_BORDERLESS_SAVE_PROP, NULL);
+	HWND wnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+	if( wnd == NULL )
+		return false;
+	if( save && mode != 2 ) {
+		// exit borderless
+		SetWindowLong(wnd, GWL_STYLE, save->style);
+		if( save->maximized ) {
+			WINDOWPLACEMENT placement = { sizeof(placement) };
+			placement.showCmd = SW_SHOWMAXIMIZED;
+			placement.rcNormalPosition.left = save->x;
+			placement.rcNormalPosition.top = save->y;
+			placement.rcNormalPosition.right = save->x + save->w;
+			placement.rcNormalPosition.bottom = save->y + save->h;
+			SetWindowPlacement(wnd, &placement);
+			SetWindowPos(wnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+		} else {
+			SetWindowPos(wnd, NULL, save->x, save->y, save->w, save->h, SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+			SDL_SetWindowSize(win, save->w, save->h);
+		}
+		free(save);
+		SDL_SetPointerProperty(props, HL_SDL_BORDERLESS_SAVE_PROP, NULL);
+		save = NULL;
+		if( mode == 1 )
+			sync_window_state(win);
+	}
+#endif
 	switch( mode ) {
 	case 0: // WINDOWED
 		return SDL_SetWindowFullscreen(win, false);
 	case 1: { // FULLSCREEN
 		// sdl3 non-standard behavior; force mode to get exclusive fullscreen.
 		const SDL_DisplayMode *fullscreen_mode = SDL_GetWindowFullscreenMode(win);
+		bool result;
 		if( fullscreen_mode == NULL )
 			fullscreen_mode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(win));
 		if( fullscreen_mode != NULL && !SDL_SetWindowFullscreenMode(win, fullscreen_mode) )
 			return false;
 
 		// Fall back to borderless if we can't find a mode.
-		return SDL_SetWindowFullscreen(win, true);
+		result = SDL_SetWindowFullscreen(win, true);
+		if( result )
+			sync_window_state(win);
+		return result;
 	}
 	case 2: // BORDERLESS
+#ifdef HL_SDL_WIN32_BORDERLESS
+		{
+			HMONITOR hmon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
+			MONITORINFO mi = { sizeof(mi) };
+			RECT r;
+			if( !GetMonitorInfo(hmon, &mi) )
+				return false;
+			if( !save ) {
+				WINDOWPLACEMENT placement = { sizeof(placement) };
+				bool maximized = IsZoomed(wnd) != 0;
+				if( maximized && GetWindowPlacement(wnd, &placement) )
+					r = placement.rcNormalPosition;
+				else
+					GetWindowRect(wnd, &r);
+				save = (wsave_pos*)malloc(sizeof(wsave_pos));
+				save->x = r.left;
+				save->y = r.top;
+				save->w = r.right - r.left;
+				save->h = r.bottom - r.top;
+				save->style = GetWindowLong(wnd, GWL_STYLE);
+				save->maximized = maximized ? 1 : 0;
+				SDL_SetPointerProperty(props, HL_SDL_BORDERLESS_SAVE_PROP, save);
+			}
+			SDL_SetWindowFullscreen(win, false);
+			if( save->maximized ) {
+				SDL_RestoreWindow(win);
+				ShowWindow(wnd, SW_RESTORE);
+			}
+			SetWindowLong(wnd, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+			SetWindowPos(wnd, NULL, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right - mi.rcMonitor.left, mi.rcMonitor.bottom - mi.rcMonitor.top + 2 /* prevent opengl driver to use exclusive mode !*/, SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+			return true;
+		}
+#else
 		SDL_SetWindowFullscreenMode(win, NULL);
 		return SDL_SetWindowFullscreen(win, true);
+#endif
 	}
 	return false;
 }
@@ -725,7 +807,10 @@ HL_PRIM bool HL_NAME(win_set_display_mode)(SDL_Window *win, int width, int heigh
 
 	if( SDL_GetClosestFullscreenDisplayMode( display_idx, width, height, framerate, true, &mode ) )
 	{
-		return SDL_SetWindowFullscreenMode(win, &mode);
+		bool result = SDL_SetWindowFullscreenMode(win, &mode);
+		if( result )
+			sync_window_state(win);
+		return result;
 	}
 	return false;
 }
@@ -830,6 +915,14 @@ HL_PRIM int HL_NAME(win_get_id)(SDL_Window *window) {
 }
 
 HL_PRIM void HL_NAME(win_destroy)(SDL_Window *win, SDL_GLContext gl) {
+#ifdef HL_SDL_WIN32_BORDERLESS
+	SDL_PropertiesID props = SDL_GetWindowProperties(win);
+	wsave_pos *save = (wsave_pos*)SDL_GetPointerProperty(props, HL_SDL_BORDERLESS_SAVE_PROP, NULL);
+	if( save ) {
+		free(save);
+		SDL_SetPointerProperty(props, HL_SDL_BORDERLESS_SAVE_PROP, NULL);
+	}
+#endif
 	SDL_DestroyWindow(win);
 	SDL_GL_DestroyContext(gl);
 }

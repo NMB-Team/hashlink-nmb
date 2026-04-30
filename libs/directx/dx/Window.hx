@@ -21,6 +21,7 @@ typedef DisplaySetting = {
 enum abstract DisplayMode(Int) {
 	var Windowed = 0;
 	var Fullscreen = 1;
+	var ExclusiveFullscreen = 1;
 	var Borderless = 2;
 }
 

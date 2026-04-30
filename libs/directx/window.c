@@ -197,6 +197,9 @@ static LRESULT CALLBACK WndProc( HWND wnd, UINT umsg, WPARAM wparam, LPARAM lpar
 		}
 		addState(Resize);
 		break;
+	case WM_SHOWWINDOW:
+		addState(wparam ? Show : Hide);
+		break;
 	case WM_LBUTTONDOWN: addMouse(MouseDown,1); break;
 	case WM_LBUTTONUP: addMouse(MouseUp,1); break;
 	case WM_MBUTTONDOWN: addMouse(MouseDown,2); break;

@@ -7,6 +7,7 @@ typedef DisplayHandle = Null<Int>;
 enum abstract DisplayMode(Int) {
 	var Windowed = 0;
 	var Fullscreen = 1;
+	var ExclusiveFullscreen = 1;
 	var Borderless = 2;
 }
 
@@ -149,11 +150,11 @@ class Window {
 	}
 
 	function set_displayMode(mode) {
+		if(mode == Fullscreen) {
+			try @:privateAccess sdl.Window.winSetDisplayMode(win, displaySetting.width, displaySetting.height, displaySetting.framerate) catch(_) {}
+		}
 		if( winSetFullscreen(win, mode) ) {
 			displayMode = mode;
-			if(mode == Fullscreen) {
-				try @:privateAccess sdl.Window.winSetDisplayMode(win, displaySetting.width, displaySetting.height, displaySetting.framerate) catch(_) {}
-			}
 		}
 		return displayMode;
 	}
