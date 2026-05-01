@@ -608,6 +608,10 @@ HL_PRIM const char *HL_NAME(detect_keyboard_layout)() {
 	return "unknown";
 }
 
+HL_PRIM const char *HL_NAME(win_error)() {
+	return SDL_GetError();
+}
+
 #define TWIN _ABSTRACT(sdl_window)
 DEFINE_PRIM(_BOOL, init_once, _NO_ARG);
 DEFINE_PRIM(_VOID, gl_options, _I32 _I32 _I32 _I32 _I32 _I32);
@@ -847,6 +851,10 @@ HL_PRIM void HL_NAME(win_set_max_size)(SDL_Window *win, int width, int height) {
 	SDL_SetWindowMaximumSize(win, width, height);
 }
 
+HL_PRIM void HL_NAME(win_get_pixel_size)(SDL_Window *win, int *width, int *height) {
+	SDL_GetWindowSizeInPixels(win, width, height);
+}
+
 HL_PRIM void HL_NAME(win_get_size)(SDL_Window *win, int *width, int *height) {
 	SDL_GetWindowSize(win, width, height);
 }
@@ -943,6 +951,7 @@ DEFINE_PRIM(_VOID, win_get_position, TWIN _REF(_I32) _REF(_I32));
 DEFINE_PRIM(_VOID, win_set_size, TWIN _I32 _I32);
 DEFINE_PRIM(_VOID, win_set_min_size, TWIN _I32 _I32);
 DEFINE_PRIM(_VOID, win_set_max_size, TWIN _I32 _I32);
+DEFINE_PRIM(_VOID, win_get_pixel_size, TWIN _REF(_I32) _REF(_I32));
 DEFINE_PRIM(_VOID, win_get_size, TWIN _REF(_I32) _REF(_I32));
 DEFINE_PRIM(_VOID, win_get_min_size, TWIN _REF(_I32) _REF(_I32));
 DEFINE_PRIM(_VOID, win_get_max_size, TWIN _REF(_I32) _REF(_I32));
@@ -951,6 +960,7 @@ DEFINE_PRIM(_BOOL, win_set_opacity, TWIN _F64);
 DEFINE_PRIM(_VOID, win_swap_window, TWIN);
 DEFINE_PRIM(_VOID, win_render_to, TWIN TGL);
 DEFINE_PRIM(_VOID, win_destroy, TWIN TGL);
+DEFINE_PRIM(_BYTES, win_error, _NO_ARG);
 DEFINE_PRIM(_I32, win_get_id, TWIN);
 
 // game controller

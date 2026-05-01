@@ -28,6 +28,8 @@ class TType {
 		this.closure = cl;
 		isDyn = t.isDynamic();
 		switch( t ) {
+		case HAbstract("hl_int_map" | "hl_int64_map" | "hl_bytes_map" | "hl_obj_map" | "hl_map_values"):
+			hasPtr = true;
 		case HFun(_):
 			hasPtr = cl != null && cl.isPtr();
 		default:
@@ -99,6 +101,21 @@ class TType {
 		}
 
 		switch( t ) {
+		case HAbstract("hl_int_map" | "hl_int64_map" | "hl_bytes_map" | "hl_obj_map"):
+			var tbytes = m.getType(HBytes);
+			var tvalues = m.getSyntheticAbstract("hl_map_values");
+			memFields = [
+				tbytes,		// entries
+				tvalues,	// values
+				tbytes,		// psl
+			];
+			memFieldsNames = ["entries", "values", "psl"];
+			tagPtr(0);
+			tagPtr(1);
+			tagPtr(2);
+			fill(memFields, (3 << m.ptrBits) + 12);
+		case HAbstract("hl_map_values"):
+			memFields = null;
 		case HObj(p), HStruct(p):
 			var protos = [p];
 			while( p.tsuper != null )

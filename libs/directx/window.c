@@ -1,6 +1,8 @@
 #define HL_NAME(n) directx_##n
 #include <hl.h>
 #include "hlsystem.h"
+#include <stdio.h>
+#include <string.h>
 
 #define MAX_EVENTS 1024
 
@@ -782,6 +784,15 @@ HL_PRIM void HL_NAME(win_destroy)(dx_window *win) {
 	free(buf);
 }
 
+HL_PRIM vbyte *HL_NAME(win_error)() {
+	char message[512];
+	DWORD error = GetLastError();
+	DWORD len = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error, 0, message, sizeof(message), NULL);
+	if( len == 0 )
+		snprintf(message, sizeof(message), "Win32 error %lu", error);
+	return hl_copy_bytes((vbyte*)message, (int)strlen(message) + 1);
+}
+
 HL_PRIM bool HL_NAME(win_get_next_event)( dx_window *win, dx_event *e ) {
 	dx_events *buf = get_events(win);
 	hl_type *save;
@@ -987,6 +998,7 @@ DEFINE_PRIM(_VOID, win_get_position, TWIN _REF(_I32) _REF(_I32));
 DEFINE_PRIM(_F64, win_get_opacity, TWIN);
 DEFINE_PRIM(_BOOL, win_set_opacity, TWIN _F64);
 DEFINE_PRIM(_VOID, win_destroy, TWIN);
+DEFINE_PRIM(_BYTES, win_error, _NO_ARG);
 DEFINE_PRIM(_BOOL, win_get_next_event, TWIN _DYN);
 DEFINE_PRIM(_VOID, win_clip_cursor, TWIN _BOOL);
 DEFINE_PRIM(_BOOL, set_cursor_pos, _I32 _I32);

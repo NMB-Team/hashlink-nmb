@@ -61,6 +61,7 @@ class Window {
 	public var vsync(default, set) : Bool;
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
+	public var windowToPixelRatio(get, never) : Float;
 	public var minWidth(get, never) : Int;
 	public var minHeight(get, never) : Int;
 	public var maxWidth(get, never) : Int;
@@ -77,7 +78,7 @@ class Window {
 	public function new( title : String, width : Int, height : Int, x : Int = SDL_WINDOWPOS_CENTERED, y : Int = SDL_WINDOWPOS_CENTERED, sdlFlags : Int = SDL_WINDOW_RESIZABLE ) {
 		while( true ) {
 			win = winCreateEx(x, y, width, height, sdlFlags);
-			if( win == null ) throw "Failed to create window";
+			if( win == null ) throw "Failed to create window (" + winError() + ")";
 			glctx = winGetGLContext(win);
 			if( glctx == null || !GL.init() || !testGL() ) {
 				destroy();
@@ -212,6 +213,14 @@ class Window {
 		var h = 0;
 		winGetSize(win, null, h);
 		return h;
+	}
+
+	function get_windowToPixelRatio() {
+		var pixelHeight = 0;
+		winGetPixelSize(win, null, pixelHeight);
+		var h : Float = height;
+
+		return h / pixelHeight;
 	}
 
 	function get_minWidth() {
@@ -381,6 +390,9 @@ class Window {
 	static function winGetSize( win : WinPtr, width : hl.Ref<Int>, height : hl.Ref<Int> ) {
 	}
 
+	static function winGetPixelSize( win : WinPtr, width : hl.Ref<Int>, height : hl.Ref<Int> ) {
+	}
+
 	static function winGetMinSize( win : WinPtr, width : hl.Ref<Int>, height : hl.Ref<Int> ) {
 	}
 
@@ -403,6 +415,14 @@ class Window {
 	}
 
 	static function winDestroy( win : WinPtr, gl : GLContext ) {
+	}
+
+	static function winError() {
+		return @:privateAccess String.fromUTF8(win_error());
+	}
+
+	static function win_error() : hl.Bytes {
+		return null;
 	}
 
 	static function setVsync( b : Bool ) {

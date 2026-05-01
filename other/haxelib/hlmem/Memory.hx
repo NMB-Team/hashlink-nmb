@@ -37,6 +37,7 @@ class Memory {
 	var baseTypes : Array<{ t : HLType, p : Pointer }>;
 	var typesPointers : Array<Pointer>;
 	var closuresPointers : Array<Pointer>;
+	var syntheticTypes : Map<String,TType> = new Map();
 
 	// Build using dump + code
 	var types : Array<TType>;
@@ -95,6 +96,16 @@ class Memory {
 	public function getTypeById( tid : Int ) : TType {
 		var tid = tid & 0xFFFFFF;
 		return types[tid];
+	}
+
+	public function getSyntheticAbstract( name : String ) : TType {
+		var t = syntheticTypes.get(name);
+		if( t != null )
+			return t;
+		t = new TType(types.length, HAbstract(name));
+		syntheticTypes.set(name, t);
+		types.push(t);
+		return t;
 	}
 
 	public function getTypeString( id : Int, withTstr : Bool, withId : Bool, withField : Bool ) : String {
