@@ -55,5 +55,6 @@ node_modules
 /*.tgz
 args.txt
 /other/benchs/hlc
+/include/vulkan
 /packages
 packages.config

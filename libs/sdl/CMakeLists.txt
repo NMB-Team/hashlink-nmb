@@ -36,11 +36,39 @@ else()
     find_package(SDL3 REQUIRED)
 endif()
 
+set(_WITH_SDL_VULKAN ON)
+if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set(_WITH_SDL_VULKAN OFF)
+endif()
+
 set_as_hdll(sdl)
 target_link_libraries(sdl.hdll
     libhl
     SDL3::SDL3
 )
+if(_WITH_SDL_VULKAN)
+    target_sources(sdl.hdll PRIVATE vulkan.c)
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(sdl.hdll Vulkan::Vulkan)
+    if(NOT APPLE)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            set(_VULKAN_LIB_SUFFIX Lib32)
+        else()
+            set(_VULKAN_LIB_SUFFIX Lib)
+        endif()
+        find_library(SHADERC_LIBRARY
+            NAMES shaderc_shared shaderc
+            HINTS $ENV{VULKAN_SDK}
+            PATH_SUFFIXES ${_VULKAN_LIB_SUFFIX} lib
+        )
+    endif()
+    if(SHADERC_LIBRARY)
+        target_link_libraries(sdl.hdll ${SHADERC_LIBRARY})
+        target_compile_definitions(sdl.hdll PRIVATE HL_VULKAN_HAS_SHADERC)
+    endif()
+else()
+    target_compile_definitions(sdl.hdll PRIVATE HL_DISABLE_SDL_VULKAN_NATIVE)
+endif()
 if(APPLE)
     target_compile_definitions(sdl.hdll PRIVATE GL_SILENCE_DEPRECATION)
 endif()

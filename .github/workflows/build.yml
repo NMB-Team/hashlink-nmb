@@ -149,6 +149,8 @@ jobs:
               sudo dpkg --add-architecture i386
               SUFFIX=":i386"
               EXTRA_APT_PKGS="gcc-multilib g++-multilib"
+            else
+              VULKAN_APT_PKGS="libvulkan-dev libshaderc-dev"
             fi
 
             sudo apt-get update -y
@@ -160,6 +162,7 @@ jobs:
               libuv1-dev${SUFFIX} \
               libvorbis-dev${SUFFIX} \
               libsqlite3-dev${SUFFIX} \
+              ${VULKAN_APT_PKGS} \
               ${EXTRA_APT_PKGS}
 
             # ref https://github.com/libsdl-org/SDL/blob/main/docs/README-linux.md#build-dependencies
@@ -196,6 +199,9 @@ jobs:
             if [ "${{matrix.build_system}}" != "cmake" ]; then
               brew update
               brew bundle
+            else
+              brew update
+              brew install vulkan-headers vulkan-loader
             fi
             ;;
 
@@ -215,6 +221,10 @@ jobs:
             7z x /tmp/sdl.zip    -oinclude; mv include/SDL3*   include/sdl
             7z x /tmp/openal.zip -oinclude; mv include/openal* include/openal
             7z x /tmp/ffmpeg.zip -oinclude; mv include/ffmpeg* include/ffmpeg
+            choco install vulkan-sdk --no-progress -y
+            VULKAN_SDK="$(powershell -NoProfile -Command "Get-ChildItem 'C:\VulkanSDK' -Directory | Sort-Object Name -Descending | Select-Object -First 1 -ExpandProperty FullName")"
+            echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
+            echo "$VULKAN_SDK/Bin" >> $GITHUB_PATH
             ;;
         esac
 

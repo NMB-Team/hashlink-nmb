@@ -55,6 +55,7 @@ class Window {
 
 	var win : WinPtr;
 	var glctx : GLContext;
+	var vkctx : Vulkan.VkSurface;
 	var lastFrame : Float;
 	public var id(get,never) : Int;
 	public var title(default, set) : String;
@@ -76,14 +77,27 @@ class Window {
 	public var grab(get, set) : Bool;
 
 	public function new( title : String, width : Int, height : Int, x : Int = SDL_WINDOWPOS_CENTERED, y : Int = SDL_WINDOWPOS_CENTERED, sdlFlags : Int = SDL_WINDOW_RESIZABLE ) {
+		var vk = (sdlFlags & SDL_WINDOW_VULKAN) != 0;
+		if( vk && !vkInit(Vulkan.ENABLE_VALIDATION) )
+			throw "Failed to initialize Vulkan";
+
 		while( true ) {
 			win = winCreateEx(x, y, width, height, sdlFlags);
 			if( win == null ) throw "Failed to create window (" + winError() + ")";
-			glctx = winGetGLContext(win);
-			if( glctx == null || !GL.init() || !testGL() ) {
-				destroy();
-				if( Sdl.onGlContextRetry() ) continue;
-				Sdl.onGlContextError();
+
+			if( vk ) {
+				vkctx = winGetVulkan(win);
+				if( vkctx == null ) {
+					destroy();
+					throw "Failed to create Vulkan Context";
+				}
+			} else {
+				glctx = winGetGLContext(win);
+				if( glctx == null || !GL.init() || !testGL() ) {
+					destroy();
+					if( Sdl.onGlContextRetry() ) continue;
+					Sdl.onGlContextError();
+				}
 			}
 			break;
 		}
@@ -295,14 +309,17 @@ class Window {
 		Set the current window you will render to (in case of multiple windows)
 	**/
 	public function renderTo() {
-		winRenderTo(win, glctx);
+		if( glctx != null ) winRenderTo(win, glctx);
 	}
 
 	public function present() {
+		if( glctx == null )
+			return;
+
 		if( vsync && @:privateAccess Sdl.isWin32 ) {
 			// NVIDIA OpenGL windows driver does implement vsync as an infinite loop, causing high CPU usage
 			// make sure to sleep a bit here based on how much time we spent since the last frame
-			var spent = haxe.Timer.stamp() - lastFrame;
+			final spent = haxe.Timer.stamp() - lastFrame;
 			if( spent < 0.005 ) Sys.sleep(0.005 - spent);
 		}
 		winSwapWindow(win);
@@ -313,6 +330,7 @@ class Window {
 		try winDestroy(win, glctx) catch( e : Dynamic ) {};
 		win = null;
 		glctx = null;
+		vkctx = null;
 		windows.remove(this);
 	}
 
@@ -441,5 +459,15 @@ class Window {
 	@:hlNative("?sdl", "capture_mouse")
 	static function captureMouse(enable: Bool) {
 		return 0;
+	}
+
+	@:hlNative("?sdl","vk_init")
+	static function vkInit( debug : Bool ) : Bool {
+		return false;
+	}
+
+	@:hlNative("?sdl","win_get_vulkan")
+	static function winGetVulkan( win : WinPtr ) : Vulkan.VkSurface {
+		return null;
 	}
 }

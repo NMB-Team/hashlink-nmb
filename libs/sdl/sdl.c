@@ -1,11 +1,17 @@
 #define HL_NAME(n) sdl_##n
 
-#include <hl.h>
-#include "hlsystem.h"
-
 #include <locale.h>
+#include <stdint.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gamepad.h>
+
+#ifndef HL_DISABLE_SDL_VULKAN_NATIVE
+#	include <SDL3/SDL_vulkan.h>
+#	define ALLOW_VULKAN
+#endif
+
+#include <hl.h>
+#include "hlsystem.h"
 
 #if defined (HL_IOS) || defined(HL_TVOS)
 #	include <OpenGLES/ES3/gl.h>
@@ -105,7 +111,6 @@ typedef struct {
 } event_data;
 
 static bool isGlOptionsSet = false;
-
 
 HL_PRIM bool HL_NAME(init_once)() {
 	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
@@ -660,7 +665,12 @@ HL_PRIM SDL_Window *HL_NAME(win_create_ex)(int x, int y, int width, int height, 
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, height);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
-    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+	if( sdlFlags & SDL_WINDOW_METAL )
+		SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_METAL_BOOLEAN, true);
+	if( sdlFlags & SDL_WINDOW_VULKAN )
+		SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_VULKAN_BOOLEAN, true);
+	if( sdlFlags & SDL_WINDOW_OPENGL )
+		SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
 	if( sdlFlags & SDL_WINDOW_BORDERLESS )
 		SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_BORDERLESS_BOOLEAN, true);
 	if( sdlFlags & SDL_WINDOW_FULLSCREEN )
@@ -715,6 +725,21 @@ HL_PRIM SDL_Window *HL_NAME(win_create)(int width, int height) {
 HL_PRIM SDL_GLContext HL_NAME(win_get_glcontext)(SDL_Window *win) {
 	return SDL_GL_CreateContext(win);
 }
+
+#ifdef ALLOW_VULKAN
+extern VkInstance vk_get_instance(void);
+HL_PRIM void *HL_NAME(win_get_vulkan)( SDL_Window *win ) {
+	VkInstance inst = vk_get_instance();
+	VkSurfaceKHR surface = 0;
+	if( !SDL_Vulkan_CreateSurface(win, inst, NULL, &surface) )
+		return NULL;
+	return (void*)(uintptr_t)surface;
+}
+#else
+HL_PRIM void *HL_NAME(win_get_vulkan)( SDL_Window *win ) {
+	return NULL;
+}
+#endif
 
 HL_PRIM bool HL_NAME(win_set_fullscreen)(SDL_Window *win, int mode) {
 #ifdef HL_SDL_WIN32_BORDERLESS
@@ -932,13 +957,14 @@ HL_PRIM void HL_NAME(win_destroy)(SDL_Window *win, SDL_GLContext gl) {
 	}
 #endif
 	SDL_DestroyWindow(win);
-	SDL_GL_DestroyContext(gl);
+	if ( gl ) SDL_GL_DestroyContext(gl);
 }
 
 #define TGL _ABSTRACT(sdl_gl)
 DEFINE_PRIM(TWIN, win_create_ex, _I32 _I32 _I32 _I32 _I32);
 DEFINE_PRIM(TWIN, win_create, _I32 _I32);
 DEFINE_PRIM(TGL, win_get_glcontext, TWIN);
+DEFINE_PRIM(_BYTES, win_get_vulkan, TWIN);
 DEFINE_PRIM(_BOOL, win_set_fullscreen, TWIN _I32);
 DEFINE_PRIM(_BOOL, win_set_display_mode, TWIN _I32 _I32 _I32);
 DEFINE_PRIM(_I32, win_display_handle, TWIN);

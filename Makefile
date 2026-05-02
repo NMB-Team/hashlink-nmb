@@ -47,7 +47,7 @@ FMT_CPPFLAGS = -I include/mikktspace -I include/minimp3
 
 FMT = libs/fmt/fmt.o libs/fmt/sha1.o include/mikktspace/mikktspace.o libs/fmt/mikkt.o libs/fmt/dxt.o
 
-SDL = libs/sdl/sdl.o libs/sdl/gl.o
+SDL = libs/sdl/sdl.o libs/sdl/gl.o libs/sdl/vulkan.o
 
 OPENAL = libs/openal/openal.o
 
@@ -180,7 +180,7 @@ endif
 
 LDFLAGS += -L$(BREW_PREFIX)/lib
 sdl_LDFLAGS = -L$(BREW_SDL_PREFIX)/lib
-sdl_LDLIBS = -lSDL3 -framework OpenGL
+sdl_LDLIBS = -lSDL3 -framework OpenGL -lvulkan
 openal_LDFLAGS = -L$(BREW_OPENAL_PREFIX)/lib
 openal_LDLIBS = -lopenal
 ssl_LDLIBS += -framework Security -framework CoreFoundation
@@ -219,7 +219,7 @@ endif
 
 SDL_CPPFLAGS = $(shell pkg-config --cflags sdl3)
 sdl_LDFLAGS = $(shell pkg-config --libs-only-L --libs-only-other sdl3)
-sdl_LDLIBS = $(shell pkg-config --libs-only-l sdl3) -lGL
+sdl_LDLIBS = $(shell pkg-config --libs-only-l sdl3) -lGL -lvulkan
 openal_LDLIBS = -lopenal
 RELEASE_NAME = linux
 
