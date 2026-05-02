@@ -1053,10 +1053,8 @@ static HICON create_icon_internal(int width, int height, vbyte* data, bool icon,
 
 	memset(&ii, 0, sizeof(ii));
 	ii.fIcon = icon;
-	if (icon) {
-		ii.xHotspot = (DWORD)hotX;
-		ii.yHotspot = (DWORD)hotY;
-	}
+	ii.xHotspot = (DWORD)hotX;
+	ii.yHotspot = (DWORD)hotY;
 	ii.hbmColor = CreateDIBSection(hdc, (BITMAPINFO*)&bmh, DIB_RGB_COLORS, &pixels, NULL, 0);
 	ii.hbmMask = CreateBitmap(width, height, 1, 1, maskbits);
 	ReleaseDC(NULL, hdc);
