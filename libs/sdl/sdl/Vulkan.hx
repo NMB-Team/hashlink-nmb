@@ -148,7 +148,9 @@ abstract ArrayStruct<T>(hl.Bytes) {
 
 abstract IntArray<T>(hl.Bytes) {
 	public function new( arr : Array<T> ) {
-		throw "TODO";
+		this = new hl.Bytes(arr.length << 2);
+		for( i in 0...arr.length )
+			this.setI32(i << 2, cast arr[i]);
 	}
 }
 
@@ -1870,7 +1872,7 @@ abstract VkContext(hl.Abstract<"vk_context">) {
 		return null;
 	}
 
-	public function initSwapchain( width : Int, height : Int, outImages : hl.NativeArray<VkImage>, outFormat : hl.Ref<VkFormat> ) : Bool {
+	public function initSwapchain( width : Int, height : Int, vsync : Bool, outImages : hl.NativeArray<VkImage>, outFormat : hl.Ref<VkFormat> ) : Bool {
 		return false;
 	}
 
@@ -1934,6 +1936,9 @@ abstract VkContext(hl.Abstract<"vk_context">) {
 	}
 
 	public function updateDescriptorSets( writeCount : Int, write : ArrayStruct<VkWriteDescriptorSet>, copyCount : Int, copy : ArrayStruct<VkCopyDescriptorSet> ) {
+	}
+
+	public function updateDescriptorImageSampler( set : VkDescriptorSet, binding : Int, view : VkImageView, sampler : VkSampler, layout : VkImageLayout ) {
 	}
 
 	public function createFramebuffer( inf : VkFramebufferCreateInfo ) : VkFramebuffer {
@@ -2057,6 +2062,21 @@ abstract VkCommandBuffer(hl.Abstract<"vk_command_buffer">) {
 	public function bindVertexBuffers( first : Int, count : Int, buffers : ArrayStruct<VkBuffer>, offsets : ArrayStruct<VkDeviceSize> ) {
 	}
 
+	public function bindVertexBuffer( first : Int, buffer : VkBuffer, offset : Int ) {
+	}
+
+	public function setViewport( first : Int, count : Int, viewports : ArrayStruct<VkViewport> ) {
+	}
+
+	public function setViewport1( first : Int, x : hl.F32, y : hl.F32, width : hl.F32, height : hl.F32, minDepth : hl.F32, maxDepth : hl.F32 ) {
+	}
+
+	public function setScissor( first : Int, count : Int, scissors : ArrayStruct<VkRect2D> ) {
+	}
+
+	public function setScissor1( first : Int, x : Int, y : Int, width : Int, height : Int ) {
+	}
+
 	public function beginRenderPass( begin : VkRenderPassBeginInfo, contents : VkSubpassContents ) {
 	}
 
@@ -2077,6 +2097,9 @@ abstract VkCommandBuffer(hl.Abstract<"vk_command_buffer">) {
 	}
 
 	public function bindDescriptorSets( bind : VkPipelineBindPoint, layout : VkPipelineLayout, first : Int, count : Int, sets : ArrayStruct<VkDescriptorSet>, offsetCount : Int, offsets : hl.Bytes ) {
+	}
+
+	public function bindDescriptorSet( bind : VkPipelineBindPoint, layout : VkPipelineLayout, first : Int, set : VkDescriptorSet ) {
 	}
 
 }

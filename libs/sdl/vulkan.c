@@ -188,7 +188,7 @@ void HL_NAME(vk_get_pdevice_format_props)( VkContext ctx, VkFormat format, VkFor
 	vkGetPhysicalDeviceFormatProperties(ctx->pdevice, format, props);
 }
 
-bool HL_NAME(vk_init_swapchain)( VkContext ctx, int width, int height, varray *outImages, VkFormat *outFormat ) {
+bool HL_NAME(vk_init_swapchain)( VkContext ctx, int width, int height, bool vsync, varray *outImages, VkFormat *outFormat ) {
 
 	vkDeviceWaitIdle(ctx->device);
 
@@ -212,6 +212,22 @@ bool HL_NAME(vk_init_swapchain)( VkContext ctx, int width, int height, varray *o
 	modeCount = modeCount > MAX_PRESENT_MODE_COUNT ? MAX_PRESENT_MODE_COUNT : modeCount;
 	vkGetPhysicalDeviceSurfacePresentModesKHR(ctx->pdevice, ctx->surface, &modeCount, modes);
 
+	VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+	if( !vsync ) {
+		unsigned int i;
+		for(i=0;i<modeCount;i++)
+			if( modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR ) {
+				presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+				break;
+			}
+		if( presentMode == VK_PRESENT_MODE_FIFO_KHR )
+			for(i=0;i<modeCount;i++)
+				if( modes[i] == VK_PRESENT_MODE_MAILBOX_KHR ) {
+					presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+					break;
+				}
+	}
+
 	VkSurfaceCapabilitiesKHR scaps;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx->pdevice, ctx->surface, &scaps);
 
@@ -234,7 +250,7 @@ bool HL_NAME(vk_init_swapchain)( VkContext ctx, int width, int height, varray *o
 		.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
 		.preTransform = scaps.currentTransform,
 		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-		.presentMode = VK_PRESENT_MODE_FIFO_KHR, // always supported
+		.presentMode = presentMode,
 		.clipped = VK_TRUE,
 	};
 
@@ -363,6 +379,23 @@ void HL_NAME(vk_update_descriptor_sets)( VkContext ctx, int writeCount, VkWriteD
 	vkUpdateDescriptorSets(ctx->device, writeCount, write, copyCount, copy);
 }
 
+void HL_NAME(vk_update_descriptor_image_sampler)( VkContext ctx, VkDescriptorSet set, int binding, VkImageView view, VkSampler sampler, VkImageLayout layout ) {
+	VkDescriptorImageInfo imageInfo = {
+		.sampler = sampler,
+		.imageView = view,
+		.imageLayout = layout,
+	};
+	VkWriteDescriptorSet write = {
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = set,
+		.dstBinding = binding,
+		.descriptorCount = 1,
+		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		.pImageInfo = &imageInfo,
+	};
+	vkUpdateDescriptorSets(ctx->device, 1, &write, 0, NULL);
+}
+
 VkSampler HL_NAME(vk_create_sampler)( VkContext ctx, VkSamplerCreateInfo *inf ) {
 	VkSampler sampler = NULL;
 	vkCreateSampler(ctx->device, inf, NULL, &sampler);
@@ -483,7 +516,7 @@ void HL_NAME(vk_destroy_sampler)( VkContext ctx, VkSampler sampler ) {
 
 DEFINE_PRIM(_BOOL, vk_init, _BOOL);
 DEFINE_PRIM(_VCTX, vk_init_context, _BYTES _REF(_I32));
-DEFINE_PRIM(_BOOL, vk_init_swapchain, _VCTX _I32 _I32 _ARR _REF(_I32));
+DEFINE_PRIM(_BOOL, vk_init_swapchain, _VCTX _I32 _I32 _BOOL _ARR _REF(_I32));
 DEFINE_PRIM(_BYTES, vk_make_array, _ARR);
 DEFINE_PRIM(_BYTES, vk_make_ref, _DYN);
 DEFINE_PRIM(_STRUCT, vk_get_limits, _VCTX);
@@ -520,6 +553,7 @@ DEFINE_PRIM(_VOID, vk_get_pdevice_format_props, _VCTX _I32 _STRUCT);
 DEFINE_PRIM(_DPOOL, vk_create_descriptor_pool, _VCTX _STRUCT);
 DEFINE_PRIM(_BOOL, vk_allocate_descriptor_sets, _VCTX _STRUCT _ARR);
 DEFINE_PRIM(_VOID, vk_update_descriptor_sets, _VCTX _I32 _BYTES _I32 _BYTES);
+DEFINE_PRIM(_VOID, vk_update_descriptor_image_sampler, _VCTX _DSET _I32 _IMAGE_VIEW _SAMPLER _I32);
 DEFINE_PRIM(_VOID, vk_destroy_image, _VCTX _IMAGE);
 DEFINE_PRIM(_VOID, vk_destroy_image_view, _VCTX _IMAGE_VIEW);
 DEFINE_PRIM(_VOID, vk_destroy_framebuffer, _VCTX _FRAMEBUFFER);
@@ -574,6 +608,39 @@ HL_PRIM void HL_NAME(vk_bind_vertex_buffers)( VkCommandBuffer out, int first, in
 	vkCmdBindVertexBuffers(out, first, count, buffers, sizes);
 }
 
+HL_PRIM void HL_NAME(vk_bind_vertex_buffer)( VkCommandBuffer out, int first, VkBuffer buffer, int offset ) {
+	VkDeviceSize vkOffset = offset;
+	vkCmdBindVertexBuffers(out, first, 1, &buffer, &vkOffset);
+}
+
+HL_PRIM void HL_NAME(vk_set_viewport)( VkCommandBuffer out, int first, int count, VkViewport *viewports ) {
+	vkCmdSetViewport(out, first, count, viewports);
+}
+
+HL_PRIM void HL_NAME(vk_set_viewport1)( VkCommandBuffer out, int first, float x, float y, float width, float height, float minDepth, float maxDepth ) {
+	VkViewport viewport = {
+		.x = x,
+		.y = y,
+		.width = width,
+		.height = height,
+		.minDepth = minDepth,
+		.maxDepth = maxDepth,
+	};
+	vkCmdSetViewport(out, first, 1, &viewport);
+}
+
+HL_PRIM void HL_NAME(vk_set_scissor)( VkCommandBuffer out, int first, int count, VkRect2D *scissors ) {
+	vkCmdSetScissor(out, first, count, scissors);
+}
+
+HL_PRIM void HL_NAME(vk_set_scissor1)( VkCommandBuffer out, int first, int x, int y, int width, int height ) {
+	VkRect2D scissor = {
+		.offset = { x, y },
+		.extent = { width, height },
+	};
+	vkCmdSetScissor(out, first, 1, &scissor);
+}
+
 HL_PRIM void HL_NAME(vk_end_render_pass)( VkCommandBuffer out ) {
 	vkCmdEndRenderPass(out);
 }
@@ -594,6 +661,10 @@ HL_PRIM void HL_NAME(vk_bind_descriptor_sets)( VkCommandBuffer out, VkPipelineBi
 	vkCmdBindDescriptorSets(out, bind, layout, first, count, sets, offsetCount, offsets);
 }
 
+HL_PRIM void HL_NAME(vk_bind_descriptor_set)( VkCommandBuffer out, VkPipelineBindPoint bind, VkPipelineLayout layout, int first, VkDescriptorSet set ) {
+	vkCmdBindDescriptorSets(out, bind, layout, first, 1, &set, 0, NULL);
+}
+
 DEFINE_PRIM(_VOID, vk_command_begin, _CMD _STRUCT);
 DEFINE_PRIM(_VOID, vk_command_end, _CMD);
 DEFINE_PRIM(_VOID, vk_clear_color_image, _CMD _IMAGE _I32 _BYTES _I32 _STRUCT);
@@ -604,11 +675,17 @@ DEFINE_PRIM(_VOID, vk_bind_pipeline, _CMD _I32 _GPIPELINE);
 DEFINE_PRIM(_VOID, vk_begin_render_pass, _CMD _STRUCT _I32);
 DEFINE_PRIM(_VOID, vk_bind_index_buffer, _CMD _BUFFER _I32 _I32);
 DEFINE_PRIM(_VOID, vk_bind_vertex_buffers, _CMD _I32 _I32 _BYTES _BYTES);
+DEFINE_PRIM(_VOID, vk_bind_vertex_buffer, _CMD _I32 _BUFFER _I32);
+DEFINE_PRIM(_VOID, vk_set_viewport, _CMD _I32 _I32 _BYTES);
+DEFINE_PRIM(_VOID, vk_set_viewport1, _CMD _I32 _F32 _F32 _F32 _F32 _F32 _F32);
+DEFINE_PRIM(_VOID, vk_set_scissor, _CMD _I32 _I32 _BYTES);
+DEFINE_PRIM(_VOID, vk_set_scissor1, _CMD _I32 _I32 _I32 _I32 _I32);
 DEFINE_PRIM(_VOID, vk_push_constants, _CMD _PIPELAYOUT _I32 _I32 _I32 _BYTES);
 DEFINE_PRIM(_VOID, vk_end_render_pass, _CMD);
 DEFINE_PRIM(_VOID, vk_copy_buffer_to_image, _CMD _BUFFER _IMAGE _I32 _I32 _BYTES);
 DEFINE_PRIM(_VOID, vk_pipeline_barrier, _CMD _I32 _I32 _I32 _I32 _BYTES _I32 _BYTES _I32 _BYTES);
 DEFINE_PRIM(_VOID, vk_bind_descriptor_sets, _CMD _I32 _PIPELAYOUT _I32 _I32 _BYTES _I32 _BYTES);
+DEFINE_PRIM(_VOID, vk_bind_descriptor_set, _CMD _I32 _PIPELAYOUT _I32 _DSET);
 
 // ------ SHADER COMPILATION ------------------------------
 

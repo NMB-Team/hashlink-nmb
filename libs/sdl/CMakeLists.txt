@@ -65,6 +65,13 @@ if(_WITH_SDL_VULKAN)
     if(SHADERC_LIBRARY)
         target_link_libraries(sdl.hdll ${SHADERC_LIBRARY})
         target_compile_definitions(sdl.hdll PRIVATE HL_VULKAN_HAS_SHADERC)
+        if(WIN32)
+            find_file(SHADERC_RUNTIME_LIBRARY
+                NAMES shaderc_shared.dll
+                HINTS $ENV{VULKAN_SDK}
+                PATH_SUFFIXES Bin
+            )
+        endif()
     endif()
 else()
     target_compile_definitions(sdl.hdll PRIVATE HL_DISABLE_SDL_VULKAN_NATIVE)
@@ -101,3 +108,9 @@ install(
     TARGETS sdl.hdll
     DESTINATION ${HDLL_DESTINATION}
 )
+if(SHADERC_RUNTIME_LIBRARY)
+    install(
+        FILES ${SHADERC_RUNTIME_LIBRARY}
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+endif()

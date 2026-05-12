@@ -141,11 +141,13 @@ BUILD_DIR = Release
 VS_SDL_LIBRARY ?= include/sdl/lib/x86/SDL3.dll
 VS_OPENAL_LIBRARY ?= include/openal/bin/Win32/soft_oal.dll
 VS_DX_LIBRARY ?= include/dx/bin/x86/dxcompiler.dll include/dx/bin/x86/dxil.dll
+VS_SHADERC_LIBRARY ?=
 else
 BUILD_DIR = x64/Release
 VS_SDL_LIBRARY ?= include/sdl/lib/x64/SDL3.dll
 VS_OPENAL_LIBRARY ?= include/openal/bin/Win64/soft_oal.dll
 VS_DX_LIBRARY ?= include/dx/bin/x64/dxcompiler.dll include/dx/bin/x64/dxil.dll
+VS_SHADERC_LIBRARY ?= $(VULKAN_SDK)/Bin/shaderc_shared.dll
 endif
 
 ifneq (, $(findstring MINGW64, $(UNAME)))
@@ -360,6 +362,7 @@ release_win:
 	cp $(VS_SDL_LIBRARY) $(PACKAGE_NAME)
 	cp $(VS_OPENAL_LIBRARY) $(PACKAGE_NAME)/OpenAL32.dll
 	cp $(VS_DX_LIBRARY) $(PACKAGE_NAME)
+	if [ -n "$(VS_SHADERC_LIBRARY)" ] && [ -f "$(VS_SHADERC_LIBRARY)" ]; then cp "$(VS_SHADERC_LIBRARY)" $(PACKAGE_NAME); fi
 	# 7z switches: https://sevenzip.osdn.jp/chm/cmdline/switches/
 	7z a -spf -y -mx9 -bt $(PACKAGE_NAME).zip $(PACKAGE_NAME)
 	rm -rf $(PACKAGE_NAME)
