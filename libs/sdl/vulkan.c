@@ -232,16 +232,25 @@ bool HL_NAME(vk_init_swapchain)( VkContext ctx, int width, int height, bool vsyn
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx->pdevice, ctx->surface, &scaps);
 
 	VkExtent2D swapchainExtent = scaps.currentExtent;
-#	define clamp(v,min,max) ( ((v) < (min)) ? (min) : ((v) < (max)) ? (max) : (v) )
+#	define clamp(v,min,max) ( ((v) < (min)) ? (min) : ((v) > (max)) ? (max) : (v) )
 	if( swapchainExtent.width == UINT32_MAX ) {
 		swapchainExtent.width = clamp((unsigned)width, scaps.minImageExtent.width, scaps.maxImageExtent.width);
 		swapchainExtent.height = clamp((unsigned)height, scaps.minImageExtent.height, scaps.maxImageExtent.height);
 	}
 
+	unsigned int imageCapacity = outImages->size;
+	unsigned int imageCount = scaps.minImageCount + 1;
+	if( imageCount > imageCapacity )
+		imageCount = imageCapacity;
+	if( scaps.maxImageCount > 0 && imageCount > scaps.maxImageCount )
+		imageCount = scaps.maxImageCount;
+	if( imageCount < scaps.minImageCount )
+		return false;
+
 	VkSwapchainCreateInfoKHR swapInfo = {
 		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
 		.surface = ctx->surface,
-		.minImageCount = outImages->size,
+		.minImageCount = imageCount,
 		.imageFormat = format.format,
 		.imageColorSpace = format.colorSpace,
 		.imageExtent = swapchainExtent,
@@ -257,8 +266,9 @@ bool HL_NAME(vk_init_swapchain)( VkContext ctx, int width, int height, bool vsyn
 	if( vkCreateSwapchainKHR(ctx->device, &swapInfo, 0, &ctx->swapchain) != VK_SUCCESS )
 		return false;
 
-	vkGetSwapchainImagesKHR(ctx->device, ctx->swapchain, &outImages->size, NULL);
-	vkGetSwapchainImagesKHR(ctx->device, ctx->swapchain, &outImages->size, hl_aptr(outImages,void));
+	outImages->size = imageCapacity;
+	if( vkGetSwapchainImagesKHR(ctx->device, ctx->swapchain, &outImages->size, hl_aptr(outImages,void)) != VK_SUCCESS )
+		return false;
 	*outFormat = format.format;
 
 	return true;
@@ -487,6 +497,10 @@ void HL_NAME(vk_destroy_framebuffer)( VkContext ctx, VkFramebuffer fb ) {
 	vkDestroyFramebuffer(ctx->device, fb, NULL);
 }
 
+void HL_NAME(vk_destroy_render_pass)( VkContext ctx, VkRenderPass pass ) {
+	vkDestroyRenderPass(ctx->device, pass, NULL);
+}
+
 void HL_NAME(vk_destroy_descriptor_pool)( VkContext ctx, VkDescriptorPool pool ) {
 	vkDestroyDescriptorPool(ctx->device, pool, NULL);
 }
@@ -557,6 +571,7 @@ DEFINE_PRIM(_VOID, vk_update_descriptor_image_sampler, _VCTX _DSET _I32 _IMAGE_V
 DEFINE_PRIM(_VOID, vk_destroy_image, _VCTX _IMAGE);
 DEFINE_PRIM(_VOID, vk_destroy_image_view, _VCTX _IMAGE_VIEW);
 DEFINE_PRIM(_VOID, vk_destroy_framebuffer, _VCTX _FRAMEBUFFER);
+DEFINE_PRIM(_VOID, vk_destroy_render_pass, _VCTX _RENDERPASS);
 DEFINE_PRIM(_VOID, vk_free_command_buffers, _VCTX _CMD_POOL _ARR);
 DEFINE_PRIM(_VOID, vk_destroy_command_pool, _VCTX _CMD_POOL);
 DEFINE_PRIM(_VOID, vk_destroy_buffer, _VCTX _BUFFER);

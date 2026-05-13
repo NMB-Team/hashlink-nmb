@@ -2004,6 +2004,9 @@ abstract VkContext(hl.Abstract<"vk_context">) {
 	public function destroyFramebuffer( buf : VkFramebuffer ) {
 	}
 
+	public function destroyRenderPass( pass : VkRenderPass ) {
+	}
+
 	public function freeCommandBuffers( pool : VkCommandPool, arr : hl.NativeArray<VkCommandBuffer> ) {
 	}
 
