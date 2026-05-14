@@ -338,8 +338,11 @@ VkDeviceMemory HL_NAME(vk_allocate_memory)( VkContext ctx, VkMemoryAllocateInfo 
 }
 
 vbyte *HL_NAME(vk_map_memory)( VkContext ctx, VkDeviceMemory mem, int offset, int size, int flags ) {
+	if( mem == NULL || size <= 0 )
+		return NULL;
 	void *ptr = NULL;
-	vkMapMemory(ctx->device, mem, offset, size, flags, &ptr);
+	if( vkMapMemory(ctx->device, mem, offset, size, flags, &ptr) != VK_SUCCESS )
+		return NULL;
 	return ptr;
 }
 
