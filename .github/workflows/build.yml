@@ -198,7 +198,7 @@ jobs:
           darwin)
             if [ "${{matrix.build_system}}" != "cmake" ]; then
               brew update
-              brew bundle
+              HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew bundle --no-upgrade
             else
               brew update
               brew install vulkan-headers vulkan-loader
@@ -474,6 +474,8 @@ jobs:
 
   haxe-test-suite:
     needs: build
+    env:
+      HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
     strategy:
       fail-fast: false
       matrix:
