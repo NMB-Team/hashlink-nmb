@@ -11,10 +11,10 @@ enum DriverInitFlag {
 }
 
 enum abstract Constant(Int) to Int {
-	public var TEXTURE_DATA_PITCH_ALIGNMENT;
-	public var TEXTURE_DATA_PLACEMENT_ALIGNMENT;
-	public var DESCRIPTOR_RANGE_OFFSET_APPEND;
-	public var RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	public var TEXTURE_DATA_PITCH_ALIGNMENT = 0;
+	public var TEXTURE_DATA_PLACEMENT_ALIGNMENT = 1;
+	public var DESCRIPTOR_RANGE_OFFSET_APPEND = 2;
+	public var RESOURCE_BARRIER_ALL_SUBRESOURCES = 3;
 }
 
 enum abstract CommandListType(Int) {

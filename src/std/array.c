@@ -54,6 +54,27 @@ DEFINE_PRIM(_VOID,array_blit,_ARR _I32 _ARR _I32 _I32);
 DEFINE_PRIM(_TYPE,array_type,_ARR);
 DEFINE_PRIM(_BYTES,array_bytes,_ARR);
 
+typedef struct _vcarray_info {
+	void *arr;
+	hl_type *at;
+	int size;
+	int element_size;
+	struct _vcarray_info *next;
+} vcarray_info;
+
+static vcarray_info *hl_carray_infos = NULL;
+
+static vcarray_info *hl_get_carray_info( void *arr ) {
+	vcarray_info *i = hl_carray_infos;
+	while( i ) {
+		if( i->arr == arr )
+			return i;
+		i = i->next;
+	}
+	hl_error("Invalid CArray");
+	return NULL;
+}
+
 HL_PRIM void *hl_alloc_carray( hl_type *at, int size ) {
 	if( at->kind != HOBJ && at->kind != HSTRUCT )
 		hl_error("Invalid array type");
@@ -63,6 +84,13 @@ HL_PRIM void *hl_alloc_carray( hl_type *at, int size ) {
 	hl_runtime_obj *rt = at->obj->rt;
 	if( rt == NULL || rt->methods == NULL ) rt = hl_get_obj_proto(at);
 	char *arr = hl_gc_alloc_gen(at, size * rt->size, (rt->hasPtr ? MEM_KIND_RAW : MEM_KIND_NOPTR) | MEM_ZERO);
+	vcarray_info *info = (vcarray_info*)malloc(sizeof(vcarray_info));
+	info->arr = arr;
+	info->at = at;
+	info->size = size;
+	info->element_size = rt->size;
+	info->next = hl_carray_infos;
+	hl_carray_infos = info;
 	if( at->kind == HOBJ || rt->nbindings ) {
 		int i,k;
 		for(k=0;k<size;k++) {
@@ -78,6 +106,19 @@ HL_PRIM void *hl_alloc_carray( hl_type *at, int size ) {
 	return arr;
 }
 
+HL_PRIM vdynamic *hl_carray_get( void *arr, int index ) {
+	vcarray_info *info = hl_get_carray_info(arr);
+	if( index < 0 || index >= info->size )
+		hl_error("Invalid array index");
+	vdynamic *v = hl_alloc_dynamic(info->at);
+	v->v.ptr = (vbyte*)arr + index * info->element_size;
+	return v;
+}
+
+HL_PRIM int hl_carray_length( void *arr ) {
+	return hl_get_carray_info(arr)->size;
+}
+
 HL_PRIM void hl_carray_blit( void *dst, hl_type *at, int dpos, void *src, int spos, int len ) {
 	if( at->kind != HOBJ && at->kind != HSTRUCT )
 		hl_error("Invalid array type");
@@ -91,4 +132,6 @@ HL_PRIM void hl_carray_blit( void *dst, hl_type *at, int dpos, void *src, int sp
 
 #define _CARRAY _ABSTRACT(hl_carray)
 DEFINE_PRIM(_CARRAY,alloc_carray,_TYPE _I32);
+DEFINE_PRIM(_DYN,carray_get,_CARRAY _I32);
+DEFINE_PRIM(_I32,carray_length,_CARRAY);
 DEFINE_PRIM(_VOID,carray_blit,_CARRAY _TYPE _I32 _CARRAY _I32 _I32);
