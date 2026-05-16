@@ -1120,7 +1120,9 @@ enum abstract PipelineStateFlags(Int) {
 	public var sampleMask : Int;
 	@:packed public var rasterizerState(default,null) : RasterizerDesc;
 	@:packed public var depthStencilDesc(default,null) : DepthStencilDesc;
-	@:packed public var inputLayout(default,null) : InputLayoutDesc;
+	public var inputElementDescs : hl.CArray<InputElementDesc>;
+	public var numInputElements : Int;
+	public var __inputLayoutPadding : Int;
 	public var ibStripCutValue : IndexBufferStripCutValue;
 	public var primitiveTopologyType : PrimitiveTopologyType;
 	public var numRenderTargets : Int;
