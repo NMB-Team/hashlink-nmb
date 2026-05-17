@@ -111,6 +111,66 @@ typedef struct {
 } event_data;
 
 static bool isGlOptionsSet = false;
+static vclosure *window_event_watch_callback = NULL;
+static event_data *window_event_watch_event = NULL;
+static bool window_event_watch_registered = false;
+
+static bool fill_window_event( SDL_Event *e, event_data *event ) {
+	if( e->type < SDL_EVENT_WINDOW_FIRST || e->type > SDL_EVENT_WINDOW_LAST )
+		return false;
+
+	event->type = WindowState;
+	event->window = e->window.windowID;
+	switch( e->type ) {
+	case SDL_EVENT_WINDOW_SHOWN:
+		event->state = Show;
+		break;
+	case SDL_EVENT_WINDOW_HIDDEN:
+		event->state = Hide;
+		break;
+	case SDL_EVENT_WINDOW_EXPOSED:
+		event->state = Expose;
+		break;
+	case SDL_EVENT_WINDOW_MOVED:
+		event->state = Move;
+		event->mouseX = e->window.data1;
+		event->mouseY = e->window.data2;
+		break;
+	case SDL_EVENT_WINDOW_RESIZED:
+	case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+		event->state = Resize;
+		event->mouseX = e->window.data1;
+		event->mouseY = e->window.data2;
+		break;
+	case SDL_EVENT_WINDOW_MINIMIZED:
+		event->state = Minimize;
+		break;
+	case SDL_EVENT_WINDOW_MAXIMIZED:
+		event->state = Maximize;
+		break;
+	case SDL_EVENT_WINDOW_RESTORED:
+		event->state = Restore;
+		break;
+	case SDL_EVENT_WINDOW_MOUSE_ENTER:
+		event->state = Enter;
+		break;
+	case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+		event->state = Leave;
+		break;
+	case SDL_EVENT_WINDOW_FOCUS_GAINED:
+		event->state = Focus;
+		break;
+	case SDL_EVENT_WINDOW_FOCUS_LOST:
+		event->state = Blur;
+		break;
+	case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+		event->state = Close;
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
 
 HL_PRIM bool HL_NAME(init_once)() {
 	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
@@ -240,57 +300,8 @@ HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
 		if ( !SDL_PollEvent(&e) ) break;
 
 		// Handle window events first to make porting easier
-		if( e.type >= SDL_EVENT_WINDOW_FIRST && e.type <= SDL_EVENT_WINDOW_LAST)
-		{
-			event->type = WindowState;
-			event->window = e.window.windowID;
-			switch (e.type) {
-			case SDL_EVENT_WINDOW_SHOWN:
-				event->state = Show;
-				break;
-			case SDL_EVENT_WINDOW_HIDDEN:
-				event->state = Hide;
-				break;
-			case SDL_EVENT_WINDOW_EXPOSED:
-				event->state = Expose;
-				break;
-			case SDL_EVENT_WINDOW_MOVED:
-				event->state = Move;
-				break;
-			case SDL_EVENT_WINDOW_RESIZED:
-				event->state = Resize;
-				break;
-			case SDL_EVENT_WINDOW_MINIMIZED:
-				event->state = Minimize;
-				break;
-			case SDL_EVENT_WINDOW_MAXIMIZED:
-				event->state = Maximize;
-				break;
-			case SDL_EVENT_WINDOW_RESTORED:
-				event->state = Restore;
-				break;
-			case SDL_EVENT_WINDOW_MOUSE_ENTER:
-				event->state = Enter;
-				break;
-			case SDL_EVENT_WINDOW_MOUSE_LEAVE:
-				event->state = Leave;
-				break;
-			case SDL_EVENT_WINDOW_FOCUS_GAINED:
-				event->state = Focus;
-				break;
-			case SDL_EVENT_WINDOW_FOCUS_LOST:
-				event->state = Blur;
-				break;
-			case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-				event->state = Close;
-				break;
-			default:
-				//printf("Unknown window state code %d\\n", e.window.event);
-				continue;
-			}
-
+		if( fill_window_event(&e, event) )
 			return true;
-		}
 
 		switch (e.type) {
 		case SDL_EVENT_QUIT:
@@ -459,6 +470,42 @@ HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
 	return false;
 }
 
+static bool SDLCALL window_event_watch( void *userdata, SDL_Event *e ) {
+	switch( e->type ) {
+	case SDL_EVENT_WINDOW_EXPOSED:
+	case SDL_EVENT_WINDOW_MOVED:
+	case SDL_EVENT_WINDOW_RESIZED:
+	case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+		if( window_event_watch_callback && window_event_watch_event && fill_window_event(e, window_event_watch_event) ) {
+			vdynamic arg;
+			vdynamic *args[1] = { &arg };
+			arg.t = window_event_watch_event->t;
+			arg.v.ptr = window_event_watch_event;
+			hl_dyn_call(window_event_watch_callback, args, 1);
+		}
+		break;
+	default:
+		break;
+	}
+	return true;
+}
+
+HL_PRIM void HL_NAME(set_window_event_watch)( vclosure *callback, event_data *event ) {
+	if( !window_event_watch_callback )
+		hl_add_root(&window_event_watch_callback);
+	if( !window_event_watch_event )
+		hl_add_root(&window_event_watch_event);
+	if( callback && !window_event_watch_registered ) {
+		SDL_AddEventWatch(window_event_watch, NULL);
+		window_event_watch_registered = true;
+	} else if( !callback && window_event_watch_registered ) {
+		SDL_RemoveEventWatch(window_event_watch, NULL);
+		window_event_watch_registered = false;
+	}
+	window_event_watch_callback = callback;
+	window_event_watch_event = callback ? event : NULL;
+}
+
 HL_PRIM void HL_NAME(quit)() {
 	SDL_Quit();
 #	ifdef _WIN32
@@ -622,6 +669,7 @@ DEFINE_PRIM(_BOOL, init_once, _NO_ARG);
 DEFINE_PRIM(_VOID, gl_options, _I32 _I32 _I32 _I32 _I32 _I32);
 DEFINE_PRIM(_BOOL, event_loop, _DYN );
 DEFINE_PRIM(_I32, event_poll, _STRUCT );
+DEFINE_PRIM(_VOID, set_window_event_watch, _DYN _DYN);
 DEFINE_PRIM(_VOID, quit, _NO_ARG);
 DEFINE_PRIM(_VOID, delay, _I32);
 DEFINE_PRIM(_I32, get_screen_width, _NO_ARG);

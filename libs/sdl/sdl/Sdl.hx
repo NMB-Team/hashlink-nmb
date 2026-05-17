@@ -70,9 +70,16 @@ class Sdl {
 
 	static function initOnce() return false;
 	static function eventLoop( e : Dynamic ) return false;
+	static function setWindowEventWatch( onEvent : Dynamic, event : Dynamic ) {}
 	static function hintValue( name : hl.Bytes, value : hl.Bytes ) return false;
 
 	static var event = new Event();
+	static var watchEvent = new Event();
+
+	public static function watchWindowEvents( onEvent : Null<Event -> Void> ) {
+		setWindowEventWatch(onEvent, watchEvent);
+	}
+
 	public static function processEvents( onEvent : Event -> Bool ) {
 		while( true ) {
 			if( !eventLoop(event) )
