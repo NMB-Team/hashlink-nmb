@@ -1,5 +1,39 @@
 set(MINIMP3_INCLUDE_DIR ${INCLUDES_BASE_DIR}/minimp3)
 set(MIKKTSPACE_INCLUDE_DIR ${INCLUDES_BASE_DIR}/mikktspace)
+set(SPNG_INCLUDE_DIR ${INCLUDES_BASE_DIR}/spng)
+set(ZLIBNG_INCLUDE_DIR ${INCLUDES_BASE_DIR}/zlib-ng)
+set(ZLIBNG_SOURCES
+    ${ZLIBNG_INCLUDE_DIR}/arch/generic/adler32_c.c
+    ${ZLIBNG_INCLUDE_DIR}/arch/generic/adler32_fold_c.c
+    ${ZLIBNG_INCLUDE_DIR}/arch/generic/chunkset_c.c
+    ${ZLIBNG_INCLUDE_DIR}/arch/generic/compare256_c.c
+    ${ZLIBNG_INCLUDE_DIR}/arch/generic/crc32_braid_c.c
+    ${ZLIBNG_INCLUDE_DIR}/arch/generic/crc32_fold_c.c
+    ${ZLIBNG_INCLUDE_DIR}/arch/generic/slide_hash_c.c
+    ${ZLIBNG_INCLUDE_DIR}/adler32.c
+    ${ZLIBNG_INCLUDE_DIR}/compress.c
+    ${ZLIBNG_INCLUDE_DIR}/crc32.c
+    ${ZLIBNG_INCLUDE_DIR}/crc32_braid_comb.c
+    ${ZLIBNG_INCLUDE_DIR}/cpu_features.c
+    ${ZLIBNG_INCLUDE_DIR}/deflate.c
+    ${ZLIBNG_INCLUDE_DIR}/deflate_fast.c
+    ${ZLIBNG_INCLUDE_DIR}/deflate_huff.c
+    ${ZLIBNG_INCLUDE_DIR}/deflate_medium.c
+    ${ZLIBNG_INCLUDE_DIR}/deflate_quick.c
+    ${ZLIBNG_INCLUDE_DIR}/deflate_rle.c
+    ${ZLIBNG_INCLUDE_DIR}/deflate_slow.c
+    ${ZLIBNG_INCLUDE_DIR}/deflate_stored.c
+    ${ZLIBNG_INCLUDE_DIR}/functable.c
+    ${ZLIBNG_INCLUDE_DIR}/infback.c
+    ${ZLIBNG_INCLUDE_DIR}/inflate.c
+    ${ZLIBNG_INCLUDE_DIR}/inftrees.c
+    ${ZLIBNG_INCLUDE_DIR}/insert_string.c
+    ${ZLIBNG_INCLUDE_DIR}/insert_string_roll.c
+    ${ZLIBNG_INCLUDE_DIR}/trees.c
+    ${ZLIBNG_INCLUDE_DIR}/uncompr.c
+    ${ZLIBNG_INCLUDE_DIR}/zutil.c
+    ${ZLIBNG_INCLUDE_DIR}/arch/generic/crc32_chorba_c.c
+)
 
 add_library(fmt.hdll
     fmt.c
@@ -9,25 +43,12 @@ add_library(fmt.hdll
     ${MIKKTSPACE_INCLUDE_DIR}/mikktspace.c
 )
 
-if (WIN32)
-    set(PNG_INCLUDE_DIRS ${INCLUDES_BASE_DIR}/png)
-    target_sources(fmt.hdll PRIVATE
-        ${INCLUDES_BASE_DIR}/png/png.c
-        ${INCLUDES_BASE_DIR}/png/pngerror.c
-        ${INCLUDES_BASE_DIR}/png/pngget.c
-        ${INCLUDES_BASE_DIR}/png/pngmem.c
-        ${INCLUDES_BASE_DIR}/png/pngpread.c
-        ${INCLUDES_BASE_DIR}/png/pngread.c
-        ${INCLUDES_BASE_DIR}/png/pngrio.c
-        ${INCLUDES_BASE_DIR}/png/pngrtran.c
-        ${INCLUDES_BASE_DIR}/png/pngrutil.c
-        ${INCLUDES_BASE_DIR}/png/pngset.c
-        ${INCLUDES_BASE_DIR}/png/pngtrans.c
-        ${INCLUDES_BASE_DIR}/png/pngwio.c
-        ${INCLUDES_BASE_DIR}/png/pngwrite.c
-        ${INCLUDES_BASE_DIR}/png/pngwtran.c
-        ${INCLUDES_BASE_DIR}/png/pngwutil.c)
-endif()
+set(SPNG_INCLUDE_DIRS ${SPNG_INCLUDE_DIR})
+set(ZLIB_INCLUDE_DIRS ${ZLIBNG_INCLUDE_DIR})
+target_sources(fmt.hdll PRIVATE
+    ${SPNG_INCLUDE_DIR}/spng.c
+    ${ZLIBNG_SOURCES})
+target_compile_definitions(fmt.hdll PRIVATE SPNG_STATIC SPNG_DISABLE_OPT ZLIB_COMPAT NO_FSEEKO WITH_ALL_FALLBACKS)
 
 if (WIN32)
     set(VORBIS_INCLUDE_DIR ${INCLUDES_BASE_DIR}/vorbis)
@@ -59,8 +80,6 @@ if (WIN32)
 endif()
 
 if(WIN32)
-    set(ZLIB_INCLUDE_DIRS ${INCLUDES_BASE_DIR}/zlib)
-
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(TurboJPEG_INCLUDE_DIRS ${INCLUDES_BASE_DIR}/turbojpeg ${INCLUDES_BASE_DIR}/turbojpeg/x64)
         find_library(TurboJPEG_LIBRARIES simd PATHS ${INCLUDES_BASE_DIR}/turbojpeg/x64)
@@ -124,18 +143,8 @@ if(WIN32)
         ${INCLUDES_BASE_DIR}/turbojpeg/jutils.c
         ${INCLUDES_BASE_DIR}/turbojpeg/transupp.c
         ${INCLUDES_BASE_DIR}/turbojpeg/turbojpeg.c
-        ${INCLUDES_BASE_DIR}/zlib/adler32.c
-        ${INCLUDES_BASE_DIR}/zlib/crc32.c
-        ${INCLUDES_BASE_DIR}/zlib/deflate.c
-        ${INCLUDES_BASE_DIR}/zlib/inffast.c
-        ${INCLUDES_BASE_DIR}/zlib/inflate.c
-        ${INCLUDES_BASE_DIR}/zlib/inftrees.c
-        ${INCLUDES_BASE_DIR}/zlib/trees.c
-        ${INCLUDES_BASE_DIR}/zlib/zutil.c
     )
 elseif(DOWNLOAD_DEPENDENCIES)
-    find_package(ZLIB REQUIRED)
-
 	ExternalProject_Add(turbojpeg-project
         URL https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.1/libjpeg-turbo-3.1.1.tar.gz
         URL_HASH SHA256=aadc97ea91f6ef078b0ae3a62bba69e008d9a7db19b34e4ac973b19b71b4217c
@@ -156,29 +165,6 @@ elseif(DOWNLOAD_DEPENDENCIES)
     set(TurboJPEG_LIBRARIES turbojpeg)
 
     add_dependencies(turbojpeg turbojpeg-project)
-
-    ExternalProject_Add(libpng
-        URL https://github.com/pnggroup/libpng/archive/refs/tags/v1.6.50.tar.gz
-        URL_HASH SHA256=71158e53cfdf2877bc99bcab33641d78df3f48e6e0daad030afe9cb8c031aa46
-        CMAKE_ARGS
-            ${CMAKE_COMMON_DEP_ARGS}
-            -DPNG_SHARED=OFF
-            -DPNG_TESTS=OFF
-            -DPNG_TOOLS=OFF
-            -DPNG_FRAMEWORK=OFF
-            -DCMAKE_INSTALL_LIBDIR=lib
-        # INSTALL_BYPRODUCTS in CMake 3.26+
-        BUILD_BYPRODUCTS <INSTALL_DIR>/lib/libpng.a
-    )
-    ExternalProject_Get_Property(libpng INSTALL_DIR)
-
-    add_library(png STATIC IMPORTED)
-    set_target_properties(png PROPERTIES IMPORTED_LOCATION ${INSTALL_DIR}/lib/libpng.a)
-
-    set(PNG_INCLUDE_DIRS ${INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR})
-    set(PNG_LIBRARIES png)
-
-    add_dependencies(png libpng)
 
     ExternalProject_Add(libogg
         URL https://github.com/xiph/ogg/releases/download/v1.3.6/libogg-1.3.6.tar.gz
@@ -228,9 +214,6 @@ elseif(DOWNLOAD_DEPENDENCIES)
     add_dependencies(vorbis libvorbis)
     add_dependencies(ogg libogg)
 else()
-    find_package(ZLIB REQUIRED)
-    find_package(PNG REQUIRED)
-
     find_package(TurboJPEG QUIET)
     if(NOT TurboJPEG_FOUND)
         pkg_check_modules(TurboJPEG REQUIRED libjpeg)
@@ -247,7 +230,7 @@ set_as_hdll(fmt)
 target_include_directories(fmt.hdll
     PRIVATE
     ${ZLIB_INCLUDE_DIRS}
-    ${PNG_INCLUDE_DIRS}
+    ${SPNG_INCLUDE_DIRS}
     ${TurboJPEG_INCLUDE_DIRS}
     ${VORBIS_INCLUDE_DIR}
     ${MINIMP3_INCLUDE_DIR}
@@ -256,8 +239,8 @@ target_include_directories(fmt.hdll
 
 target_link_libraries(fmt.hdll
     libhl
+    ${SPNG_LIBRARIES}
     ${ZLIB_LIBRARIES}
-    ${PNG_LIBRARIES}
     ${TurboJPEG_LIBRARIES}
     ${OGGVORBIS_LIBRARIES}
 )

@@ -2,7 +2,6 @@
 
 brew "cmake"
 brew "jpeg-turbo"
-brew "libpng"
 brew "sdl3"
 brew "shaderc"
 brew "vulkan-headers"

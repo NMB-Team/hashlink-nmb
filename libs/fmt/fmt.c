@@ -1,5 +1,5 @@
 #define HL_NAME(n) fmt_##n
-#include <png.h>
+#include <spng.h>
 #include <hl.h>
 
 #if defined(HL_CONSOLE) && !defined(HL_XBO)
@@ -21,6 +21,155 @@ typedef struct {
 	unsigned char a,r,g,b;
 } pixel;
 
+static bool png_format_info( int format, int *spng_format, int *bytes_per_pixel ) {
+	switch( format ) {
+	case 0:
+	case 1:
+		*spng_format = SPNG_FMT_RGB8;
+		*bytes_per_pixel = 3;
+		break;
+	case 7:
+	case 8:
+	case 9:
+	case 10:
+		*spng_format = SPNG_FMT_RGBA8;
+		*bytes_per_pixel = 4;
+		break;
+	case 12:
+	case 15:
+		*spng_format = SPNG_FMT_GA16;
+		*bytes_per_pixel = 4;
+		break;
+	case 13:
+	case 14:
+		*spng_format = SPNG_FMT_RGBA16;
+		*bytes_per_pixel = 8;
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
+
+static void png_copy_to_output( unsigned char *decoded, vbyte *out, int width, int height, int stride, size_t row_size, int format, int flags ) {
+	int y, x;
+	for(y=0;y<height;y++) {
+		unsigned char *src = decoded + y * row_size;
+		unsigned char *dst = out + (flags & 1 ? height - 1 - y : y) * stride;
+		switch( format ) {
+		case 0:
+		case 7:
+		case 14:
+		case 15:
+			memcpy(dst,src,row_size);
+			break;
+		case 1:
+			for(x=0;x<width;x++) {
+				dst[0] = src[2];
+				dst[1] = src[1];
+				dst[2] = src[0];
+				src += 3;
+				dst += 3;
+			}
+			break;
+		case 8:
+			for(x=0;x<width;x++) {
+				dst[0] = src[2];
+				dst[1] = src[1];
+				dst[2] = src[0];
+				dst[3] = src[3];
+				src += 4;
+				dst += 4;
+			}
+			break;
+		case 9:
+			for(x=0;x<width;x++) {
+				dst[0] = src[3];
+				dst[1] = src[2];
+				dst[2] = src[1];
+				dst[3] = src[0];
+				src += 4;
+				dst += 4;
+			}
+			break;
+		case 10:
+			for(x=0;x<width;x++) {
+				dst[0] = src[3];
+				dst[1] = src[0];
+				dst[2] = src[1];
+				dst[3] = src[2];
+				src += 4;
+				dst += 4;
+			}
+			break;
+		case 12:
+			for(x=0;x<width;x++) {
+				dst[0] = src[0];
+				dst[1] = src[1];
+				src += 4;
+				dst += 2;
+			}
+			break;
+		case 13:
+			for(x=0;x<width;x++) {
+				memcpy(dst,src,6);
+				src += 8;
+				dst += 6;
+			}
+			break;
+		}
+	}
+}
+
+static void png_clear_rect( unsigned char *canvas, int canvas_width, struct spng_fctl *fctl ) {
+	uint32_t y;
+	size_t row_size = (size_t)fctl->width * 4;
+	for(y=0;y<fctl->height;y++)
+		memset(canvas + ((size_t)(fctl->y_offset + y) * canvas_width + fctl->x_offset) * 4,0,row_size);
+}
+
+static void png_blend_rect( unsigned char *canvas, int canvas_width, unsigned char *frame, struct spng_fctl *fctl ) {
+	uint32_t x, y;
+	for(y=0;y<fctl->height;y++) {
+		unsigned char *src = frame + (size_t)y * fctl->width * 4;
+		unsigned char *dst = canvas + ((size_t)(fctl->y_offset + y) * canvas_width + fctl->x_offset) * 4;
+		if( fctl->blend_op == SPNG_BLEND_OP_SOURCE ) {
+			memcpy(dst,src,(size_t)fctl->width * 4);
+			continue;
+		}
+		for(x=0;x<fctl->width;x++) {
+			unsigned int sa = src[3];
+			unsigned int da = dst[3];
+			unsigned int oa = sa + ((da * (255 - sa) + 127) / 255);
+			if( oa == 0 ) {
+				*(uint32_t*)dst = 0;
+			} else {
+				dst[0] = (unsigned char)((src[0] * sa + dst[0] * da * (255 - sa) / 255 + oa / 2) / oa);
+				dst[1] = (unsigned char)((src[1] * sa + dst[1] * da * (255 - sa) / 255 + oa / 2) / oa);
+				dst[2] = (unsigned char)((src[2] * sa + dst[2] * da * (255 - sa) / 255 + oa / 2) / oa);
+				dst[3] = (unsigned char)oa;
+			}
+			src += 4;
+			dst += 4;
+		}
+	}
+}
+
+static void png_dispose_rect( unsigned char *canvas, unsigned char *previous, int canvas_width, struct spng_fctl *fctl ) {
+	uint32_t y;
+	size_t row_size = (size_t)fctl->width * 4;
+	switch( fctl->dispose_op ) {
+	case SPNG_DISPOSE_OP_BACKGROUND:
+		png_clear_rect(canvas,canvas_width,fctl);
+		break;
+	case SPNG_DISPOSE_OP_PREVIOUS:
+		for(y=0;y<fctl->height;y++)
+			memcpy(canvas + ((size_t)(fctl->y_offset + y) * canvas_width + fctl->x_offset) * 4,
+				previous + ((size_t)(fctl->y_offset + y) * canvas_width + fctl->x_offset) * 4,row_size);
+		break;
+	}
+}
+
 HL_PRIM bool HL_NAME(jpg_decode)( vbyte *data, int dataLen, vbyte *out, int width, int height, int stride, int format, int flags ) {
 #if defined(HL_CONSOLE) && !defined(HL_XBO)
 	hl_blocking(true);
@@ -39,69 +188,236 @@ HL_PRIM bool HL_NAME(jpg_decode)( vbyte *data, int dataLen, vbyte *out, int widt
 }
 
 HL_PRIM bool HL_NAME(png_decode)( vbyte *data, int dataLen, vbyte *out, int width, int height, int stride, int format, int flags ) {
-#	ifdef PNG_IMAGE_VERSION
-	png_image img;
+	spng_ctx *ctx;
+	struct spng_ihdr ihdr;
+	unsigned char *decoded = NULL;
+	size_t size, row_size;
+	int err, spng_format, bytes_per_pixel;
+	bool success = false;
+
 	hl_blocking(true);
-	memset(&img, 0, sizeof(img));
-	img.version = PNG_IMAGE_VERSION;
-	if( png_image_begin_read_from_memory(&img,data,dataLen) == 0 ) {
+	ctx = spng_ctx_new(0);
+	if( ctx == NULL )
+		goto done;
+	if( spng_set_png_buffer(ctx,data,dataLen) != 0 )
+		goto done;
+	if( spng_get_ihdr(ctx,&ihdr) != 0 )
+		goto done;
+	if( ihdr.width != (uint32_t)width || ihdr.height != (uint32_t)height )
+		goto done;
+	if( !png_format_info(format,&spng_format,&bytes_per_pixel) ) {
+		spng_ctx_free(ctx);
 		hl_blocking(false);
-		png_image_free(&img);
-		return false;
-	}
-	switch( format ) {
-	case 0:
-		img.format = PNG_FORMAT_RGB;
-		break;
-	case 1:
-		img.format = PNG_FORMAT_BGR;
-		break;
-	case 7:
-		img.format = PNG_FORMAT_RGBA;
-		break;
-	case 8:
-		img.format = PNG_FORMAT_BGRA;
-		break;
-	case 9:
-		img.format = PNG_FORMAT_ABGR;
-		break;
-	case 10:
-		img.format = PNG_FORMAT_ARGB;
-		break;
-	case 12:
-		img.format = PNG_FORMAT_LINEAR_Y;
-		break;
-	case 13:
-		img.format = PNG_FORMAT_LINEAR_RGB;
-		break;
-	case 14:
-		img.format = PNG_FORMAT_LINEAR_RGB_ALPHA;
-		break;
-	case 15:
-		img.format = PNG_FORMAT_LINEAR_Y_ALPHA;
-		break;
-	default:
-		hl_blocking(false);
-		png_image_free(&img);
 		hl_error("Unsupported format");
-		break;
 	}
-	if( img.width != width || img.height != height ) {
-		hl_blocking(false);
-		png_image_free(&img);
-		return false;
-	}
-	if( png_image_finish_read(&img,NULL,out,stride * (flags & 1 ? -1 : 1),NULL) == 0 ) {
-		hl_blocking(false);
-		png_image_free(&img);
-		return false;
-	}
+
+	if( spng_decoded_image_size(ctx,spng_format,&size) != 0 )
+		goto done;
+	row_size = size / height;
+	if( row_size != (size_t)width * bytes_per_pixel )
+		goto done;
+	decoded = (unsigned char*)malloc(size);
+	if( decoded == NULL )
+		goto done;
+	err = spng_decode_image(ctx,decoded,size,spng_format,SPNG_DECODE_TRNS);
+	if( err != 0 )
+		goto done;
+
+	png_copy_to_output(decoded,out,width,height,stride,row_size,format,flags);
+	success = true;
+
+done:
+	if( decoded != NULL )
+		free(decoded);
+	if( ctx != NULL )
+		spng_ctx_free(ctx);
 	hl_blocking(false);
-	png_image_free(&img);
-#	else
-	hl_error("PNG support is missing for this libPNG version");
-#	endif
-	return true;
+	return success;
+}
+
+HL_PRIM bool HL_NAME(png_apng_info)( vbyte *data, int dataLen, vbyte *out ) {
+	spng_ctx *ctx;
+	struct spng_ihdr ihdr;
+	struct spng_actl actl;
+	struct spng_fctl fctl;
+	int32_t *info = (int32_t*)out;
+	bool success = false;
+
+	hl_blocking(true);
+	ctx = spng_ctx_new(0);
+	if( ctx == NULL )
+		goto done;
+	if( spng_set_png_buffer(ctx,data,dataLen) != 0 )
+		goto done;
+	if( spng_get_ihdr(ctx,&ihdr) != 0 )
+		goto done;
+	if( spng_get_actl(ctx,&actl) != 0 )
+		goto done;
+	info[0] = (int32_t)ihdr.width;
+	info[1] = (int32_t)ihdr.height;
+	info[2] = (int32_t)actl.num_frames;
+	info[3] = (int32_t)actl.num_plays;
+	info[4] = spng_get_frame_fctl(ctx,&fctl) == 0 ? 0 : 1;
+	success = true;
+
+done:
+	if( ctx != NULL )
+		spng_ctx_free(ctx);
+	hl_blocking(false);
+	return success;
+}
+
+HL_PRIM bool HL_NAME(png_apng_frame_info)( vbyte *data, int dataLen, int frameIndex, vbyte *out ) {
+	spng_ctx *ctx;
+	struct spng_ihdr ihdr;
+	struct spng_actl actl;
+	struct spng_fctl fctl;
+	unsigned char *decoded = NULL;
+	unsigned char *frame = NULL;
+	size_t size;
+	int32_t *info = (int32_t*)out;
+	int i, first_visible_frame;
+	bool success = false;
+
+	hl_blocking(true);
+	ctx = spng_ctx_new(0);
+	if( ctx == NULL )
+		goto done;
+	if( spng_set_png_buffer(ctx,data,dataLen) != 0 )
+		goto done;
+	if( spng_get_ihdr(ctx,&ihdr) != 0 )
+		goto done;
+	if( spng_get_actl(ctx,&actl) != 0 || frameIndex < 0 || (uint32_t)frameIndex >= actl.num_frames )
+		goto done;
+
+	first_visible_frame = spng_get_frame_fctl(ctx,&fctl) == 0;
+	if( spng_decoded_image_size(ctx,SPNG_FMT_RGBA8,&size) != 0 )
+		goto done;
+	decoded = (unsigned char*)malloc(size);
+	if( decoded == NULL )
+		goto done;
+	if( spng_decode_image(ctx,decoded,size,SPNG_FMT_RGBA8,SPNG_DECODE_TRNS) != 0 )
+		goto done;
+
+	if( !first_visible_frame || frameIndex > 0 ) {
+		int skip = first_visible_frame ? frameIndex - 1 : frameIndex;
+		frame = (unsigned char*)malloc(size);
+		if( frame == NULL )
+			goto done;
+		for(i=0;i<=skip;i++) {
+			if( spng_decode_frame(ctx,frame,size,SPNG_FMT_RGBA8,0,&fctl) != 0 )
+				goto done;
+		}
+	}
+
+	info[0] = (int32_t)fctl.width;
+	info[1] = (int32_t)fctl.height;
+	info[2] = (int32_t)fctl.x_offset;
+	info[3] = (int32_t)fctl.y_offset;
+	info[4] = (int32_t)fctl.delay_num;
+	info[5] = (int32_t)fctl.delay_den;
+	info[6] = (int32_t)fctl.dispose_op;
+	info[7] = (int32_t)fctl.blend_op;
+	success = true;
+
+done:
+	if( frame != NULL )
+		free(frame);
+	if( decoded != NULL )
+		free(decoded);
+	if( ctx != NULL )
+		spng_ctx_free(ctx);
+	hl_blocking(false);
+	return success;
+}
+
+HL_PRIM bool HL_NAME(png_apng_decode_frame)( vbyte *data, int dataLen, vbyte *out, int width, int height, int stride, int format, int flags, int frameIndex ) {
+	spng_ctx *ctx;
+	struct spng_ihdr ihdr;
+	struct spng_actl actl;
+	struct spng_fctl fctl, last_fctl;
+	unsigned char *canvas = NULL;
+	unsigned char *previous = NULL;
+	unsigned char *default_image = NULL;
+	unsigned char *frame = NULL;
+	size_t canvas_size, frame_size;
+	int i, first_visible_frame;
+	bool success = false;
+
+	if( format < 7 || format > 10 )
+		hl_error("Unsupported APNG format");
+
+	hl_blocking(true);
+	ctx = spng_ctx_new(0);
+	if( ctx == NULL )
+		goto done;
+	if( spng_set_png_buffer(ctx,data,dataLen) != 0 )
+		goto done;
+	if( spng_get_ihdr(ctx,&ihdr) != 0 )
+		goto done;
+	if( ihdr.width != (uint32_t)width || ihdr.height != (uint32_t)height )
+		goto done;
+	if( spng_get_actl(ctx,&actl) != 0 || frameIndex < 0 || (uint32_t)frameIndex >= actl.num_frames )
+		goto done;
+
+	canvas_size = (size_t)width * height * 4;
+	canvas = (unsigned char*)calloc(canvas_size,1);
+	previous = (unsigned char*)malloc(canvas_size);
+	default_image = (unsigned char*)malloc(canvas_size);
+	if( canvas == NULL || previous == NULL || default_image == NULL )
+		goto done;
+
+	first_visible_frame = spng_get_frame_fctl(ctx,&fctl) == 0;
+	if( spng_decode_image(ctx,default_image,canvas_size,SPNG_FMT_RGBA8,SPNG_DECODE_TRNS) != 0 )
+		goto done;
+
+	if( first_visible_frame ) {
+		memcpy(previous,canvas,canvas_size);
+		png_blend_rect(canvas,width,default_image,&fctl);
+		if( frameIndex == 0 ) {
+			png_copy_to_output(canvas,out,width,height,stride,(size_t)width * 4,format,flags);
+			success = true;
+			goto done;
+		}
+		last_fctl = fctl;
+	} else {
+		memset(&last_fctl,0,sizeof(last_fctl));
+	}
+
+	for(i=first_visible_frame ? 1 : 0;i<=frameIndex;i++) {
+		if( i > 0 || first_visible_frame )
+			png_dispose_rect(canvas,previous,width,&last_fctl);
+		frame_size = canvas_size;
+		frame = (unsigned char*)malloc(frame_size);
+		if( frame == NULL )
+			goto done;
+		if( spng_decode_frame(ctx,frame,frame_size,SPNG_FMT_RGBA8,0,&fctl) != 0 )
+			goto done;
+		memcpy(previous,canvas,canvas_size);
+		png_blend_rect(canvas,width,frame,&fctl);
+		free(frame);
+		frame = NULL;
+		if( i == frameIndex ) {
+			png_copy_to_output(canvas,out,width,height,stride,(size_t)width * 4,format,flags);
+			success = true;
+			goto done;
+		}
+		last_fctl = fctl;
+	}
+
+done:
+	if( frame != NULL )
+		free(frame);
+	if( default_image != NULL )
+		free(default_image);
+	if( previous != NULL )
+		free(previous);
+	if( canvas != NULL )
+		free(canvas);
+	if( ctx != NULL )
+		spng_ctx_free(ctx);
+	hl_blocking(false);
+	return success;
 }
 
 HL_PRIM void HL_NAME(img_scale)( vbyte *out, int outPos, int outStride, int outWidth, int outHeight, vbyte *in, int inPos, int inStride, int inWidth, int inHeight, int flags ) {
@@ -151,6 +467,9 @@ HL_PRIM void HL_NAME(img_scale)( vbyte *out, int outPos, int outStride, int outW
 
 DEFINE_PRIM(_BOOL, jpg_decode, _BYTES _I32 _BYTES _I32 _I32 _I32 _I32 _I32);
 DEFINE_PRIM(_BOOL, png_decode, _BYTES _I32 _BYTES _I32 _I32 _I32 _I32 _I32);
+DEFINE_PRIM(_BOOL, png_apng_info, _BYTES _I32 _BYTES);
+DEFINE_PRIM(_BOOL, png_apng_frame_info, _BYTES _I32 _I32 _BYTES);
+DEFINE_PRIM(_BOOL, png_apng_decode_frame, _BYTES _I32 _BYTES _I32 _I32 _I32 _I32 _I32 _I32);
 DEFINE_PRIM(_VOID, img_scale, _BYTES _I32 _I32 _I32 _I32 _BYTES _I32 _I32 _I32 _I32 _I32);
 
 
@@ -631,7 +950,7 @@ static void md5_process( md5_context *ctx, uint8 data[64] ) {
     P( B, C, D, A, 12, 20, 0x8D2A4C8A );
 
 #undef F
-    
+
 #define F(x,y,z) (x ^ y ^ z)
 
     P( A, B, C, D,  5,  4, 0xFFFA3942 );

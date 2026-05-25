@@ -28,21 +28,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\include\mikktspace\mikktspace.c" />
-    <ClCompile Include="..\..\include\png\png.c" />
-    <ClCompile Include="..\..\include\png\pngerror.c" />
-    <ClCompile Include="..\..\include\png\pngget.c" />
-    <ClCompile Include="..\..\include\png\pngmem.c" />
-    <ClCompile Include="..\..\include\png\pngpread.c" />
-    <ClCompile Include="..\..\include\png\pngread.c" />
-    <ClCompile Include="..\..\include\png\pngrio.c" />
-    <ClCompile Include="..\..\include\png\pngrtran.c" />
-    <ClCompile Include="..\..\include\png\pngrutil.c" />
-    <ClCompile Include="..\..\include\png\pngset.c" />
-    <ClCompile Include="..\..\include\png\pngtrans.c" />
-    <ClCompile Include="..\..\include\png\pngwio.c" />
-    <ClCompile Include="..\..\include\png\pngwrite.c" />
-    <ClCompile Include="..\..\include\png\pngwtran.c" />
-    <ClCompile Include="..\..\include\png\pngwutil.c" />
+    <ClCompile Include="..\..\include\spng\spng.c" />
     <ClCompile Include="..\..\include\turbojpeg\jaricom.c" />
     <ClCompile Include="..\..\include\turbojpeg\jcapimin.c" />
     <ClCompile Include="..\..\include\turbojpeg\jcapistd.c" />
@@ -119,14 +105,36 @@
     <ClCompile Include="..\..\include\vorbis\synthesis.c" />
     <ClCompile Include="..\..\include\vorbis\vorbisfile.c" />
     <ClCompile Include="..\..\include\vorbis\window.c" />
-    <ClCompile Include="..\..\include\zlib\adler32.c" />
-    <ClCompile Include="..\..\include\zlib\crc32.c" />
-    <ClCompile Include="..\..\include\zlib\deflate.c" />
-    <ClCompile Include="..\..\include\zlib\inffast.c" />
-    <ClCompile Include="..\..\include\zlib\inflate.c" />
-    <ClCompile Include="..\..\include\zlib\inftrees.c" />
-    <ClCompile Include="..\..\include\zlib\trees.c" />
-    <ClCompile Include="..\..\include\zlib\zutil.c" />
+    <ClCompile Include="..\..\include\zlib-ng\arch\generic\adler32_c.c" />
+    <ClCompile Include="..\..\include\zlib-ng\arch\generic\adler32_fold_c.c" />
+    <ClCompile Include="..\..\include\zlib-ng\arch\generic\chunkset_c.c" />
+    <ClCompile Include="..\..\include\zlib-ng\arch\generic\compare256_c.c" />
+    <ClCompile Include="..\..\include\zlib-ng\arch\generic\crc32_braid_c.c" />
+    <ClCompile Include="..\..\include\zlib-ng\arch\generic\crc32_fold_c.c" />
+    <ClCompile Include="..\..\include\zlib-ng\arch\generic\slide_hash_c.c" />
+    <ClCompile Include="..\..\include\zlib-ng\adler32.c" />
+    <ClCompile Include="..\..\include\zlib-ng\compress.c" />
+    <ClCompile Include="..\..\include\zlib-ng\crc32.c" />
+    <ClCompile Include="..\..\include\zlib-ng\crc32_braid_comb.c" />
+    <ClCompile Include="..\..\include\zlib-ng\cpu_features.c" />
+    <ClCompile Include="..\..\include\zlib-ng\deflate.c" />
+    <ClCompile Include="..\..\include\zlib-ng\deflate_fast.c" />
+    <ClCompile Include="..\..\include\zlib-ng\deflate_huff.c" />
+    <ClCompile Include="..\..\include\zlib-ng\deflate_medium.c" />
+    <ClCompile Include="..\..\include\zlib-ng\deflate_quick.c" />
+    <ClCompile Include="..\..\include\zlib-ng\deflate_rle.c" />
+    <ClCompile Include="..\..\include\zlib-ng\deflate_slow.c" />
+    <ClCompile Include="..\..\include\zlib-ng\deflate_stored.c" />
+    <ClCompile Include="..\..\include\zlib-ng\functable.c" />
+    <ClCompile Include="..\..\include\zlib-ng\infback.c" />
+    <ClCompile Include="..\..\include\zlib-ng\inflate.c" />
+    <ClCompile Include="..\..\include\zlib-ng\inftrees.c" />
+    <ClCompile Include="..\..\include\zlib-ng\insert_string.c" />
+    <ClCompile Include="..\..\include\zlib-ng\insert_string_roll.c" />
+    <ClCompile Include="..\..\include\zlib-ng\trees.c" />
+    <ClCompile Include="..\..\include\zlib-ng\uncompr.c" />
+    <ClCompile Include="..\..\include\zlib-ng\zutil.c" />
+    <ClCompile Include="..\..\include\zlib-ng\arch\generic\crc32_chorba_c.c" />
     <ClCompile Include="dxt.c" />
     <ClCompile Include="fmt.c" />
     <ClCompile Include="mikkt.c" />
@@ -134,13 +142,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\mikktspace\mikktspace.h" />
-    <ClInclude Include="..\..\include\png\png.h" />
-    <ClInclude Include="..\..\include\png\pngconf.h" />
-    <ClInclude Include="..\..\include\png\pngdebug.h" />
-    <ClInclude Include="..\..\include\png\pnginfo.h" />
-    <ClInclude Include="..\..\include\png\pnglibconf.h" />
-    <ClInclude Include="..\..\include\png\pngpriv.h" />
-    <ClInclude Include="..\..\include\png\pngstruct.h" />
+    <ClInclude Include="..\..\include\spng\spng.h" />
     <ClInclude Include="..\..\include\vorbis\backends.h" />
     <ClInclude Include="..\..\include\vorbis\bitrate.h" />
     <ClInclude Include="..\..\include\vorbis\codebook.h" />
@@ -160,15 +162,13 @@
     <ClInclude Include="..\..\include\vorbis\scales.h" />
     <ClInclude Include="..\..\include\vorbis\smallft.h" />
     <ClInclude Include="..\..\include\vorbis\window.h" />
-    <ClInclude Include="..\..\include\zlib\crc32.h" />
-    <ClInclude Include="..\..\include\zlib\deflate.h" />
-    <ClInclude Include="..\..\include\zlib\inffast.h" />
-    <ClInclude Include="..\..\include\zlib\inffixed.h" />
-    <ClInclude Include="..\..\include\zlib\inflate.h" />
-    <ClInclude Include="..\..\include\zlib\inftrees.h" />
-    <ClInclude Include="..\..\include\zlib\trees.h" />
-    <ClInclude Include="..\..\include\zlib\zconf.h" />
-    <ClInclude Include="..\..\include\zlib\zlib.h" />
+    <ClInclude Include="..\..\include\zlib-ng\crc32.h" />
+    <ClInclude Include="..\..\include\zlib-ng\deflate.h" />
+    <ClInclude Include="..\..\include\zlib-ng\inflate.h" />
+    <ClInclude Include="..\..\include\zlib-ng\inftrees.h" />
+    <ClInclude Include="..\..\include\zlib-ng\trees.h" />
+    <ClInclude Include="..\..\include\zlib-ng\zconf.h" />
+    <ClInclude Include="..\..\include\zlib-ng\zlib.h" />
     <ClInclude Include="..\..\include\minimp3\minimp3.h" />
     <ClInclude Include="sha1.h" />
   </ItemGroup>
@@ -247,37 +247,37 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.hdll</TargetExt>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib;../../include/png;../../include/vorbis;../../include/mikktspace;../../include/minimp3;../../include/meshoptimizer</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib-ng;../../include/spng;../../include/vorbis;../../include/mikktspace;../../include/minimp3;../../include/meshoptimizer</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;../../$(Configuration);../../include/turbojpeg/x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.hdll</TargetExt>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib;../../include/png;../../include/vorbis;../../include/mikktspace;../../include/minimp3</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib-ng;../../include/spng;../../include/vorbis;../../include/mikktspace;../../include/minimp3</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;../../x64/$(Configuration);../../include/turbojpeg/x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.hdll</TargetExt>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib;../../include/png;../../include/vorbis;../../include/mikktspace;../../include/minimp3;../../include/meshoptimizer</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib-ng;../../include/spng;../../include/vorbis;../../include/mikktspace;../../include/minimp3;../../include/meshoptimizer</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;../../$(Configuration);../../include/turbojpeg/x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseVS2013|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.hdll</TargetExt>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib;../../include/png;../../include/vorbis;../../include/mikktspace;../../include/minimp3;../../include/meshoptimizer</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib-ng;../../include/spng;../../include/vorbis;../../include/mikktspace;../../include/minimp3;../../include/meshoptimizer</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;../../$(Configuration);../../include/turbojpeg/x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.hdll</TargetExt>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib;../../include/png;../../include/vorbis;../../include/mikktspace;../../include/minimp3</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib-ng;../../include/spng;../../include/vorbis;../../include/mikktspace;../../include/minimp3</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;../../x64/$(Configuration);../../include/turbojpeg/x64</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseVS2013|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.hdll</TargetExt>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib;../../include/png;../../include/vorbis;../../include/mikktspace;../../include/minimp3</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../../src;../../include/turbojpeg;../../include/zlib-ng;../../include/spng;../../include/vorbis;../../include/mikktspace;../../include/minimp3</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;../../x64/$(Configuration);../../include/turbojpeg/x64</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -286,7 +286,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;%(PreprocessorDefinitions); _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;SPNG_STATIC;SPNG_DISABLE_OPT;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions); _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <AdditionalOptions>/wd4996 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
@@ -305,7 +305,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;%(PreprocessorDefinitions); _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;SPNG_STATIC;SPNG_DISABLE_OPT;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions); _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <AdditionalOptions>/wd4996 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
@@ -324,7 +324,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;SPNG_STATIC;SPNG_DISABLE_OPT;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <AdditionalOptions>/wd4996 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
@@ -347,7 +347,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;SPNG_STATIC;SPNG_DISABLE_OPT;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <AdditionalOptions>/wd4996 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
@@ -370,7 +370,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;%(PreprocessorDefinitions); _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;SPNG_STATIC;SPNG_DISABLE_OPT;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions); _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <AdditionalOptions>/wd4996 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
@@ -395,7 +395,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;%(PreprocessorDefinitions); _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;JPG_EXPORTS;SPNG_STATIC;SPNG_DISABLE_OPT;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions); _CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <AdditionalOptions>/wd4996 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>

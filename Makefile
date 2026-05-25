@@ -43,9 +43,23 @@ STD = src/std/array.o src/std/buffer.o src/std/bytes.o src/std/cast.o src/std/da
 
 HL_OBJ = src/code.o src/jit.o src/main.o src/module.o src/debugger.o src/profile.o
 
-FMT_CPPFLAGS = -I include/mikktspace -I include/minimp3
+FMT_CPPFLAGS = -I include/mikktspace -I include/minimp3 -I include/spng -I include/zlib-ng
+FMT_CPPFLAGS += -D SPNG_STATIC -D SPNG_DISABLE_OPT -D ZLIB_COMPAT -D NO_FSEEKO -D WITH_ALL_FALLBACKS
 
 FMT = libs/fmt/fmt.o libs/fmt/sha1.o include/mikktspace/mikktspace.o libs/fmt/mikkt.o libs/fmt/dxt.o
+FMT += include/spng/spng.o
+FMT += include/zlib-ng/arch/generic/adler32_c.o include/zlib-ng/arch/generic/adler32_fold_c.o \
+	include/zlib-ng/arch/generic/chunkset_c.o include/zlib-ng/arch/generic/compare256_c.o \
+	include/zlib-ng/arch/generic/crc32_braid_c.o include/zlib-ng/arch/generic/crc32_fold_c.o \
+	include/zlib-ng/arch/generic/slide_hash_c.o include/zlib-ng/adler32.o include/zlib-ng/compress.o \
+	include/zlib-ng/crc32.o include/zlib-ng/crc32_braid_comb.o include/zlib-ng/cpu_features.o \
+	include/zlib-ng/deflate.o include/zlib-ng/deflate_fast.o include/zlib-ng/deflate_huff.o \
+	include/zlib-ng/deflate_medium.o include/zlib-ng/deflate_quick.o include/zlib-ng/deflate_rle.o \
+	include/zlib-ng/deflate_slow.o include/zlib-ng/deflate_stored.o include/zlib-ng/functable.o \
+	include/zlib-ng/infback.o \
+	include/zlib-ng/inflate.o include/zlib-ng/inftrees.o include/zlib-ng/insert_string.o \
+	include/zlib-ng/insert_string_roll.o include/zlib-ng/trees.o include/zlib-ng/uncompr.o \
+	include/zlib-ng/zutil.o include/zlib-ng/arch/generic/crc32_chorba_c.o
 
 SDL = libs/sdl/sdl.o libs/sdl/gl.o libs/sdl/vulkan.o
 
@@ -282,7 +296,7 @@ $(HL) $(HLC):
 	$(HDLL_LINK) $(USE_LIBHL_LDFLAGS) $(HDLL_LDFLAGS) $($*_LDFLAGS) -shared $^ $($*_LDLIBS) -o $@
 
 $(FMT): CPPFLAGS += $(FMT_CPPFLAGS)
-fmt_LDLIBS = -lpng -lturbojpeg -lvorbisfile -lz -lm
+fmt_LDLIBS = -lturbojpeg -lvorbisfile -lm
 fmt.hdll: $(FMT) $(LIBHL)
 
 $(SDL): CPPFLAGS += $(SDL_CPPFLAGS)
