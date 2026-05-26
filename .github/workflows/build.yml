@@ -125,7 +125,7 @@ jobs:
 
     steps:
     - name: "SCM Checkout"
-      uses: actions/checkout@v6
+      uses: actions/checkout@v6.0.2
 
     - name: "Add msbuild to PATH"
       if: matrix.build_system == 'vs2026'
@@ -246,7 +246,7 @@ jobs:
           gcc --version
 
     - name: Install haxe
-      uses: tobil4sk/setup-haxe@9d1527c4bb9d1d449d196a0822118692ceeac457
+      uses: krdlab/setup-haxe@master
       with:
         haxe-version: latest
 
@@ -438,7 +438,7 @@ jobs:
 
 
     - name: "Share: build artifact"
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v7.0.1
       with:
         name: ${{ matrix.target }}-${{ matrix.build_system }}-${{ matrix.architecture }}
         path: ${{ env.HASHLINK_DISTRIBUTION }}
@@ -449,10 +449,10 @@ jobs:
     steps:
 
     - name: "SCM Checkout"
-      uses: actions/checkout@v6
+      uses: actions/checkout@v6.0.2
 
     - name: Install haxe
-      uses: krdlab/setup-haxe@v2.0.2
+      uses: krdlab/setup-haxe@master
       with:
         haxe-version: latest
 
@@ -514,7 +514,7 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v6.0.2
     - name: Download binary
       uses: actions/download-artifact@v8
       with:
@@ -578,14 +578,14 @@ jobs:
 
     - name: Check binary
       run: hl --version
-    - uses: tobil4sk/setup-haxe@9d1527c4bb9d1d449d196a0822118692ceeac457
+    - uses: krdlab/setup-haxe@master
       with:
         haxe-version: latest
 
     - name: Setup haxelib
       run: haxelib dev hashlink ./other/haxelib
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v6.0.2
       with:
         repository: HaxeFoundation/haxe
         path: haxe
@@ -611,10 +611,10 @@ jobs:
     steps:
 
     - name: "SCM Checkout"
-      uses: actions/checkout@v6
+      uses: actions/checkout@v6.0.2
 
     - name: "Get: all build artifacts"
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@v8.0.1
 
     - name: "Delete previous 'latest' release"
       env:

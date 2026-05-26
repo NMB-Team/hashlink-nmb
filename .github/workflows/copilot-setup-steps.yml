@@ -14,7 +14,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
       - name: Install system dependencies
         run: |
@@ -30,7 +30,7 @@ jobs:
             libsqlite3-dev
 
       - name: Install Haxe
-        uses: tobil4sk/setup-haxe@9d1527c4bb9d1d449d196a0822118692ceeac457
+        uses: krdlab/setup-haxe@master
         with:
           haxe-version: latest
 
