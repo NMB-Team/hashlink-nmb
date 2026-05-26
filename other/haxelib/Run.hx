@@ -58,9 +58,8 @@ class Build {
 					case _: [];
 				};
 				Sys.command("haxelib", ["--cwd", targetDir, "run", "hxcpp", "Build.xml"].concat(config.defines.exists("debug") ? ["-Ddebug"] : []).concat(platformArgs));
-			case "vs2019", "vs2022", "vs2026":
+			case "vs2022", "vs2026":
 				var versions = switch (tpl) {
-					case "vs2019": ["[16.0,17.0]"];
 					case "vs2022": ["[17.0,18.0]", "[18.0,19.0]"];
 					case "vs2026": ["[18.0,19.0]"];
 					default: null;

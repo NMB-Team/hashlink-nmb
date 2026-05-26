@@ -40,7 +40,7 @@ HL_PRIM vbyte *hl_ftos( double d, int *len ) {
 	k = (int)usprintf(tmp,24,USTR("%.15g"),d);
 #	if defined(HL_WIN) && _MSC_VER <= 1800
 	// fix for window : 1e-5 is printed as 1e-005 whereas it's 1e-05 on other platforms
-	// note : this is VS2013 std bug, VS2015 works correctly
+	// note : this is an old MSVC std bug
 	{
 		int i;
 		for(i=0;i<k;i++)
