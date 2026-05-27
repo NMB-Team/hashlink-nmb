@@ -6,6 +6,8 @@ typedef DriverInstance = hl.Abstract<"dx_driver">;
 
 typedef Device = hl.Abstract<"dx_device">;
 
+typedef Adapter = hl.Abstract<"dx_adapter">;
+
 enum DriverInitFlag {
 	DEBUG;
 	GPU_BASED_VALIDATION;
@@ -1666,6 +1668,10 @@ class Dx12 {
 	}
 
 	public static function getDevice() : Device {
+		return null;
+	}
+
+	public static function getAdapter() : Adapter {
 		return null;
 	}
 
