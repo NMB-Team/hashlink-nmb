@@ -61,7 +61,7 @@ HL_PRIM bool HL_NAME(vk_init)( bool enable_validation ) {
 		.ppEnabledLayerNames = (const char* const[]) { "VK_LAYER_KHRONOS_validation" },
 		.ppEnabledExtensionNames = extensions,
 	};
-	
+
 	return vkCreateInstance(&info, NULL, &instance) == VK_SUCCESS;
 }
 
@@ -719,7 +719,7 @@ HL_PRIM vbyte *HL_NAME(vk_compile_shader)( vbyte *source, vbyte *shaderFile, vby
 	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, source, strlen(source), shaderKind, shaderFile, mainFunction, opts);
 	shaderc_compiler_release(compiler);
 	shaderc_compile_options_release(opts);
-	
+
 	if( shaderc_result_get_compilation_status(result) != shaderc_compilation_status_success ) {
 		const char *str = shaderc_result_get_error_message(result);
 		vbyte *error = hl_copy_bytes(str, (int)strlen(str)+1);
@@ -732,7 +732,7 @@ HL_PRIM vbyte *HL_NAME(vk_compile_shader)( vbyte *source, vbyte *shaderFile, vby
 	vbyte *data = hl_alloc_bytes(size);
 	memcpy(data, shaderc_result_get_bytes(result), size);
 	shaderc_result_release(result);
-	
+
 	*outSize = size;
 	return data;
 #endif

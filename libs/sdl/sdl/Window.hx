@@ -7,8 +7,8 @@ typedef DisplayHandle = Null<Int>;
 enum abstract DisplayMode(Int) {
 	var Windowed = 0;
 	var Fullscreen = 1;
-	var ExclusiveFullscreen = 1;
-	var Borderless = 2;
+	var BorderlessFixed = 2;
+	var Borderless = 3;
 }
 
 typedef DisplaySetting = {

@@ -447,7 +447,8 @@ HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
 			event->type = DropStart;
 			event->window = e.drop.windowID;
 			break;
-		case SDL_EVENT_DROP_FILE: case SDL_EVENT_DROP_TEXT: {
+		case SDL_EVENT_DROP_FILE:
+		case SDL_EVENT_DROP_TEXT: {
 			vbyte* bytes = hl_copy_bytes(e.drop.data, (int)strlen(e.drop.data) + 1);
 			event->type = e.type == SDL_EVENT_DROP_FILE ? DropFile : DropText;
 			event->dropFile = bytes;
@@ -822,7 +823,7 @@ HL_PRIM bool HL_NAME(win_set_fullscreen)(SDL_Window *win, int mode) {
 	switch( mode ) {
 	case 0: // WINDOWED
 		return SDL_SetWindowFullscreen(win, false);
-	case 1: { // FULLSCREEN
+	case 1: { // EXCLUSIVE-FULLSCREEN
 		// sdl3 non-standard behavior; force mode to get exclusive fullscreen.
 		const SDL_DisplayMode *fullscreen_mode = SDL_GetWindowFullscreenMode(win);
 		bool result;
@@ -837,7 +838,7 @@ HL_PRIM bool HL_NAME(win_set_fullscreen)(SDL_Window *win, int mode) {
 			sync_window_state(win);
 		return result;
 	}
-	case 2: // BORDERLESS
+	case 2: // BORDERLESS-FIXED (resizes to screen size)
 #ifdef HL_SDL_WIN32_BORDERLESS
 		{
 			HMONITOR hmon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
@@ -874,6 +875,9 @@ HL_PRIM bool HL_NAME(win_set_fullscreen)(SDL_Window *win, int mode) {
 		SDL_SetWindowFullscreenMode(win, NULL);
 		return SDL_SetWindowFullscreen(win, true);
 #endif
+	case 3: // BORDERLESS
+		SDL_SetWindowFullscreenMode(win, NULL);
+		return SDL_SetWindowFullscreen(win, true);
 	}
 	return false;
 }

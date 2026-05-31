@@ -21,8 +21,8 @@ typedef DisplaySetting = {
 enum abstract DisplayMode(Int) {
 	var Windowed = 0;
 	var Fullscreen = 1;
-	var ExclusiveFullscreen = 1;
-	var Borderless = 2;
+	var BorderlessFixed = 2;
+	var Borderless = 3;
 }
 
 @:hlNative("directx")
@@ -78,7 +78,7 @@ class Window {
 			dx.Window.winChangeDisplaySetting(selectedMonitor != null ? @:privateAccess selectedMonitor.bytes : null, null);
 			winSetFullscreen(win, false);
 		}
-		else if(mode == Borderless) {
+		else if(mode == BorderlessFixed || mode == Borderless) {
 			dx.Window.winChangeDisplaySetting(selectedMonitor != null ? @:privateAccess selectedMonitor.bytes : null, null);
 			winSetFullscreen(win,true);
 		}
