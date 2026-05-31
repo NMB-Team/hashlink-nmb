@@ -17,7 +17,8 @@ package sdl;
 	public var value : Int;
 	public var __unused : Int;
 	public var windowId : Int;
-	public var dropFile: hl.Bytes;
+	public var dropFile : hl.Bytes;
+	public var inputChar : hl.Bytes;
 
 	// for compile-time backward compatibility
 	public var controller(get,never) : Int;

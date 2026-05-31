@@ -181,6 +181,18 @@ class Sdl {
 			return @:privateAccess String.fromUTF8(t);
 	}
 
+	static function get_pref_path(org:hl.Bytes, app:hl.Bytes):hl.Bytes {
+		return null;
+	}
+
+	public static function getPrefPath(org:String, app:String) {
+		return @:privateAccess String.fromUTF8(get_pref_path(org.toUtf8(), app.toUtf8()));
+	}
+
+	public static function isTextInputShown():Bool {
+		return _isTextInputShown();
+	}
+
 	@:hlNative("?sdl", "get_screen_width")
 	static function get_screen_width() : Int {
 		return 0;
@@ -270,6 +282,11 @@ class Sdl {
 	@:hlNative("?sdl", "get_error")
 	private static function _getError() : hl.Bytes {
 		return null;
+	}
+
+	@:hlNative("?sdl", "is_text_input_shown")
+	private static function _isTextInputShown():Bool {
+		return false;
 	}
 
 	//

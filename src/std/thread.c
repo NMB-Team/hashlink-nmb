@@ -26,6 +26,11 @@
 typedef struct _hl_semaphore hl_semaphore;
 typedef struct _hl_condition hl_condition;
 
+#ifdef __OpenBSD__
+#include <pthread_np.h>
+#define pthread_setname_np(a,b) pthread_set_name_np(a,b)
+#endif
+
 #if !defined(HL_THREADS)
 
 struct _hl_mutex {
@@ -472,7 +477,7 @@ HL_PRIM void hl_tls_set( hl_tls *l, void *v ) {
 	hl_thread_info *info = hl_get_thread();
 	if (l->key >= info->tls_arr_size) {
 		int new_max = info->tls_arr_size > 0 ? info->tls_arr_size * 2 : 16;
-		new_max = l->key > new_max ? l->key : new_max; 
+		new_max = l->key > new_max ? l->key : new_max;
 		void **new_arr = hl_gc_alloc_raw(sizeof(void*) * new_max);
 		memcpy(new_arr, info->tls_arr, info->tls_arr_size * sizeof(void*));
 		info->tls_arr = new_arr;
@@ -776,6 +781,8 @@ HL_PRIM int hl_thread_id() {
 	return (pid_t)tid64;
 #elif defined(SYS_gettid) && !defined(HL_TVOS)
 	return syscall(SYS_gettid);
+#elif defined(__OpenBSD__)
+	return getthrid();
 #else
 	return -1;
 #endif

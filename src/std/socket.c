@@ -27,7 +27,11 @@
 #	include <string.h>
 #	include <hl.h>
 #	undef _GUID
+#	ifndef _WIN32_WINNT
+#	define _WIN32_WINNT 0x0600
+#	endif
 #	include <winsock2.h>
+#	include <ws2tcpip.h>
 #	define FDSIZE(n)	(sizeof(void*) + (n) * sizeof(SOCKET))
 #	define SHUT_WR		SD_SEND
 #	define SHUT_RD		SD_RECEIVE
@@ -195,27 +199,30 @@ HL_PRIM int hl_socket_recv_char( hl_socket *s ) {
 	return (unsigned char)cc;
 }
 
-HL_PRIM int hl_host_resolve( vbyte *host ) {
-	unsigned int ip;
+HL_PRIM int hl_host_resolve(vbyte *host) {
+	struct addrinfo hints, *res;
+	unsigned int ip = INADDR_NONE;
+
 	hl_blocking(true);
-	ip = inet_addr((char*)host);
-	if( ip == INADDR_NONE ) {
-		struct hostent *h;
-#	if defined(HL_WIN) || defined(HL_MAC) || defined(HL_IOS) || defined(HL_TVOS) || defined (HL_CYGWIN) || defined(HL_CONSOLE)
-		h = gethostbyname((char*)host);
-#	else
-		struct hostent hbase;
-		char buf[1024];
-		int errcode;
-		gethostbyname_r((char*)host,&hbase,buf,1024,&h,&errcode);
-#	endif
-		if( h == NULL ) {
-			hl_blocking(false);
-			return -1;
-		}
-		ip = *((unsigned int*)h->h_addr_list[0]);
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+
+	int status = getaddrinfo((char*)host, NULL, &hints, &res);
+	if (status != 0) {
+		hl_blocking(false);
+		return -1;
 	}
+
+	if (res != NULL) {
+		struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
+		ip = ipv4->sin_addr.s_addr;
+	}
+
+	freeaddrinfo(res);
 	hl_blocking(false);
+
 	return ip;
 }
 
@@ -228,7 +235,7 @@ HL_PRIM vbyte *hl_host_to_string( int ip ) {
 HL_PRIM vbyte *hl_host_reverse( int ip ) {
 	struct hostent *h;
 	hl_blocking(true);
-#	if defined(HL_WIN) || defined(HL_MAC) || defined(HL_IOS) || defined(HL_TVOS) || defined(HL_CYGWIN) || defined(HL_CONSOLE)
+#	if defined(HL_WIN) || defined(HL_MAC) || defined(HL_IOS) || defined(HL_TVOS) || defined(HL_CYGWIN) || defined(HL_CONSOLE) || defined(__OpenBSD__)
 	h = gethostbyaddr((char *)&ip,4,AF_INET);
 #	elif defined(__ANDROID__)
 	hl_error("hl_host_reverse() not available for this platform");

@@ -1,4 +1,4 @@
-#define HL_NAME(n) sdl_##n
+﻿#define HL_NAME(n) sdl_##n
 
 #include <locale.h>
 #include <stdint.h>
@@ -108,9 +108,11 @@ typedef struct {
 	int __unused;
 	int window;
 	vbyte* dropFile;
+	uchar* inputChar;
 } event_data;
 
 static bool isGlOptionsSet = false;
+static bool textediting = false;
 static vclosure *window_event_watch_callback = NULL;
 static event_data *window_event_watch_event = NULL;
 static bool window_event_watch_registered = false;
@@ -174,6 +176,8 @@ static bool fill_window_event( SDL_Event *e, event_data *event ) {
 
 HL_PRIM bool HL_NAME(init_once)() {
 	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "none");
+
 	if( !SDL_Init( SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_GAMEPAD ) ) {
 		hl_error("SDL_Init failed: %s", hl_to_utf16(SDL_GetError()));
 		return false;
@@ -374,13 +378,15 @@ HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
 			break;
 
 		case SDL_EVENT_TEXT_EDITING:
-			// skip
+			textediting = true;
 			continue;
 		case SDL_EVENT_TEXT_INPUT:
 			event->type = TextInput;
 			event->window = e.text.windowID;
 			event->keyCode = *(int*)e.text.text;
 			event->keyCode &= e.text.text[0] ? e.text.text[1] ? e.text.text[2] ? e.text.text[3] ? 0xFFFFFFFF : 0xFFFFFF : 0xFFFF : 0xFF : 0;
+			event->value = 2;
+			event->inputChar = hl_to_utf16(e.text.text);
 			break;
 		case SDL_EVENT_GAMEPAD_ADDED:
 			event->type = GControllerAdded;
@@ -665,6 +671,19 @@ HL_PRIM const char *HL_NAME(win_error)() {
 	return SDL_GetError();
 }
 
+HL_PRIM const char *HL_NAME(get_pref_path)(const char *org, const char *app) {
+	return SDL_GetPrefPath(org, app);
+}
+
+HL_PRIM bool HL_NAME(is_text_input_shown)() {
+	if( textediting ) {
+		textediting = false;
+		return true;
+	}
+
+	return false;
+}
+
 #define TWIN _ABSTRACT(sdl_window)
 DEFINE_PRIM(_BOOL, init_once, _NO_ARG);
 DEFINE_PRIM(_VOID, gl_options, _I32 _I32 _I32 _I32 _I32 _I32);
@@ -692,6 +711,8 @@ DEFINE_PRIM(_BOOL, get_window_grab, TWIN);
 DEFINE_PRIM(_I32, get_global_mouse_state, _REF(_I32) _REF(_I32));
 DEFINE_PRIM(_BYTES, detect_keyboard_layout, _NO_ARG);
 DEFINE_PRIM(_BOOL, hint_value, _BYTES _BYTES);
+DEFINE_PRIM(_BYTES, get_pref_path, _BYTES _BYTES);
+DEFINE_PRIM(_BOOL, is_text_input_shown, _NO_ARG);
 
 // Window
 
