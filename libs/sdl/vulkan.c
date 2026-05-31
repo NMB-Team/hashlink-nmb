@@ -65,12 +65,12 @@ HL_PRIM bool HL_NAME(vk_init)( bool enable_validation ) {
 	return vkCreateInstance(&info, NULL, &instance) == VK_SUCCESS;
 }
 
-vbyte *HL_NAME(vk_make_ref)( vdynamic *v ) {
+HL_PRIM vbyte *HL_NAME(vk_make_ref)( vdynamic *v ) {
 	if( v->t->kind != HSTRUCT ) hl_error("assert");
 	return v->v.ptr;
 }
 
-vbyte *HL_NAME(vk_make_array)( varray *a ) {
+HL_PRIM vbyte *HL_NAME(vk_make_array)( varray *a ) {
 	if( a->size == 0 )
 		return NULL;
 	if( a->at->kind == HABSTRACT )
@@ -99,7 +99,7 @@ typedef struct _VkContext {
 	VkSwapchainKHR swapchain;
 } *VkContext;
 
-VkContext HL_NAME(vk_init_context)( VkSurfaceKHR surface, int *outQueue ) {
+HL_PRIM VkContext HL_NAME(vk_init_context)( VkSurfaceKHR surface, int *outQueue ) {
 	VkContext ctx = (VkContext)malloc(sizeof(struct _VkContext));
 	memset(ctx,0,sizeof(struct _VkContext));
 	ctx->surface = surface;
@@ -163,19 +163,19 @@ VkContext HL_NAME(vk_init_context)( VkSurfaceKHR surface, int *outQueue ) {
 	return ctx;
 }
 
-vbyte *HL_NAME(vk_get_device_name)( VkContext ctx ) {
+HL_PRIM vbyte *HL_NAME(vk_get_device_name)( VkContext ctx ) {
 	VkPhysicalDeviceProperties props;
 	vkGetPhysicalDeviceProperties(ctx->pdevice, &props);
 	return hl_copy_bytes(props.deviceName, (int)strlen(props.deviceName)+1);
 }
 
-VkPhysicalDeviceLimits *HL_NAME(vk_get_limits)( VkContext ctx ) {
+HL_PRIM VkPhysicalDeviceLimits *HL_NAME(vk_get_limits)( VkContext ctx ) {
 	VkPhysicalDeviceProperties props;
 	vkGetPhysicalDeviceProperties(ctx->pdevice, &props);
 	return (VkPhysicalDeviceLimits*)hl_copy_bytes((vbyte*)&props.limits, sizeof(VkPhysicalDeviceLimits));
 }
 
-int HL_NAME(vk_find_memory_type)( VkContext ctx, int allowed, int req ) {
+HL_PRIM int HL_NAME(vk_find_memory_type)( VkContext ctx, int allowed, int req ) {
 	unsigned int i;
     for(i=0;i<ctx->memProps.memoryTypeCount;i++) {
 		if( (allowed & (1<< i)) && (ctx->memProps.memoryTypes[i].propertyFlags & req) == req )
@@ -184,11 +184,11 @@ int HL_NAME(vk_find_memory_type)( VkContext ctx, int allowed, int req ) {
     return -1;
 }
 
-void HL_NAME(vk_get_pdevice_format_props)( VkContext ctx, VkFormat format, VkFormatProperties *props ) {
+HL_PRIM void HL_NAME(vk_get_pdevice_format_props)( VkContext ctx, VkFormat format, VkFormatProperties *props ) {
 	vkGetPhysicalDeviceFormatProperties(ctx->pdevice, format, props);
 }
 
-bool HL_NAME(vk_init_swapchain)( VkContext ctx, int width, int height, bool vsync, varray *outImages, VkFormat *outFormat ) {
+HL_PRIM bool HL_NAME(vk_init_swapchain)( VkContext ctx, int width, int height, bool vsync, varray *outImages, VkFormat *outFormat ) {
 
 	vkDeviceWaitIdle(ctx->device);
 
@@ -274,7 +274,7 @@ bool HL_NAME(vk_init_swapchain)( VkContext ctx, int width, int height, bool vsyn
 	return true;
 }
 
-VkShaderModule HL_NAME(vk_create_shader_module)( VkContext ctx, vbyte *data, int len ) {
+HL_PRIM VkShaderModule HL_NAME(vk_create_shader_module)( VkContext ctx, vbyte *data, int len ) {
 	VkShaderModule module = NULL;
 	VkShaderModuleCreateInfo inf = {
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -285,59 +285,59 @@ VkShaderModule HL_NAME(vk_create_shader_module)( VkContext ctx, vbyte *data, int
 	return module;
 }
 
-VkPipelineLayout HL_NAME(vk_create_pipeline_layout)( VkContext ctx, VkPipelineLayoutCreateInfo *info ) {
+HL_PRIM VkPipelineLayout HL_NAME(vk_create_pipeline_layout)( VkContext ctx, VkPipelineLayoutCreateInfo *info ) {
 	VkPipelineLayout p = NULL;
 	vkCreatePipelineLayout(ctx->device, info, NULL, &p);
 	return p;
 }
 
-VkPipeline HL_NAME(vk_create_graphics_pipeline)( VkContext ctx, VkGraphicsPipelineCreateInfo *info ) {
+HL_PRIM VkPipeline HL_NAME(vk_create_graphics_pipeline)( VkContext ctx, VkGraphicsPipelineCreateInfo *info ) {
 	VkPipeline p = NULL;
 	vkCreateGraphicsPipelines(ctx->device, NULL, 1, info, NULL, &p);
 	return p;
 }
 
-VkRenderPass HL_NAME(vk_create_render_pass)( VkContext ctx, VkRenderPassCreateInfo *info ) {
+HL_PRIM VkRenderPass HL_NAME(vk_create_render_pass)( VkContext ctx, VkRenderPassCreateInfo *info ) {
 	VkRenderPass p = NULL;
 	vkCreateRenderPass(ctx->device, info, NULL, &p);
 	return p;
 }
 
-VkImageView HL_NAME(vk_create_image_view)( VkContext ctx, VkImageViewCreateInfo *info ) {
+HL_PRIM VkImageView HL_NAME(vk_create_image_view)( VkContext ctx, VkImageViewCreateInfo *info ) {
 	VkImageView i = NULL;
 	vkCreateImageView(ctx->device, info, NULL, &i);
 	return i;
 }
 
-VkFramebuffer HL_NAME(vk_create_framebuffer)( VkContext ctx, VkFramebufferCreateInfo *info ) {
+HL_PRIM VkFramebuffer HL_NAME(vk_create_framebuffer)( VkContext ctx, VkFramebufferCreateInfo *info ) {
 	VkFramebuffer b = NULL;
 	vkCreateFramebuffer(ctx->device, info, NULL, &b);
 	return b;
 }
 
-VkDescriptorSetLayout HL_NAME(vk_create_descriptor_set_layout)( VkContext ctx, VkDescriptorSetLayoutCreateInfo *info ) {
+HL_PRIM VkDescriptorSetLayout HL_NAME(vk_create_descriptor_set_layout)( VkContext ctx, VkDescriptorSetLayoutCreateInfo *info ) {
 	VkDescriptorSetLayout p = NULL;
 	vkCreateDescriptorSetLayout(ctx->device, info, NULL, &p);
 	return p;
 }
 
-VkBuffer HL_NAME(vk_create_buffer)( VkContext ctx, VkBufferCreateInfo *info ) {
+HL_PRIM VkBuffer HL_NAME(vk_create_buffer)( VkContext ctx, VkBufferCreateInfo *info ) {
 	VkBuffer b = NULL;
 	vkCreateBuffer(ctx->device, info, NULL, &b);
 	return b;
 }
 
-void HL_NAME(vk_get_buffer_memory_requirements)( VkContext ctx, VkBuffer buf, VkMemoryRequirements *info ) {
+HL_PRIM void HL_NAME(vk_get_buffer_memory_requirements)( VkContext ctx, VkBuffer buf, VkMemoryRequirements *info ) {
 	vkGetBufferMemoryRequirements(ctx->device,buf,info);
 }
 
-VkDeviceMemory HL_NAME(vk_allocate_memory)( VkContext ctx, VkMemoryAllocateInfo *inf ) {
+HL_PRIM VkDeviceMemory HL_NAME(vk_allocate_memory)( VkContext ctx, VkMemoryAllocateInfo *inf ) {
 	VkDeviceMemory m = NULL;
 	vkAllocateMemory(ctx->device, inf, NULL, &m);
 	return m;
 }
 
-vbyte *HL_NAME(vk_map_memory)( VkContext ctx, VkDeviceMemory mem, int offset, int size, int flags ) {
+HL_PRIM vbyte *HL_NAME(vk_map_memory)( VkContext ctx, VkDeviceMemory mem, int offset, int size, int flags ) {
 	if( mem == NULL || size <= 0 )
 		return NULL;
 	void *ptr = NULL;
@@ -346,53 +346,53 @@ vbyte *HL_NAME(vk_map_memory)( VkContext ctx, VkDeviceMemory mem, int offset, in
 	return ptr;
 }
 
-void HL_NAME(vk_unmap_memory)( VkContext ctx, VkDeviceMemory mem ) {
+HL_PRIM void HL_NAME(vk_unmap_memory)( VkContext ctx, VkDeviceMemory mem ) {
 	vkUnmapMemory(ctx->device, mem);
 }
 
-bool HL_NAME(vk_bind_buffer_memory)( VkContext ctx, VkBuffer buf, VkDeviceMemory mem, int offset ) {
+HL_PRIM bool HL_NAME(vk_bind_buffer_memory)( VkContext ctx, VkBuffer buf, VkDeviceMemory mem, int offset ) {
 	return vkBindBufferMemory(ctx->device, buf, mem, offset) == VK_SUCCESS;
 }
 
-VkImage HL_NAME(vk_create_image)( VkContext ctx, VkImageCreateInfo *info ) {
+HL_PRIM VkImage HL_NAME(vk_create_image)( VkContext ctx, VkImageCreateInfo *info ) {
 	VkImage i = NULL;
 	vkCreateImage(ctx->device, info, NULL, &i);
 	return i;
 }
 
-void HL_NAME(vk_get_image_memory_requirements)( VkContext ctx, VkImage img, VkMemoryRequirements *info ) {
+HL_PRIM void HL_NAME(vk_get_image_memory_requirements)( VkContext ctx, VkImage img, VkMemoryRequirements *info ) {
 	vkGetImageMemoryRequirements(ctx->device,img,info);
 }
 
-bool HL_NAME(vk_bind_image_memory)( VkContext ctx, VkImage img, VkDeviceMemory mem, int offset ) {
+HL_PRIM bool HL_NAME(vk_bind_image_memory)( VkContext ctx, VkImage img, VkDeviceMemory mem, int offset ) {
 	return vkBindImageMemory(ctx->device, img, mem, offset) == VK_SUCCESS;
 }
 
-VkCommandPool HL_NAME(vk_create_command_pool)( VkContext ctx, VkCommandPoolCreateInfo *inf ) {
+HL_PRIM VkCommandPool HL_NAME(vk_create_command_pool)( VkContext ctx, VkCommandPoolCreateInfo *inf ) {
 	VkCommandPool pool = NULL;
 	vkCreateCommandPool(ctx->device,inf,NULL,&pool);
 	return pool;
 }
 
-bool HL_NAME(vk_allocate_command_buffers)( VkContext ctx, VkCommandBufferAllocateInfo *inf, varray *buffers ) {
+HL_PRIM bool HL_NAME(vk_allocate_command_buffers)( VkContext ctx, VkCommandBufferAllocateInfo *inf, varray *buffers ) {
 	return vkAllocateCommandBuffers(ctx->device, inf, hl_aptr(buffers,VkCommandBuffer)) == VK_SUCCESS;
 }
 
-VkDescriptorPool HL_NAME(vk_create_descriptor_pool)( VkContext ctx, VkDescriptorPoolCreateInfo *inf ) {
+HL_PRIM VkDescriptorPool HL_NAME(vk_create_descriptor_pool)( VkContext ctx, VkDescriptorPoolCreateInfo *inf ) {
 	VkDescriptorPool pool = NULL;
 	vkCreateDescriptorPool(ctx->device,inf,NULL,&pool);
 	return pool;
 }
 
-bool HL_NAME(vk_allocate_descriptor_sets)( VkContext ctx, VkDescriptorSetAllocateInfo *inf, varray *sets ) {
+HL_PRIM bool HL_NAME(vk_allocate_descriptor_sets)( VkContext ctx, VkDescriptorSetAllocateInfo *inf, varray *sets ) {
 	return vkAllocateDescriptorSets(ctx->device, inf, hl_aptr(sets,VkDescriptorSet)) == VK_SUCCESS;
 }
 
-void HL_NAME(vk_update_descriptor_sets)( VkContext ctx, int writeCount, VkWriteDescriptorSet *write, int copyCount, VkCopyDescriptorSet *copy ) {
+HL_PRIM void HL_NAME(vk_update_descriptor_sets)( VkContext ctx, int writeCount, VkWriteDescriptorSet *write, int copyCount, VkCopyDescriptorSet *copy ) {
 	vkUpdateDescriptorSets(ctx->device, writeCount, write, copyCount, copy);
 }
 
-void HL_NAME(vk_update_descriptor_image_sampler)( VkContext ctx, VkDescriptorSet set, int binding, VkImageView view, VkSampler sampler, VkImageLayout layout ) {
+HL_PRIM void HL_NAME(vk_update_descriptor_image_sampler)( VkContext ctx, VkDescriptorSet set, int binding, VkImageView view, VkSampler sampler, VkImageLayout layout ) {
 	VkDescriptorImageInfo imageInfo = {
 		.sampler = sampler,
 		.imageView = view,
@@ -409,50 +409,50 @@ void HL_NAME(vk_update_descriptor_image_sampler)( VkContext ctx, VkDescriptorSet
 	vkUpdateDescriptorSets(ctx->device, 1, &write, 0, NULL);
 }
 
-VkSampler HL_NAME(vk_create_sampler)( VkContext ctx, VkSamplerCreateInfo *inf ) {
+HL_PRIM VkSampler HL_NAME(vk_create_sampler)( VkContext ctx, VkSamplerCreateInfo *inf ) {
 	VkSampler sampler = NULL;
 	vkCreateSampler(ctx->device, inf, NULL, &sampler);
 	return sampler;
 }
 
-VkFence HL_NAME(vk_create_fence)( VkContext ctx, VkFenceCreateInfo *inf ) {
+HL_PRIM VkFence HL_NAME(vk_create_fence)( VkContext ctx, VkFenceCreateInfo *inf ) {
 	VkFence fence = NULL;
 	vkCreateFence(ctx->device,inf,NULL,&fence);
 	return fence;
 }
 
 
-VkSemaphore HL_NAME(vk_create_semaphore)( VkContext ctx, VkSemaphoreCreateInfo *inf ) {
+HL_PRIM VkSemaphore HL_NAME(vk_create_semaphore)( VkContext ctx, VkSemaphoreCreateInfo *inf ) {
 	VkSemaphore s = NULL;
 	vkCreateSemaphore(ctx->device,inf,NULL,&s);
 	return s;
 }
 
-void HL_NAME(vk_reset_fence)( VkContext ctx, VkFence f ) {
+HL_PRIM void HL_NAME(vk_reset_fence)( VkContext ctx, VkFence f ) {
 	vkResetFences(ctx->device,1,&f);
 }
 
-bool HL_NAME(vk_wait_for_fence)( VkContext ctx, VkFence f, double timeout ) {
+HL_PRIM bool HL_NAME(vk_wait_for_fence)( VkContext ctx, VkFence f, double timeout ) {
 	uint64_t t = (uint64_t)timeout;
 	return vkWaitForFences(ctx->device, 1, &f, VK_TRUE, t) == VK_SUCCESS;
 }
 
-int HL_NAME(vk_get_next_image_index)( VkContext ctx, VkSemaphore lock ) {
+HL_PRIM int HL_NAME(vk_get_next_image_index)( VkContext ctx, VkSemaphore lock ) {
 	int image = -1;
 	if( vkAcquireNextImageKHR(ctx->device, ctx->swapchain, UINT64_MAX, lock, VK_NULL_HANDLE, &image) != VK_SUCCESS )
 		return -1;
 	return image;
 }
 
-void HL_NAME(vk_queue_submit)( VkContext ctx, VkSubmitInfo *inf, VkFence fence ) {
+HL_PRIM void HL_NAME(vk_queue_submit)( VkContext ctx, VkSubmitInfo *inf, VkFence fence ) {
 	vkQueueSubmit(ctx->queue, 1, inf, fence);
 }
 
-void HL_NAME(vk_queue_wait_idle)( VkContext ctx ) {
+HL_PRIM void HL_NAME(vk_queue_wait_idle)( VkContext ctx ) {
 	vkQueueWaitIdle(ctx->queue);
 }
 
-void HL_NAME(vk_present)( VkContext ctx, VkSemaphore sem, int image ) {
+HL_PRIM void HL_NAME(vk_present)( VkContext ctx, VkSemaphore sem, int image ) {
 	VkPresentInfoKHR presentInfo = {
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		.waitSemaphoreCount = 1,
@@ -464,51 +464,51 @@ void HL_NAME(vk_present)( VkContext ctx, VkSemaphore sem, int image ) {
 	vkQueuePresentKHR(ctx->queue, &presentInfo);
 }
 
-void HL_NAME(vk_destroy_buffer)( VkContext ctx, VkBuffer buf ) {
+HL_PRIM void HL_NAME(vk_destroy_buffer)( VkContext ctx, VkBuffer buf ) {
 	vkDestroyBuffer(ctx->device, buf, NULL);
 }
 
-void HL_NAME(vk_destroy_image)( VkContext ctx, VkImage img ) {
+HL_PRIM void HL_NAME(vk_destroy_image)( VkContext ctx, VkImage img ) {
 	vkDestroyImage(ctx->device, img, NULL);
 }
 
-void HL_NAME(vk_destroy_image_view)( VkContext ctx, VkImageView view ) {
+HL_PRIM void HL_NAME(vk_destroy_image_view)( VkContext ctx, VkImageView view ) {
 	vkDestroyImageView(ctx->device, view, NULL);
 }
 
-void HL_NAME(vk_free_memory)( VkContext ctx, VkDeviceMemory mem ) {
+HL_PRIM void HL_NAME(vk_free_memory)( VkContext ctx, VkDeviceMemory mem ) {
 	vkFreeMemory(ctx->device, mem, NULL);
 }
 
-void HL_NAME(vk_destroy_fence)( VkContext ctx, VkFence fence ) {
+HL_PRIM void HL_NAME(vk_destroy_fence)( VkContext ctx, VkFence fence ) {
 	vkDestroyFence(ctx->device, fence, NULL);
 }
 
-void HL_NAME(vk_destroy_semaphore)( VkContext ctx, VkSemaphore sem ) {
+HL_PRIM void HL_NAME(vk_destroy_semaphore)( VkContext ctx, VkSemaphore sem ) {
 	vkDestroySemaphore(ctx->device, sem, NULL);
 }
 
-void HL_NAME(vk_destroy_command_pool)( VkContext ctx, VkCommandPool pool ) {
+HL_PRIM void HL_NAME(vk_destroy_command_pool)( VkContext ctx, VkCommandPool pool ) {
 	vkDestroyCommandPool(ctx->device, pool, NULL);
 }
 
-void HL_NAME(vk_free_command_buffers)( VkContext ctx, VkCommandPool pool, varray *cmd ) {
+HL_PRIM void HL_NAME(vk_free_command_buffers)( VkContext ctx, VkCommandPool pool, varray *cmd ) {
 	vkFreeCommandBuffers(ctx->device, pool, cmd->size, hl_aptr(cmd,VkCommandBuffer));
 }
 
-void HL_NAME(vk_destroy_framebuffer)( VkContext ctx, VkFramebuffer fb ) {
+HL_PRIM void HL_NAME(vk_destroy_framebuffer)( VkContext ctx, VkFramebuffer fb ) {
 	vkDestroyFramebuffer(ctx->device, fb, NULL);
 }
 
-void HL_NAME(vk_destroy_render_pass)( VkContext ctx, VkRenderPass pass ) {
+HL_PRIM void HL_NAME(vk_destroy_render_pass)( VkContext ctx, VkRenderPass pass ) {
 	vkDestroyRenderPass(ctx->device, pass, NULL);
 }
 
-void HL_NAME(vk_destroy_descriptor_pool)( VkContext ctx, VkDescriptorPool pool ) {
+HL_PRIM void HL_NAME(vk_destroy_descriptor_pool)( VkContext ctx, VkDescriptorPool pool ) {
 	vkDestroyDescriptorPool(ctx->device, pool, NULL);
 }
 
-void HL_NAME(vk_destroy_sampler)( VkContext ctx, VkSampler sampler ) {
+HL_PRIM void HL_NAME(vk_destroy_sampler)( VkContext ctx, VkSampler sampler ) {
 	vkDestroySampler(ctx->device, sampler, NULL);
 }
 
