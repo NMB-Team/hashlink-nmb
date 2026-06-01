@@ -502,7 +502,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6.0.2
     - name: Download binary
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@v8.0.1
       with:
         name: |
           ${{ matrix.os }}-${{ matrix.os == 'windows' && 'vs2026' || 'make' }}-${{
