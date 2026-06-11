@@ -571,10 +571,25 @@ jobs:
     - name: Setup haxelib
       run: haxelib dev hashlink ./other/haxelib
 
+    - name: Get Haxe commit SHA
+      id: haxe_sha
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        version=$(haxe --version)
+        echo "Haxe version: $version"
+        short_sha=${version##*+}
+        full_sha=$(gh api repos/HaxeFoundation/haxe/commits/$short_sha --jq '.sha')
+        echo "Commit SHA: $short_sha, Full SHA: $full_sha"
+        echo "sha=$full_sha" >> "$GITHUB_OUTPUT"
+
     - uses: actions/checkout@v6.0.3
       with:
         repository: HaxeFoundation/haxe
         path: haxe
+        ref: ${{ steps.haxe_sha.outputs.sha }}
+
     - name: Test
       run: |
         if [[ "${{ matrix.os }}" == "darwin" ]]; then
