@@ -5,7 +5,7 @@ private typedef GLContext = hl.Abstract<"sdl_gl">;
 typedef DisplayHandle = Null<Int>;
 
 enum abstract DisplayMode(Int) {
-	var Windowed = 0;
+	var Windowed = 0; // same as BorderlessFixed
 	var Fullscreen = 1;
 	var BorderlessFixed = 2;
 	var Borderless = 3;

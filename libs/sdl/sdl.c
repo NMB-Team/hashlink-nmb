@@ -528,14 +528,24 @@ HL_PRIM void HL_NAME(delay)( int time ) {
 
 // SDL2 compat: Assume display 0.
 HL_PRIM int HL_NAME(get_screen_width)() {
-	const SDL_DisplayMode *e = SDL_GetCurrentDisplayMode(display_id_from_index(0));
-	return e->w;
+	int count;
+	SDL_DisplayID *displays = SDL_GetDisplays( &count );
+	const SDL_DisplayMode *e = NULL;
+	if( displays != NULL && count > 0 )
+		e = SDL_GetCurrentDisplayMode(displays[0]);
+	SDL_free( displays );
+	return e != NULL ? e->w : 0;
 }
 
 // SDL2 compat: Assume display 0.
 HL_PRIM int HL_NAME(get_screen_height)() {
-	const SDL_DisplayMode *e = SDL_GetCurrentDisplayMode(display_id_from_index(0));
-	return e->h;
+	int count;
+	SDL_DisplayID *displays = SDL_GetDisplays( &count );
+	const SDL_DisplayMode *e = NULL;
+	if( displays != NULL && count > 0 )
+		e = SDL_GetCurrentDisplayMode(displays[0]);
+	SDL_free( displays );
+	return e != NULL ? e->h : 0;
 }
 
 HL_PRIM int HL_NAME(get_screen_width_of_window)(SDL_Window* win) {
@@ -767,8 +777,6 @@ HL_PRIM SDL_Window *HL_NAME(win_create_ex)(int x, int y, int width, int height, 
 		SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MENU_BOOLEAN, true);
 	if( sdlFlags & SDL_WINDOW_MODAL )
 		SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MODAL_BOOLEAN, true);
-	if( sdlFlags & SDL_WINDOW_POPUP_MENU )
-		SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MENU_BOOLEAN, true);
 
     SDL_Window* win = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
@@ -845,16 +853,14 @@ HL_PRIM bool HL_NAME(win_set_fullscreen)(SDL_Window *win, int mode) {
 	case 0: // WINDOWED
 		return SDL_SetWindowFullscreen(win, false);
 	case 1: { // EXCLUSIVE-FULLSCREEN
-		// sdl3 non-standard behavior; force mode to get exclusive fullscreen.
-		const SDL_DisplayMode *fullscreen_mode = SDL_GetWindowFullscreenMode(win);
-		bool result;
-		if( fullscreen_mode == NULL )
-			fullscreen_mode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(win));
-		if( fullscreen_mode != NULL && !SDL_SetWindowFullscreenMode(win, fullscreen_mode) )
-			return false;
+		// Rebuild mode from the current display to avoid stale monitor config
+		SDL_DisplayID display = SDL_GetDisplayForWindow(win);
+		const SDL_DisplayMode *fullscreen_mode = SDL_GetDesktopDisplayMode(display);
+		if( fullscreen_mode != NULL )
+			SDL_SetWindowFullscreenMode(win, fullscreen_mode);
 
 		// Fall back to borderless if we can't find a mode.
-		result = SDL_SetWindowFullscreen(win, true);
+		bool result = SDL_SetWindowFullscreen(win, true);
 		if( result )
 			sync_window_state(win);
 		return result;
@@ -905,9 +911,9 @@ HL_PRIM bool HL_NAME(win_set_fullscreen)(SDL_Window *win, int mode) {
 
 HL_PRIM bool HL_NAME(win_set_display_mode)(SDL_Window *win, int width, int height, int framerate) {
 	SDL_DisplayMode mode;
-	int display_idx = SDL_GetDisplayForWindow(win);
+	SDL_DisplayID display = SDL_GetDisplayForWindow(win);
 
-	if( SDL_GetClosestFullscreenDisplayMode( display_idx, width, height, framerate, true, &mode ) )
+	if( SDL_GetClosestFullscreenDisplayMode( display, width, height, framerate, true, &mode ) )
 	{
 		bool result = SDL_SetWindowFullscreenMode(win, &mode);
 		if( result )
@@ -1176,15 +1182,14 @@ DEFINE_PRIM(_BYTES, joy_get_name, TJOY);
 
 // SDL3 Joystick API
 HL_PRIM varray *HL_NAME(get_joysticks)() {
-	SDL_JoystickID *sticks;
 	int count;
-	sticks = SDL_GetJoysticks( &count );
+	SDL_JoystickID *sticks = SDL_GetJoysticks( &count );
 	varray *result = hl_alloc_array(&hlt_i32, count);
 	SDL_JoystickID *idx = hl_aptr(result,SDL_JoystickID);
-	while( *sticks )
-	{
-		*idx++ = *sticks++;
-	}
+	for( int i = 0; i < count; i++ )
+		idx[i] = sticks[i];
+	SDL_free(sticks);
+
 	return result;
 }
 

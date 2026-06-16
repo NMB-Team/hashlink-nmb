@@ -25,6 +25,21 @@ To install all dependencies on the latest **Ubuntu**, for example:
 
 `sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libsdl3-dev libglu1-mesa-dev libmbedtls-dev libuv1-dev libsqlite3-dev`
 
+
+`libsdl3-dev` is not released yet, build from source is needed, see [this note](https://wiki.libsdl.org/SDL3/README-linux).
+
+```
+sudo apt-get install build-essential git make pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libusb-1.0-0-dev
+wget https://github.com/libsdl-org/SDL/releases/download/release-3.4.10/SDL3-3.4.10.tar.gz
+tar -xzvf SDL3-3.4.10.tar.gz
+cd SDL3-3.4.10/
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+```
+
 For 16.04, see [this note](https://github.com/HaxeFoundation/hashlink/issues/147).
 
 To install all dependencies on the latest **Fedora**, for example:
