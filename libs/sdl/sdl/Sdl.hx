@@ -292,6 +292,7 @@ class Sdl {
 	//
 	// SDL3 Joystick API
 	//
+	@:hlNative("?sdl", "get_joysticks")
 	public static function getJoysticks() : hl.NativeArray<Int> {
 		return null;
 	}

@@ -572,7 +572,7 @@ HL_PRIM bool HL_NAME(detect_win32)() {
 #	endif
 }
 
-// sdl2 compat: start input for all windows
+// SDL2 compat: start input for all windows
 HL_PRIM void HL_NAME(text_input)( bool enable ) {
 	SDL_Window **windows;
 
@@ -594,7 +594,7 @@ HL_PRIM void HL_NAME(text_input)( bool enable ) {
     }
 }
 
-// sdl2 compat: We need to internally store relative mouse mode state
+// SDL2 compat: We need to internally store relative mouse mode state
 static bool relative_mouse_mode = false;
 
 HL_PRIM int HL_NAME(set_relative_mouse_mode)( bool enable) {
@@ -646,7 +646,7 @@ HL_PRIM bool HL_NAME(get_window_grab)(SDL_Window* window) {
 	return SDL_GetWindowMouseGrab(window);
 }
 
-// sdl2 compat:
+// SDL2 compat:
 HL_PRIM int HL_NAME(get_global_mouse_state)(int* x, int* y) {
 	float fx, fy;
 	int retval = SDL_GetGlobalMouseState(&fx, &fy);
@@ -1268,7 +1268,7 @@ HL_PRIM varray* HL_NAME(get_displays)() {
 		hl_dyn_seti(obj, hl_hash_utf8("bottom"), &hlt_i32, rect.y+rect.h);
 		hl_dyn_seti(obj, hl_hash_utf8("left"), &hlt_i32, rect.x);
 		hl_dyn_seti(obj, hl_hash_utf8("top"), &hlt_i32, rect.y);
-		hl_dyn_seti(obj, hl_hash_utf8("handle"), &hlt_i32, i);
+		hl_dyn_seti(obj, hl_hash_utf8("handle"), &hlt_i32, display);
 		const char *name = SDL_GetDisplayName(display);
 		hl_dyn_setp(obj, hl_hash_utf8("name"), &hlt_bytes, hl_copy_bytes(name, (int) strlen(name)+1));
 		hl_aptr(arr, vdynamic*)[i] = obj;
