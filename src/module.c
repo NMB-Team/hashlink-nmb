@@ -783,6 +783,8 @@ static bool check_same_type( hl_type *t1, hl_type *t2 ) {
 		return ucmp(t1->abs_name, t2->abs_name) == 0;
 	case HENUM:
 		return ucmp(t1->tenum->name, t2->tenum->name) == 0;
+	case HPACKED:
+		return check_same_type(t1->tparam, t2->tparam);
 	default:
 		break;
 	}
@@ -807,11 +809,11 @@ static int check_same_obj( hl_type_obj *o1, hl_type_obj *o2 ) {
 
 hl_type *hl_module_resolve_type( hl_module *m, hl_type *t, bool err ) {
 	int i;
-	if( t->kind != HOBJ )
+	if( t->kind != HOBJ && t->kind != HSTRUCT )
 		return NULL;
 	for(i=0;i<m->code->ntypes;i++) {
 		hl_type *t2 = m->code->types + i;
-		if( t2->kind == HOBJ && ucmp(t->obj->name,t2->obj->name) == 0 ) {
+		if( t2->kind == t->kind && ucmp(t->obj->name,t2->obj->name) == 0 ) {
 			int r = check_same_obj(t->obj,t2->obj);
 			if( r == 0 )
 				return t2;
