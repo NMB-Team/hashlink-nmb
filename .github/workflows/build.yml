@@ -117,7 +117,7 @@ jobs:
 
     steps:
     - name: "SCM Checkout"
-      uses: actions/checkout@v6.0.3
+      uses: actions/checkout@v7
 
     - name: "Add msbuild to PATH"
       if: matrix.build_system == 'vs2026'
@@ -441,7 +441,7 @@ jobs:
     steps:
 
     - name: "SCM Checkout"
-      uses: actions/checkout@v6.0.3
+      uses: actions/checkout@v7
 
     - name: Install haxe
       uses: krdlab/setup-haxe@master
@@ -500,7 +500,7 @@ jobs:
 
     runs-on: ${{ matrix.runner }}
     steps:
-    - uses: actions/checkout@v6.0.3
+    - uses: actions/checkout@v7
     - name: Download binary
       uses: actions/download-artifact@v8.0.1
       with:
@@ -584,7 +584,7 @@ jobs:
         echo "Commit SHA: $short_sha, Full SHA: $full_sha"
         echo "sha=$full_sha" >> "$GITHUB_OUTPUT"
 
-    - uses: actions/checkout@v6.0.3
+    - uses: actions/checkout@v7
       with:
         repository: HaxeFoundation/haxe
         path: haxe
@@ -612,7 +612,7 @@ jobs:
     steps:
 
     - name: "SCM Checkout"
-      uses: actions/checkout@v6.0.3
+      uses: actions/checkout@v7
 
     - name: "Get: all build artifacts"
       uses: actions/download-artifact@v8.0.1
