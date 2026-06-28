@@ -7,6 +7,9 @@
 #include <dxgi1_5.h>
 #include <d3d12.h>
 #include <dxcapi.h>
+#ifdef HL_DIRECTX_HAS_SDL
+#include <SDL3/SDL.h>
+#endif
 #endif
 
 #ifdef HL_XBS
@@ -252,6 +255,15 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, DriverInitFlag flags, uchar *de
 	return drv;
 }
 
+#ifdef HL_DIRECTX_HAS_SDL
+HL_PRIM dx_driver *HL_NAME(create_sdl)( SDL_Window *window, DriverInitFlag flags, uchar *dev_desc ) {
+	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+	if( !hwnd )
+		hl_error("Could not get Win32 window handle from SDL window");
+	return HL_NAME(create)(hwnd, flags, dev_desc);
+}
+#endif
+
 #ifdef HL_XBS
 void register_frame_events() {
 	dx_driver *drv = static_driver;
@@ -437,6 +449,9 @@ HL_PRIM void HL_NAME(query_video_memory_info)( int group, void *mem ) {
 
 DEFINE_PRIM(_ARR, list_devices, _NO_ARG);
 DEFINE_PRIM(_DRIVER, create, _ABSTRACT(dx_window) _I32 _BYTES);
+#ifdef HL_DIRECTX_HAS_SDL
+DEFINE_PRIM(_DRIVER, create_sdl, _ABSTRACT(sdl_window) _I32 _BYTES);
+#endif
 DEFINE_PRIM(_DEVICE, get_device, _NO_ARG);
 DEFINE_PRIM(_ADAPTER, get_adapter, _NO_ARG);
 DEFINE_PRIM(_VOID, resize, _I32 _I32 _I32 _I32);

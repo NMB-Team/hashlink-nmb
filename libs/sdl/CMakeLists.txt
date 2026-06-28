@@ -85,6 +85,58 @@ if(WIN32)
         winmm
         opengl32
     )
+
+    option(WITH_SDL_DX12 "Build dx12.hdll for SDL windows." ${WITH_DX12})
+    if(WITH_DX12 AND WITH_SDL_DX12 AND NOT TARGET dx12.hdll)
+        add_library(dx12.hdll
+            dx12.cpp
+        )
+
+        set_as_hdll(dx12)
+
+        target_link_libraries(dx12.hdll
+            libhl
+            SDL3::SDL3
+            d3d12
+            dxgi
+            dxcompiler
+        )
+        target_compile_definitions(dx12.hdll PRIVATE HL_DIRECTX_HAS_SDL)
+
+        install(
+            TARGETS
+                dx12.hdll
+            DESTINATION ${HDLL_DESTINATION}
+        )
+    endif()
+
+    option(WITH_SDL_DIRECTX "Build directx.hdll for SDL windows." ON)
+    if(WITH_SDL_DIRECTX AND NOT TARGET directx.hdll)
+        add_library(directx.hdll
+            ../directx/directx.cpp
+            ../directx/gamecontroller.c
+            ../directx/window.c
+        )
+
+        set_as_hdll(directx)
+
+        target_link_libraries(directx.hdll
+            libhl
+            SDL3::SDL3
+            d3d11
+            dxgi
+            d3dcompiler
+            xinput9_1_0
+            dinput8
+        )
+        target_compile_definitions(directx.hdll PRIVATE HL_DIRECTX_HAS_SDL)
+
+        install(
+            TARGETS
+                directx.hdll
+            DESTINATION ${HDLL_DESTINATION}
+        )
+    endif()
 endif()
 
 if(ANDROID)

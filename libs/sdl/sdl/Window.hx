@@ -92,7 +92,10 @@ class Window {
 			win = winCreateEx(x, y, width, height, sdlFlags);
 			if( win == null ) throw "Failed to create window (" + winError() + ")";
 
-			#if vulkan
+			#if (dx11 || dx12)
+			if( vk )
+				throw "Vulkan support is not available in DirectX mode";
+			#elseif vulkan
 			if( vk ) {
 				vkctx = winGetVulkan(win);
 				if( vkctx == null ) {
@@ -107,7 +110,7 @@ class Window {
 					if( Sdl.onGlContextRetry() ) continue;
 					Sdl.onGlContextError();
 				}
-			#if vulkan
+			#if (!(dx11 || dx12) && vulkan)
 			}
 			#end
 			break;

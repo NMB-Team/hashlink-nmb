@@ -1,5 +1,7 @@
 package dx;
 
+import sdl.Window;
+
 import haxe.Int64;
 
 typedef DriverInstance = hl.Abstract<"dx_driver">;
@@ -1810,8 +1812,8 @@ class Dx12 {
 	public static function queryVideoMemoryInfo( group : Int, infos : QueryVideoMemoryInfo ) : Void {
 	}
 
-	@:hlNative("dx12", "create")
-	static function dxCreate( win : hl.Abstract<"dx_window">, flags : DriverInitFlags, deviceName : hl.Bytes ) : DriverInstance {
+	@:hlNative("dx12", "create_sdl")
+	static function dxCreate( win : hl.Abstract<"sdl_window">, flags : DriverInitFlags, deviceName : hl.Bytes ) : DriverInstance {
 		return null;
 	}
 }

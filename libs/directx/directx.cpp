@@ -7,6 +7,9 @@
 #include <d3dcommon.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
+#ifdef HL_DIRECTX_HAS_SDL
+#include <SDL3/SDL.h>
+#endif
 #else
 #include <xbo_directx.h>
 #endif
@@ -120,6 +123,15 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int rest
 	driver = d;
 	return d;
 }
+
+#ifdef HL_DIRECTX_HAS_SDL
+HL_PRIM dx_driver *HL_NAME(create_sdl)( SDL_Window *window, int format, int flags, int restrictLevel ) {
+	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+	if( hwnd == NULL )
+		hl_error("Failed to get Win32 window handle from SDL");
+	return HL_NAME(create)(hwnd, format, flags, restrictLevel);
+}
+#endif
 
 HL_PRIM void HL_NAME(dispose_driver)( dx_driver *d ) {
 	d->swapchain->Release();
@@ -452,6 +464,9 @@ HL_PRIM void HL_NAME(debug_print)( vbyte *b ) {
 
 DEFINE_PRIM(_VOID, set_error_handler, _FUN(_VOID, _I32 _I32 _I32));
 DEFINE_PRIM(_DRIVER, create, _ABSTRACT(dx_window) _I32 _I32 _I32);
+#ifdef HL_DIRECTX_HAS_SDL
+DEFINE_PRIM(_DRIVER, create_sdl, _ABSTRACT(sdl_window) _I32 _I32 _I32);
+#endif
 DEFINE_PRIM(_VOID, dispose_driver, _DRIVER);
 DEFINE_PRIM(_BOOL, resize, _I32 _I32 _I32);
 DEFINE_PRIM(_RESOURCE, get_back_buffer, _NO_ARG);

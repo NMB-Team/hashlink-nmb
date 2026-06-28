@@ -2,6 +2,10 @@ option(WITH_DIRECTX "Build directx.hdll." ON)
 
 if(WITH_DIRECTX)
     find_package(DirectX)
+    if(WIN32 AND NOT SDL3_DIR)
+        set(SDL3_DIR ${INCLUDES_BASE_DIR}/sdl/cmake)
+    endif()
+    find_package(SDL3 CONFIG QUIET)
 
     add_library(directx.hdll
         directx.cpp
@@ -19,6 +23,10 @@ if(WITH_DIRECTX)
         xinput9_1_0
         dinput8
     )
+    if(TARGET SDL3::SDL3)
+        target_link_libraries(directx.hdll SDL3::SDL3)
+        target_compile_definitions(directx.hdll PRIVATE HL_DIRECTX_HAS_SDL)
+    endif()
 
     install(
         TARGETS
@@ -30,6 +38,11 @@ endif()
 option(WITH_DX12 "Build dx12.hdll." ON)
 
 if(WITH_DX12)
+    if(WIN32 AND NOT SDL3_DIR)
+        set(SDL3_DIR ${INCLUDES_BASE_DIR}/sdl/cmake)
+    endif()
+    find_package(SDL3 CONFIG QUIET)
+
     add_library(dx12.hdll
         dx12.cpp
     )
@@ -42,6 +55,10 @@ if(WITH_DX12)
         dxgi
         dxcompiler
     )
+    if(TARGET SDL3::SDL3)
+        target_link_libraries(dx12.hdll SDL3::SDL3)
+        target_compile_definitions(dx12.hdll PRIVATE HL_DIRECTX_HAS_SDL)
+    endif()
 
     install(
         TARGETS
