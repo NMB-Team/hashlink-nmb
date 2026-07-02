@@ -905,7 +905,6 @@ HL_PRIM bool HL_NAME(win_set_fullscreen)(SDL_Window *win, int mode) {
 	case 3: // BORDERLESS
 		SDL_SetWindowFullscreenMode(win, NULL);
 		return SDL_SetWindowFullscreen(win, true);
-#endif
 	}
 	return false;
 }
