@@ -9,6 +9,7 @@ typedef struct dx_driver_ {
     ID3D11RenderTargetView *renderTarget;
     D3D_FEATURE_LEVEL feature;
     int init_flags;
+    int back_buffer_count;
 } dx_driver;
 
 HL_PRIM dx_driver *directx_get_driver();

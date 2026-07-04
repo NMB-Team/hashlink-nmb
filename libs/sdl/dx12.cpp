@@ -316,6 +316,7 @@ HL_PRIM void HL_NAME(resize)( int width, int height, int buffer_count, DXGI_FORM
 		drv->factory->CreateSwapChainForHwnd(drv->commandQueue,drv->wnd,&desc,NULL,NULL,&swapchain);
 		if( !swapchain ) CHKERR(E_INVALIDARG);
 		swapchain->QueryInterface(IID_PPV_ARGS(&drv->swapchain));
+		drv->swapchain->SetMaximumFrameLatency(1);
 		drv->factory->MakeWindowAssociation(drv->wnd, DXGI_MWA_NO_ALT_ENTER);
 	}
 #else

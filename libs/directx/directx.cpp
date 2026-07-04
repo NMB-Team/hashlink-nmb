@@ -4,6 +4,7 @@
 
 #ifdef HL_WIN_DESKTOP
 #include <dxgi.h>
+#include <dxgi1_2.h>
 #include <d3dcommon.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -30,12 +31,22 @@ typedef ID3D11DeviceChild dx_pointer;
 static dx_driver *driver = NULL;
 static IDXGIFactory *factory = NULL;
 static vclosure *on_dx_error = NULL;
+static const int BACK_BUFFER_COUNT = 2;
 
 static IDXGIFactory *GetDXGI() {
 	if( factory == NULL && CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory) != S_OK )
 		hl_error("Failed to init DXGI");
 	return factory;
 }
+
+#ifdef HL_WIN_DESKTOP
+static IDXGIFactory2 *CreateDXGIFactory2Instance() {
+	IDXGIFactory2 *factory2 = NULL;
+	if( CreateDXGIFactory(__uuidof(IDXGIFactory2), (void**)&factory2) != S_OK )
+		return NULL;
+	return factory2;
+}
+#endif
 
 static void ReportDxError( HRESULT err, int line ) {
 	if( on_dx_error ) {
@@ -83,6 +94,66 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int rest
 	dx_driver *d = (dx_driver*)hl_gc_alloc_noptr(sizeof(dx_driver));
 	ZeroMemory(d,sizeof(dx_driver));
 	GetClientRect(window, &r);
+	d->back_buffer_count = BACK_BUFFER_COUNT;
+#ifdef HL_WIN_DESKTOP
+	if( restrictLevel >= maxLevels ) restrictLevel = maxLevels - 1;
+	d->init_flags = flags;
+	result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + restrictLevel,maxLevels - restrictLevel,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
+
+	if( result == E_INVALIDARG ) {
+		flags &= ~D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT;
+		d->init_flags = flags;
+		result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,NULL,0,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
+	}
+	if( result == DXGI_ERROR_SDK_COMPONENT_MISSING && (flags & D3D11_CREATE_DEVICE_DEBUG) != 0 ) {
+		flags &= ~D3D11_CREATE_DEVICE_DEBUG;
+		d->init_flags = flags;
+		result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + restrictLevel,maxLevels - restrictLevel,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
+		if( result == E_INVALIDARG )
+			result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,NULL,0,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
+	}
+
+	if( result == S_OK ) {
+		IDXGIDevice1 *dxgiDevice = NULL;
+		if( d->device->QueryInterface(__uuidof(IDXGIDevice1), (void**)&dxgiDevice) == S_OK ) {
+			dxgiDevice->SetMaximumFrameLatency(1);
+			dxgiDevice->Release();
+		}
+
+		IDXGIFactory2 *factory2 = CreateDXGIFactory2Instance();
+		if( factory2 != NULL ) {
+			DXGI_SWAP_CHAIN_DESC1 desc1;
+			ZeroMemory(&desc1, sizeof(desc1));
+			desc1.Width = r.right;
+			desc1.Height = r.bottom;
+			desc1.Format = (DXGI_FORMAT)format;
+			desc1.SampleDesc.Count = 1;
+			desc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			desc1.BufferCount = BACK_BUFFER_COUNT;
+			desc1.Scaling = DXGI_SCALING_STRETCH;
+			desc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+			desc1.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+
+			IDXGISwapChain1 *swapchain1 = NULL;
+			result = factory2->CreateSwapChainForHwnd(d->device, window, &desc1, NULL, NULL, &swapchain1);
+			if( result == S_OK ) {
+				result = swapchain1->QueryInterface(__uuidof(IDXGISwapChain), (void**)&d->swapchain);
+				swapchain1->Release();
+				factory2->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER);
+			}
+			factory2->Release();
+		} else {
+			result = E_INVALIDARG;
+		}
+	}
+
+	if( result != S_OK ) {
+		if( d->swapchain ) d->swapchain->Release();
+		if( d->context ) d->context->Release();
+		if( d->device ) d->device->Release();
+		ZeroMemory(d,sizeof(dx_driver));
+		d->back_buffer_count = 1;
+#endif
 	ZeroMemory(&desc, sizeof(desc));
 	desc.BufferDesc.Width = r.right;
 	desc.BufferDesc.Height = r.bottom;
@@ -117,6 +188,9 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int rest
 
 	if( result == E_INVALIDARG ) // most likely no DX11.1 support, try again
 		result = D3D11CreateDeviceAndSwapChain(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,NULL,0,D3D11_SDK_VERSION, &desc, &d->swapchain, &d->device, &d->feature, &d->context);
+#ifdef HL_WIN_DESKTOP
+	}
+#endif
 
 	DXERR(result);
 
@@ -154,7 +228,7 @@ HL_PRIM dx_resource *HL_NAME(get_back_buffer)() {
 
 HL_PRIM bool HL_NAME(resize)(int width, int height, int format) {
 #ifdef HL_WIN_DESKTOP
-	HRESULT res = driver->swapchain->ResizeBuffers(1, width, height, (DXGI_FORMAT)format, 0); assert(res == S_OK);
+	HRESULT res = driver->swapchain->ResizeBuffers(driver->back_buffer_count, width, height, (DXGI_FORMAT)format, 0); assert(res == S_OK);
 	return res == S_OK;
 #else
 	return TRUE; //Should not be called if the window is not resized (in the case here it will never happen)
