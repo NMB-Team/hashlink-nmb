@@ -129,6 +129,7 @@ HL_PRIM dx_driver *HL_NAME(create_sdl)( SDL_Window *window, int format, int flag
 	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 	if( hwnd == NULL )
 		hl_error("Failed to get Win32 window handle from SDL");
+	flags &= ~D3D11_CREATE_DEVICE_DEBUG;
 	return HL_NAME(create)(hwnd, format, flags, restrictLevel);
 }
 #endif

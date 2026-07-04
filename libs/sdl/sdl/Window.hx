@@ -80,6 +80,14 @@ class Window {
 
 	public function new( title : String, width : Int, height : Int, x : Int = SDL_WINDOWPOS_CENTERED, y : Int = SDL_WINDOWPOS_CENTERED, sdlFlags : Int = SDL_WINDOW_RESIZABLE ) {
 		var vk = (sdlFlags & SDL_WINDOW_VULKAN) != 0;
+		#if (dx11 || dx12)
+		if( vk )
+			throw "Vulkan support is not available in DirectX mode";
+		sdlFlags &= ~SDL_WINDOW_OPENGL;
+		#else
+		if( !vk )
+			sdlFlags |= SDL_WINDOW_OPENGL;
+		#end
 		#if vulkan
 		if( vk && !vkInit(Vulkan.ENABLE_VALIDATION) )
 			throw "Failed to initialize Vulkan";
@@ -92,10 +100,7 @@ class Window {
 			win = winCreateEx(x, y, width, height, sdlFlags);
 			if( win == null ) throw "Failed to create window (" + winError() + ")";
 
-			#if (dx11 || dx12)
-			if( vk )
-				throw "Vulkan support is not available in DirectX mode";
-			#elseif vulkan
+			#if vulkan
 			if( vk ) {
 				vkctx = winGetVulkan(win);
 				if( vkctx == null ) {
@@ -104,13 +109,15 @@ class Window {
 				}
 			} else {
 			#end
+			#if !(dx11 || dx12)
 				glctx = winGetGLContext(win);
 				if( glctx == null || !GL.init() || !testGL() ) {
 					destroy();
 					if( Sdl.onGlContextRetry() ) continue;
 					Sdl.onGlContextError();
 				}
-			#if (!(dx11 || dx12) && vulkan)
+			#end
+			#if vulkan
 			}
 			#end
 			break;

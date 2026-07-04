@@ -260,6 +260,7 @@ HL_PRIM dx_driver *HL_NAME(create_sdl)( SDL_Window *window, DriverInitFlag flags
 	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 	if( !hwnd )
 		hl_error("Could not get Win32 window handle from SDL window");
+	flags = (DriverInitFlag)(flags & ~(DEBUG | GPU_BASED_VALIDATION));
 	return HL_NAME(create)(hwnd, flags, dev_desc);
 }
 #endif

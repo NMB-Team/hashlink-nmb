@@ -727,15 +727,6 @@ DEFINE_PRIM(_BOOL, is_text_input_shown, _NO_ARG);
 // Window
 
 HL_PRIM SDL_Window *HL_NAME(win_create_ex)(int x, int y, int width, int height, int sdlFlags) {
-	// force window to match device resolution on mobile
-	if ((sdlFlags & (
-#ifdef HL_MAC
-		SDL_WINDOW_METAL |
-#endif
-		SDL_WINDOW_VULKAN )) == 0) {
-		sdlFlags |= SDL_WINDOW_OPENGL;
-	}
-
 #ifdef	HL_MOBILE
 	SDL_Window* win = SDL_CreateWindow("", width, height, SDL_WINDOW_BORDERLESS | sdlFlags);
 #else

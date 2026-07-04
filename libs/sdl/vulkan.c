@@ -16,6 +16,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 #define HL_NAME(n) sdl_##n
 #include <hl.h>
@@ -41,6 +44,10 @@ VkInstance vk_get_instance() {
 HL_PRIM bool HL_NAME(vk_init)( bool enable_validation ) {
 	if( instance )
 		return true;
+#if defined(_WIN32)
+	if( GetEnvironmentVariableA("VK_LOADER_LAYERS_DISABLE", NULL, 0) == 0 && GetLastError() == ERROR_ENVVAR_NOT_FOUND )
+		SetEnvironmentVariableA("VK_LOADER_LAYERS_DISABLE", "~implicit~");
+#endif
 	const char *extensions[3] = { VK_KHR_SURFACE_EXTENSION_NAME, HL_VK_PLATFORM_EXTENSION, VK_EXT_DEBUG_UTILS_EXTENSION_NAME };
 	int extensionCount = enable_validation ? 3 : 2;
 	if( extensions[1] == NULL )

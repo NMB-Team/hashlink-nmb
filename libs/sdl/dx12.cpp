@@ -158,6 +158,7 @@ HL_PRIM dx_driver *HL_NAME(create_sdl)( SDL_Window *window, DriverInitFlag flags
 	drv->wnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 	if( !drv->wnd )
 		hl_error("Could not get Win32 window handle from SDL window");
+	flags = (DriverInitFlag)(flags & ~(DEBUG | GPU_BASED_VALIDATION));
 
 	if( flags & DEBUG ) {
 		ID3D12Debug *debugController;
