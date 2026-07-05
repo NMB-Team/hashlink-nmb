@@ -864,10 +864,21 @@ HL_PRIM hl_thread *hl_thread_create( vclosure *c ) {
 #if defined(HL_WIN) && defined(HL_THREADS)
 #ifdef HL_MINGW
 static void SetThreadName(DWORD dwThreadID, const char* threadName) {
-	SetThreadDescription(
-		OpenThread(THREAD_SET_LIMITED_INFORMATION, FALSE, dwThreadID),
-		hl_to_utf16(threadName)
-	);
+	HMODULE kernel32 = GetModuleHandleA("kernel32.dll");
+	if( kernel32 == NULL )
+		return;
+
+	typedef HRESULT(WINAPI *SetThreadDescriptionFunc)(HANDLE, PCWSTR);
+	SetThreadDescriptionFunc setThreadDescription = (SetThreadDescriptionFunc)GetProcAddress(kernel32, "SetThreadDescription");
+	if( setThreadDescription == NULL )
+		return;
+
+	HANDLE thread = OpenThread(THREAD_SET_LIMITED_INFORMATION, FALSE, dwThreadID);
+	if( thread == NULL )
+		return;
+
+	setThreadDescription(thread, hl_to_utf16(threadName));
+	CloseHandle(thread);
 }
 #else
 const DWORD MS_VC_EXCEPTION = 0x406D1388;

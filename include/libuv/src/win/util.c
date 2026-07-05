@@ -440,7 +440,19 @@ int uv_clock_gettime(uv_clock_id clock_id, uv_timespec64_t* ts) {
       ts->tv_nsec = t % 1000000000;
       return 0;
     case UV_CLOCK_REALTIME:
-      GetSystemTimePreciseAsFileTime(&ft);
+      {
+        typedef VOID (WINAPI *sGetSystemTimePreciseAsFileTime)(LPFILETIME);
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        sGetSystemTimePreciseAsFileTime getSystemTimePreciseAsFileTime =
+            kernel32 == NULL ? NULL :
+            (sGetSystemTimePreciseAsFileTime)
+            GetProcAddress(kernel32, "GetSystemTimePreciseAsFileTime");
+
+        if (getSystemTimePreciseAsFileTime != NULL)
+          getSystemTimePreciseAsFileTime(&ft);
+        else
+          GetSystemTimeAsFileTime(&ft);
+      }
       /* In 100-nanosecond increments from 1601-01-01 UTC because why not? */
       t = (int64_t) ft.dwHighDateTime << 32 | ft.dwLowDateTime;
       /* Convert to UNIX epoch, 1970-01-01. Still in 100 ns increments. */
