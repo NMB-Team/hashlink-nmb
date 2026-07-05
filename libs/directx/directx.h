@@ -10,6 +10,7 @@ typedef struct dx_driver_ {
     D3D_FEATURE_LEVEL feature;
     int init_flags;
     int back_buffer_count;
+    bool allow_tearing;
 } dx_driver;
 
 HL_PRIM dx_driver *directx_get_driver();

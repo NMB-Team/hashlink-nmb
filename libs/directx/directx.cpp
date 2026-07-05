@@ -5,6 +5,7 @@
 #ifdef HL_WIN_DESKTOP
 #include <dxgi.h>
 #include <dxgi1_2.h>
+#include <dxgi1_5.h>
 #include <d3dcommon.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -45,6 +46,17 @@ static IDXGIFactory2 *CreateDXGIFactory2Instance() {
 	if( CreateDXGIFactory(__uuidof(IDXGIFactory2), (void**)&factory2) != S_OK )
 		return NULL;
 	return factory2;
+}
+
+static bool CheckTearingSupport() {
+	IDXGIFactory5 *factory5 = NULL;
+	BOOL allowTearing = FALSE;
+	if( CreateDXGIFactory(__uuidof(IDXGIFactory5), (void**)&factory5) == S_OK ) {
+		if( factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing)) != S_OK )
+			allowTearing = FALSE;
+		factory5->Release();
+	}
+	return allowTearing == TRUE;
 }
 #endif
 
@@ -96,6 +108,7 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int rest
 	GetClientRect(window, &r);
 	d->back_buffer_count = BACK_BUFFER_COUNT;
 #ifdef HL_WIN_DESKTOP
+	d->allow_tearing = CheckTearingSupport();
 	if( restrictLevel >= maxLevels ) restrictLevel = maxLevels - 1;
 	d->init_flags = flags;
 	result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + restrictLevel,maxLevels - restrictLevel,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
@@ -133,6 +146,7 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int rest
 			desc1.Scaling = DXGI_SCALING_STRETCH;
 			desc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 			desc1.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+			desc1.Flags = d->allow_tearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
 			IDXGISwapChain1 *swapchain1 = NULL;
 			result = factory2->CreateSwapChainForHwnd(d->device, window, &desc1, NULL, NULL, &swapchain1);
@@ -228,7 +242,7 @@ HL_PRIM dx_resource *HL_NAME(get_back_buffer)() {
 
 HL_PRIM bool HL_NAME(resize)(int width, int height, int format) {
 #ifdef HL_WIN_DESKTOP
-	HRESULT res = driver->swapchain->ResizeBuffers(driver->back_buffer_count, width, height, (DXGI_FORMAT)format, 0); assert(res == S_OK);
+	HRESULT res = driver->swapchain->ResizeBuffers(driver->back_buffer_count, width, height, (DXGI_FORMAT)format, driver->allow_tearing ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0); assert(res == S_OK);
 	return res == S_OK;
 #else
 	return TRUE; //Should not be called if the window is not resized (in the case here it will never happen)
@@ -273,6 +287,10 @@ HL_PRIM void HL_NAME(clear_color)( dx_pointer *rt, double r, double g, double b,
 }
 
 HL_PRIM void HL_NAME(present)( int interval, int flags ) {
+#ifdef HL_WIN_DESKTOP
+	if( interval == 0 && driver->allow_tearing )
+		flags |= DXGI_PRESENT_ALLOW_TEARING;
+#endif
 	HRESULT ret = driver->swapchain->Present(interval, flags);
 	if (ret != S_OK && ret != DXGI_STATUS_OCCLUDED) ReportDxError(ret, __LINE__);
 }
