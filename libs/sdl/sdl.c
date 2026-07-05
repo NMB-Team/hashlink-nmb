@@ -665,6 +665,22 @@ HL_PRIM int HL_NAME(get_global_mouse_state)(int* x, int* y) {
 	return retval;
 }
 
+HL_PRIM int HL_NAME(get_relative_mouse_state)(int* x, int* y) {
+    float fx = 0.0f;
+    float fy = 0.0f;
+
+    SDL_MouseButtonFlags buttons = SDL_GetRelativeMouseState(&fx, &fy);
+
+    *x = (int)fx;
+    *y = (int)fy;
+
+    return (int)buttons;
+}
+
+HL_PRIM void HL_NAME(set_mouse_motion_events)(bool enabled) {
+	SDL_SetEventEnabled(SDL_EVENT_MOUSE_MOTION, enabled);
+}
+
 HL_PRIM const char *HL_NAME(detect_keyboard_layout)() {
 	char q = SDL_GetKeyFromScancode(SDL_SCANCODE_Q, SDL_KMOD_NONE, false);
 	char w = SDL_GetKeyFromScancode(SDL_SCANCODE_W, SDL_KMOD_NONE, false);
@@ -719,6 +735,8 @@ DEFINE_PRIM(_VOID, warp_mouse_in_window, TWIN _I32 _I32);
 DEFINE_PRIM(_VOID, set_window_grab, TWIN _BOOL);
 DEFINE_PRIM(_BOOL, get_window_grab, TWIN);
 DEFINE_PRIM(_I32, get_global_mouse_state, _REF(_I32) _REF(_I32));
+DEFINE_PRIM(_I32, get_relative_mouse_state, _REF(_I32) _REF(_I32));
+DEFINE_PRIM(_VOID, set_mouse_motion_events, _BOOL);
 DEFINE_PRIM(_BYTES, detect_keyboard_layout, _NO_ARG);
 DEFINE_PRIM(_BOOL, hint_value, _BYTES _BYTES);
 DEFINE_PRIM(_BYTES, get_pref_path, _BYTES _BYTES);

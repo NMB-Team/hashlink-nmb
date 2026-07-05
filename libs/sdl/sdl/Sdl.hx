@@ -252,6 +252,15 @@ class Sdl {
 		return 0;
 	}
 
+	@:hlNative("?sdl", "get_relative_mouse_state")
+	public static function getRelativeMouseState( x : hl.Ref<Int>, y : hl.Ref<Int> ) : Int {
+		return 0;
+	}
+
+	@:hlNative("?sdl", "set_mouse_motion_events")
+	public static function setMouseMotionEvents( enabled : Bool ) : Void {
+	}
+
 	static function detect_keyboard_layout() : hl.Bytes {
 		return null;
 	}
