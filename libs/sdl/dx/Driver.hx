@@ -2,7 +2,7 @@ package dx;
 
 import sdl.Window;
 
-#if !dx12
+#if (!gfx_dx12 || gfx_dx11)
 
 typedef DriverInstance = hl.Abstract<"dx_driver">;
 

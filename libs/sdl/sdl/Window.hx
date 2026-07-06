@@ -55,7 +55,7 @@ class Window {
 
 	var win : WinPtr;
 	var glctx : GLContext;
-	#if (gfx_vulkan || vulkan)
+	#if gfx_vulkan
 	var vkctx : Vulkan.VkSurface;
 	#end
 	var lastFrame : Float;
@@ -88,7 +88,7 @@ class Window {
 			sdlFlags &= ~SDL_WINDOW_OPENGL;
 		else if( !vk )
 			sdlFlags |= SDL_WINDOW_OPENGL;
-		#if (gfx_vulkan || vulkan)
+		#if gfx_vulkan
 		if( vk && !vkInit(Vulkan.ENABLE_VALIDATION) )
 			throw "Failed to initialize Vulkan";
 		#else
@@ -100,7 +100,7 @@ class Window {
 			win = winCreateEx(x, y, width, height, sdlFlags);
 			if( win == null ) throw "Failed to create window (" + winError() + ")";
 
-			#if (gfx_vulkan || vulkan)
+			#if gfx_vulkan
 			if( vk ) {
 				vkctx = winGetVulkan(win);
 				if( vkctx == null ) {
@@ -117,7 +117,7 @@ class Window {
 					Sdl.onGlContextError();
 				}
 			}
-			#if (gfx_vulkan || vulkan)
+			#if gfx_vulkan
 			}
 			#end
 			break;
@@ -351,7 +351,7 @@ class Window {
 		try winDestroy(win, glctx) catch( e : Dynamic ) {};
 		win = null;
 		glctx = null;
-		#if (gfx_vulkan || vulkan)
+		#if gfx_vulkan
 		vkctx = null;
 		#end
 		windows.remove(this);
@@ -484,7 +484,7 @@ class Window {
 		return 0;
 	}
 
-	#if (gfx_vulkan || vulkan)
+	#if gfx_vulkan
 	@:hlNative("?sdl", "vk_init")
 	static function vkInit( debug : Bool ) : Bool {
 		return false;

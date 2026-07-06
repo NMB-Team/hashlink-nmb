@@ -2,13 +2,13 @@ package dx;
 
 import haxe.Int64;
 
-typedef DriverInstance = hl.Abstract<"dx_driver">;
+typedef Dx12DriverInstance = hl.Abstract<"dx_driver">;
 
 typedef Device = hl.Abstract<"dx_device">;
 
 typedef Adapter = hl.Abstract<"dx_adapter">;
 
-enum DriverInitFlag {
+enum Dx12DriverInitFlag {
 	DEBUG;
 	GPU_BASED_VALIDATION;
 	BREAK_ON_ERROR;
@@ -31,10 +31,10 @@ enum abstract CommandListType(Int) {
 	public var VIDEO_ENCODE = 6;
 }
 
-typedef DriverInitFlags = haxe.EnumFlags<DriverInitFlag>;
+typedef Dx12DriverInitFlags = haxe.EnumFlags<Dx12DriverInitFlag>;
 
 @:hlNative("dx12","resource_")
-abstract Resource(hl.Abstract<"dx_resource">) {
+abstract Dx12Resource(hl.Abstract<"dx_resource">) {
 	public function release() {}
 	public inline function setName( name : String ) {
 		set_name(@:privateAccess name.bytes);
@@ -50,25 +50,25 @@ abstract Resource(hl.Abstract<"dx_resource">) {
 }
 
 @:hlNative("dx12","resource_") @:forward(release, setName)
-abstract GpuResource(Resource) {
+abstract GpuResource(Dx12Resource) {
 	@:hlNative("dx12","resource_get_gpu_virtual_address")
 	public function getGpuVirtualAddress() : Int64 { return 0; }
 	@:hlNative("dx12","get_required_intermediate_size")
 	public function getRequiredIntermediateSize( subRes : Int, resCount : Int ) : Int64 { return 0; }
 	public function map( subResource : Int, range : Range ) : hl.Bytes { return null; }
 	public function unmap( subResource : Int, writtenRange : Range ) {}
-	@:to inline function to() : Resource { return cast this; }
+	@:to inline function to() : Dx12Resource { return cast this; }
 }
 
-abstract PipelineState(Resource) {
+abstract PipelineState(Dx12Resource) {
 }
 
 @:forward(release)
-abstract CommandSignature(Resource) {
+abstract CommandSignature(Dx12Resource) {
 }
 
 @:hlNative("dx12","command_queue_")
-abstract CommandQueue(Resource) {
+abstract CommandQueue(Dx12Resource) {
 	public function new(type) {
 		this = create(type);
 	}
@@ -76,16 +76,16 @@ abstract CommandQueue(Resource) {
 	public function executeCommandLists( commandLists : hl.CArray<CommandList>, count : Int ) {}
 	public function signal( fence : Fence, value : Int64 ) {}
 	public function wait( fence : Fence, value : Int64 ) {}
-	static function create( type : CommandListType ) : Resource { return null; }
+	static function create( type : CommandListType ) : Dx12Resource { return null; }
 }
 
 @:hlNative("dx12","command_allocator_")
-abstract CommandAllocator(Resource) {
+abstract CommandAllocator(Dx12Resource) {
 	public function new(type) {
 		this = create(type);
 	}
 	public function reset() {}
-	static function create( type : CommandListType ) : Resource { return null; }
+	static function create( type : CommandListType ) : Dx12Resource { return null; }
 }
 
 enum abstract ClearFlags(Int) {
@@ -94,7 +94,7 @@ enum abstract ClearFlags(Int) {
 	var BOTH = 3;
 }
 
-enum abstract PrimitiveTopology(Int) {
+enum abstract Dx12PrimitiveTopology(Int) {
 	var UNDEFINED = 0;
 	var POINTLIST = 1;
 	var LINELIST = 2;
@@ -105,7 +105,7 @@ enum abstract PrimitiveTopology(Int) {
 	var LINESTRIP_ADJ = 11;
 	var TRIANGLELIST_ADJ = 12;
 	var TRIANGLESTRIP_ADJ = 13;
-	public static function controlPointPatchList( count : Int ) : PrimitiveTopology {
+	public static function controlPointPatchList( count : Int ) : Dx12PrimitiveTopology {
 		return cast (32 + count);
 	}
 }
@@ -194,7 +194,7 @@ enum abstract TextureCopyType(Int) {
 }
 
 @:hlNative("dx12","command_list_")
-abstract CommandList(Resource) {
+abstract CommandList(Dx12Resource) {
 	public function new(type,alloc,state) {
 		this = create(type,alloc,state);
 	}
@@ -218,13 +218,13 @@ abstract CommandList(Resource) {
 	public function setGraphicsRootShaderResourceView( index : Int, address : Address ) {}
 	public function setGraphicsRootUnorderedAccessView( index : Int, address : Address ) {}
 
-	public function iaSetPrimitiveTopology( top : PrimitiveTopology ) {}
+	public function iaSetPrimitiveTopology( top : Dx12PrimitiveTopology ) {}
 	public function iaSetVertexBuffers( startSlot : Int, numViews : Int, views : VertexBufferView /* hl.CArray */ ) {}
 	public function iaSetIndexBuffer( view : IndexBufferView ) {}
 
 	public function drawInstanced( vertexCountPerInstance : Int, instanceCount : Int, startVertexLocation : Int, startInstanceLocation : Int ) {}
 	public function drawIndexedInstanced( indexCountPerInstance : Int, instanceCount : Int, startIndexLocation : Int, baseVertexLocation : Int, startInstanceLocation : Int ) {}
-	public function executeIndirect( sign : CommandSignature, maxCommandCount : Int, args : Resource, argsOffset : Int64, count : Resource, countOffset : Int64 ) {}
+	public function executeIndirect( sign : CommandSignature, maxCommandCount : Int, args : Dx12Resource, argsOffset : Int64, count : Dx12Resource, countOffset : Int64 ) {}
 
 	public function omSetRenderTargets( count : Int, handles : hl.BytesAccess<Address>, flag : Bool32, depthStencils : hl.BytesAccess<Address> ) {}
 	public function omSetStencilRef( value : Int ) {}
@@ -241,9 +241,9 @@ abstract CommandList(Resource) {
 
 	public function beginQuery( heap : QueryHeap, type : QueryType, index : Int ) {}
 	public function endQuery( heap : QueryHeap, type : QueryType, index : Int ) {}
-	public function resolveQueryData( heap : QueryHeap, type : QueryType, index : Int, count : Int, dest : Resource, offset : Int64 ) {}
+	public function resolveQueryData( heap : QueryHeap, type : QueryType, index : Int, count : Int, dest : Dx12Resource, offset : Int64 ) {}
 
-	public function setPredication( res : Resource, offset : Int64, op : PredicationOp ) {}
+	public function setPredication( res : Dx12Resource, offset : Int64, op : PredicationOp ) {}
 
 	public function setComputeRootSignature( sign : RootSignature ) {}
 	public function setComputeRoot32BitConstants( index : Int, numValues : Int, data : hl.Bytes, dstOffset : Int ) {}
@@ -253,7 +253,7 @@ abstract CommandList(Resource) {
 	public function setComputeRootUnorderedAccessView( index : Int, address : Address ) {}
 	public function dispatch( x : Int, y : Int, z : Int ) {}
 
-	static function create( type : CommandListType, alloc : CommandAllocator, state : PipelineState ) : Resource { return null; }
+	static function create( type : CommandListType, alloc : CommandAllocator, state : PipelineState ) : Dx12Resource { return null; }
 }
 
 enum abstract FenceFlags(Int) {
@@ -264,14 +264,14 @@ enum abstract FenceFlags(Int) {
 }
 
 @:hlNative("dx12","fence_")
-abstract Fence(Resource) {
+abstract Fence(Dx12Resource) {
 	public function new(value,flags) {
 		this = create(value, flags);
 	}
 	@:hlNative("dx12","fence_get_completed_value")
 	public function getValue() : Int64 { return 0; }
 	public function setEvent( value : Int64, event : WaitEvent ) {}
-	static function create( value : Int64, flags : FenceFlags ) : Resource { return null; }
+	static function create( value : Int64, flags : FenceFlags ) : Dx12Resource { return null; }
 }
 
 @:hlNative("dx12","waitevent_")
@@ -345,14 +345,14 @@ abstract ShaderCompiler(hl.Abstract<"dx_compiler">) {
 }
 
 @:hlNative("dx12","descriptor_heap_")
-abstract DescriptorHeap(Resource) to Resource {
+abstract DescriptorHeap(Dx12Resource) to Dx12Resource {
 	public function new(desc) {
 		this = create(desc);
 	}
 
 	@:hlNative("dx12","descriptor_heap_get_handle")
 	public function getHandle( gpu : Bool ) : Address { return cast null; }
-	static function create( desc : DescriptorHeapDesc ) : Resource { return null; }
+	static function create( desc : DescriptorHeapDesc ) : Dx12Resource { return null; }
 }
 
 enum abstract ResourceBarrierType(Int) {
@@ -413,7 +413,7 @@ typedef ClearColor = Color;
 @:struct class ResourceBarrier {
 	var type : ResourceBarrierType;
 	public var flags : ResourceBarrierFlags;
-	public var resource : Resource;
+	public var resource : Dx12Resource;
 	public var subResource : Int;
 	public var stateBefore : ResourceState;
 	public var stateAfter : ResourceState;
@@ -581,7 +581,7 @@ enum abstract DescriptorRangeType(Int) {
 	}
 }
 
-enum abstract AddressMode(Int) {
+enum abstract Dx12AddressMode(Int) {
 	var WRAP = 1;
 	var MIRROR = 2;
 	var CLAMP = 3;
@@ -589,7 +589,7 @@ enum abstract AddressMode(Int) {
 	var ONCE = 5;
 }
 
-enum abstract Filter(Int) {
+enum abstract Dx12Filter(Int) {
 	var MIN_MAG_MIP_POINT = 0;
 	var MIN_MAG_POINT_MIP_LINEAR = 0x1;
 	var MIN_POINT_MAG_LINEAR_MIP_POINT = 0x4;
@@ -628,7 +628,7 @@ enum abstract Filter(Int) {
 	var MAXIMUM_ANISOTROPIC = 0x1d5;
 }
 
-enum abstract ComparisonFunc(Int) {
+enum abstract Dx12ComparisonFunc(Int) {
 	var NEVER = 1;
 	var LESS = 2;
 	var EQUAL = 3;
@@ -657,13 +657,13 @@ enum abstract ShaderVisibility(Int) {
 }
 
 @:struct class StaticSamplerDesc {
-	public var filter : Filter;
-	public var addressU : AddressMode;
-	public var addressV : AddressMode;
-	public var addressW : AddressMode;
+	public var filter : Dx12Filter;
+	public var addressU : Dx12AddressMode;
+	public var addressV : Dx12AddressMode;
+	public var addressW : Dx12AddressMode;
 	public var mipLODBias : Single;
 	public var maxAnisotropy : Int;
-	public var comparisonFunc : ComparisonFunc;
+	public var comparisonFunc : Dx12ComparisonFunc;
 	public var borderColor : StaticBorderColor;
 	public var minLOD : Single;
 	public var maxLOD : Single;
@@ -685,20 +685,20 @@ enum abstract ShaderVisibility(Int) {
 }
 
 @:hlNative("dx12","rootsignature_")
-abstract RootSignature(Resource) {
+abstract RootSignature(Dx12Resource) {
 	public function new( bytes : hl.Bytes, len : Int ) {
 		this = create(bytes,len);
 	}
-	static function create(bytes:hl.Bytes,len:Int) : Resource { return null; }
+	static function create(bytes:hl.Bytes,len:Int) : Dx12Resource { return null; }
 }
 
-abstract GraphicsPipelineState(Resource) {
+abstract GraphicsPipelineState(Dx12Resource) {
 	@:to inline function toPS():PipelineState {
 		return cast this;
 	}
 }
 
-abstract ComputePipelineState(Resource) {
+abstract ComputePipelineState(Dx12Resource) {
 	@:to inline function toPS():PipelineState {
 		return cast this;
 	}
@@ -907,7 +907,7 @@ abstract BlendDescRenderTargets(BlendDesc) {
 	}
 }
 
-enum abstract Blend(Int) {
+enum abstract Dx12Blend(Int) {
 	var ZERO = 1;
 	var ONE = 2;
 	var SRC_COLOR = 3;
@@ -927,7 +927,7 @@ enum abstract Blend(Int) {
 	var INV_SRC1_ALPHA = 19;
 }
 
-enum abstract BlendOp(Int) {
+enum abstract Dx12BlendOp(Int) {
 	var ADD = 1;
 	var SUBTRACT = 2;
 	var REV_SUBTRACT = 3;
@@ -954,15 +954,15 @@ enum abstract LogicOp(Int) {
 	var OR_INVERTED;
 }
 
-@:struct class RenderTargetBlendDesc {
+@:struct class Dx12RenderTargetBlendDesc {
 	public var blendEnable : Bool32;
 	public var logicOpEnable : Bool32;
-	public var srcBlend : Blend;
-	public var dstBlend : Blend;
-	public var blendOp : BlendOp;
-	public var srcBlendAlpha : Blend;
-	public var dstBlendAlpha : Blend;
-	public var blendOpAlpha : BlendOp;
+	public var srcBlend : Dx12Blend;
+	public var dstBlend : Dx12Blend;
+	public var blendOp : Dx12BlendOp;
+	public var srcBlendAlpha : Dx12Blend;
+	public var dstBlendAlpha : Dx12Blend;
+	public var blendOpAlpha : Dx12BlendOp;
 	public var logicOp : LogicOp;
 	public var renderTargetWriteMask : hl.UI8;
 	public function new() {
@@ -974,24 +974,24 @@ enum abstract LogicOp(Int) {
 	public var independentBlendEnable : Bool32;
 	public var renderTargets(get,never) : BlendDescRenderTargets;
 	inline function get_renderTargets() return new BlendDescRenderTargets(this);
-	@:packed var renderTarget0 : RenderTargetBlendDesc;
-	@:packed var renderTarget1 : RenderTargetBlendDesc;
-	@:packed var renderTarget2 : RenderTargetBlendDesc;
-	@:packed var renderTarget3 : RenderTargetBlendDesc;
-	@:packed var renderTarget4 : RenderTargetBlendDesc;
-	@:packed var renderTarget5 : RenderTargetBlendDesc;
-	@:packed var renderTarget6 : RenderTargetBlendDesc;
-	@:packed var renderTarget7 : RenderTargetBlendDesc;
+	@:packed var renderTarget0 : Dx12RenderTargetBlendDesc;
+	@:packed var renderTarget1 : Dx12RenderTargetBlendDesc;
+	@:packed var renderTarget2 : Dx12RenderTargetBlendDesc;
+	@:packed var renderTarget3 : Dx12RenderTargetBlendDesc;
+	@:packed var renderTarget4 : Dx12RenderTargetBlendDesc;
+	@:packed var renderTarget5 : Dx12RenderTargetBlendDesc;
+	@:packed var renderTarget6 : Dx12RenderTargetBlendDesc;
+	@:packed var renderTarget7 : Dx12RenderTargetBlendDesc;
 	public function new() {
 	}
 }
 
-enum abstract FillMode(Int) {
+enum abstract Dx12FillMode(Int) {
 	var WIREFRAME = 2;
 	var SOLID = 3;
 }
 
-enum abstract CullMode(Int) {
+enum abstract Dx12CullMode(Int) {
 	var NONE = 1;
 	var FRONT = 2;
 	var BACK = 3;
@@ -1002,9 +1002,9 @@ enum abstract ConservativeRasterMode(Int) {
 	var ON = 1;
 }
 
-@:struct class RasterizerDesc {
-	public var fillMode : FillMode;
-	public var cullMode : CullMode;
+@:struct class Dx12RasterizerDesc {
+	public var fillMode : Dx12FillMode;
+	public var cullMode : Dx12CullMode;
 	public var frontCounterClockwise : Bool32;
 	public var depthBias : Int;
 	public var depthBiasClamp : Single;
@@ -1023,7 +1023,7 @@ enum abstract DepthWriteMask(Int) {
 	var ALL = 1;
 }
 
-enum abstract StencilOp(Int) {
+enum abstract Dx12StencilOp(Int) {
 	var KEEP = 1;
 	var ZERO = 2;
 	var REPLACE = 3;
@@ -1035,18 +1035,18 @@ enum abstract StencilOp(Int) {
 }
 
 @:struct class DepthStencilOpDesc {
-	public var stencilFailOp : StencilOp;
-	public var stencilDepthFailOp : StencilOp;
-	public var stencilPassOp : StencilOp;
-	public var stencilFunc : ComparisonFunc;
+	public var stencilFailOp : Dx12StencilOp;
+	public var stencilDepthFailOp : Dx12StencilOp;
+	public var stencilPassOp : Dx12StencilOp;
+	public var stencilFunc : Dx12ComparisonFunc;
 	public function new() {
 	}
 }
 
-@:struct class DepthStencilDesc {
+@:struct class Dx12DepthStencilDesc {
 	public var depthEnable : Bool32;
 	public var depthWriteMask : DepthWriteMask;
-	public var depthFunc : ComparisonFunc;
+	public var depthFunc : Dx12ComparisonFunc;
 	public var stencilEnable : Bool32;
 	public var stencilReadMask : hl.UI8;
 	public var stencilWriteMask : hl.UI8;
@@ -1124,8 +1124,8 @@ enum abstract PipelineStateFlags(Int) {
 	@:packed public var streamOutput(default,null) : StreamOutputDesc;
 	@:packed public var blendState(default,null) : BlendDesc;
 	public var sampleMask : Int;
-	@:packed public var rasterizerState(default,null) : RasterizerDesc;
-	@:packed public var depthStencilDesc(default,null) : DepthStencilDesc;
+	@:packed public var rasterizerState(default,null) : Dx12RasterizerDesc;
+	@:packed public var depthStencilDesc(default,null) : Dx12DepthStencilDesc;
 	public var inputElementDescs : hl.CArray<InputElementDesc>;
 	public var numInputElements : Int;
 	public var __inputLayoutPadding : Int;
@@ -1207,7 +1207,7 @@ enum HeapFlag {
 	CREATE_NOT_ZEROED;
 }
 
-enum abstract ResourceDimension(Int) {
+enum abstract Dx12ResourceDimension(Int) {
 	var UNKNOWN = 0;
 	var BUFFER = 1;
 	var TEXTURE1D = 2;
@@ -1234,7 +1234,7 @@ enum ResourceFlag {
 }
 
 @:struct class ResourceDesc {
-	public var dimension : ResourceDimension;
+	public var dimension : Dx12ResourceDimension;
 	public var alignment : Int64;
 	public var width : Int64;
 	public var height : Int;
@@ -1306,7 +1306,7 @@ abstract ShaderComponentMapping(Int) {
 	public static inline var DEFAULT : ShaderComponentMapping = cast 0x1688;
 }
 
-@:struct class ShaderResourceViewDesc {
+@:struct class Dx12ShaderResourceViewDesc {
 	public var format : DxgiFormat;
 	public var dimension : SrvDimension;
 	public var shader4ComponentMapping : ShaderComponentMapping;
@@ -1318,7 +1318,7 @@ enum abstract BufferSRVFlags(Int) {
 	var RAW = 1;
 }
 
-@:struct class BufferSRV extends ShaderResourceViewDesc {
+@:struct class BufferSRV extends Dx12ShaderResourceViewDesc {
 	public var firstElement : Int64;
 	public var numElements : Int;
 	public var structureByteStride : Int;
@@ -1329,7 +1329,7 @@ enum abstract BufferSRVFlags(Int) {
 	}
 }
 
-@:struct class Tex1DSRV extends ShaderResourceViewDesc {
+@:struct class Tex1DSRV extends Dx12ShaderResourceViewDesc {
 	public var mostDetailedMip : Int;
 	public var mipLevels : Int;
 	public var resourceMinLODClamp : Single;
@@ -1341,7 +1341,7 @@ enum abstract BufferSRVFlags(Int) {
 	}
 }
 
-@:struct class Tex1DArraySRV extends ShaderResourceViewDesc {
+@:struct class Tex1DArraySRV extends Dx12ShaderResourceViewDesc {
 	public var mostDetailedMip : Int;
 	public var mipLevels : Int;
 	public var firstArraySlice : Int;
@@ -1353,7 +1353,7 @@ enum abstract BufferSRVFlags(Int) {
 	}
 }
 
-@:struct class Tex2DSRV extends ShaderResourceViewDesc {
+@:struct class Tex2DSRV extends Dx12ShaderResourceViewDesc {
 	public var mostDetailedMip : Int;
 	public var mipLevels : Int;
 	public var planeSlice : Int;
@@ -1365,7 +1365,7 @@ enum abstract BufferSRVFlags(Int) {
 	}
 }
 
-@:struct class Tex2DArraySRV extends ShaderResourceViewDesc {
+@:struct class Tex2DArraySRV extends Dx12ShaderResourceViewDesc {
 	public var mostDetailedMip : Int;
 	public var mipLevels : Int;
 	public var firstArraySlice : Int;
@@ -1377,7 +1377,7 @@ enum abstract BufferSRVFlags(Int) {
 	}
 }
 
-@:struct class Tex3DSRV extends ShaderResourceViewDesc {
+@:struct class Tex3DSRV extends Dx12ShaderResourceViewDesc {
 	public var mostDetailedMip : Int;
 	public var mipLevels : Int;
 	public var resourceMinLODClamp : Single;
@@ -1389,7 +1389,7 @@ enum abstract BufferSRVFlags(Int) {
 	}
 }
 
-@:struct class TexCubeSRV extends ShaderResourceViewDesc {
+@:struct class TexCubeSRV extends Dx12ShaderResourceViewDesc {
 	public var mostDetailedMip : Int;
 	public var mipLevels : Int;
 	public var resourceMinLODClamp : Single;
@@ -1401,7 +1401,7 @@ enum abstract BufferSRVFlags(Int) {
 	}
 }
 
-@:struct class TexCubeArraySRV extends ShaderResourceViewDesc {
+@:struct class TexCubeArraySRV extends Dx12ShaderResourceViewDesc {
 	public var mostDetailedMip : Int;
 	public var mipLevels : Int;
 	public var first2DArrayFace : Int;
@@ -1413,14 +1413,14 @@ enum abstract BufferSRVFlags(Int) {
 	}
 }
 
-@:struct class SamplerDesc {
-	public var filter : Filter;
-	public var addressU : AddressMode;
-	public var addressV : AddressMode;
-	public var addressW : AddressMode;
+@:struct class Dx12SamplerDesc {
+	public var filter : Dx12Filter;
+	public var addressU : Dx12AddressMode;
+	public var addressV : Dx12AddressMode;
+	public var addressW : Dx12AddressMode;
 	public var mipLODBias : Single;
 	public var maxAnisotropy : Int;
-	public var comparisonFunc : ComparisonFunc;
+	public var comparisonFunc : Dx12ComparisonFunc;
 	@:packed public var borderColor(default,never) : Color;
 	public var minLod : Single;
 	public var maxLod : Single;
@@ -1564,7 +1564,7 @@ enum abstract QueryHeapType(Int) {
 }
 
 @:forward(release)
-abstract QueryHeap(Resource) {
+abstract QueryHeap(Dx12Resource) {
 }
 
 enum abstract PredicationOp(Int) {
@@ -1665,7 +1665,7 @@ enum abstract ShaderModel(Int) to Int {
 @:hlNative("dx12")
 class Dx12 {
 
-	public static function create( win : Window, flags : DriverInitFlags, ?deviceName : String ) {
+	public static function create( win : Window, flags : Dx12DriverInitFlags, ?deviceName : String ) {
 		return dxCreate(@:privateAccess win.win, flags, deviceName == null ? null : @:privateAccess deviceName.bytes);
 	}
 
@@ -1707,19 +1707,19 @@ class Dx12 {
 		return 0;
 	}
 
-	public static function createRenderTargetView( buffer : Resource, desc : RenderTargetViewDesc, target : Address ) {
+	public static function createRenderTargetView( buffer : Dx12Resource, desc : RenderTargetViewDesc, target : Address ) {
 	}
 
-	public static function createDepthStencilView( buffer : Resource, desc : DepthStencilViewDesc, target : Address ) {
+	public static function createDepthStencilView( buffer : Dx12Resource, desc : DepthStencilViewDesc, target : Address ) {
 	}
 
 	public static function createConstantBufferView( desc : ConstantBufferViewDesc, target : Address ) {
 	}
 
-	public static function createUnorderedAccessView( res : Resource, counter : Resource, desc : UnorderedAccessViewDesc, target : Address ) {
+	public static function createUnorderedAccessView( res : Dx12Resource, counter : Dx12Resource, desc : UnorderedAccessViewDesc, target : Address ) {
 	}
 
-	public static function createShaderResourceView( resource : Resource, desc : ShaderResourceViewDesc, target : Address ) {
+	public static function createShaderResourceView( resource : Dx12Resource, desc : Dx12ShaderResourceViewDesc, target : Address ) {
 	}
 
 	public static function createQueryHeap( desc : QueryHeapDesc ) : QueryHeap {
@@ -1729,7 +1729,7 @@ class Dx12 {
 	public static function getCopyableFootprints( srcDesc : ResourceDesc, firstSubResource : Int, numSubResources : Int, baseOffset : Int64, layouts : PlacedSubresourceFootprint, numRows : hl.BytesAccess<Int>, rowSizeInBytes : hl.BytesAccess<Int64>, totalBytes : hl.BytesAccess<Int64> ) : Void {
 	}
 
-	public static function createSampler( desc : SamplerDesc, target : Address ) {
+	public static function createSampler( desc : Dx12SamplerDesc, target : Address ) {
 	}
 
 	public static function createCommittedResource( heapProperties : HeapProperties, heapFlags : haxe.EnumFlags<HeapFlag>, desc : ResourceDesc, initialState : ResourceState, clearValue : ClearValue ) : GpuResource {
@@ -1811,7 +1811,7 @@ class Dx12 {
 	}
 
 	@:hlNative("dx12", "create")
-	static function dxCreate( win : hl.Abstract<"dx_window">, flags : DriverInitFlags, deviceName : hl.Bytes ) : DriverInstance {
+	static function dxCreate( win : hl.Abstract<"dx_window">, flags : Dx12DriverInitFlags, deviceName : hl.Bytes ) : Dx12DriverInstance {
 		return null;
 	}
 }
