@@ -55,7 +55,7 @@ class Window {
 
 	var win : WinPtr;
 	var glctx : GLContext;
-	#if vulkan
+	#if (gfx_vulkan || vulkan)
 	var vkctx : Vulkan.VkSurface;
 	#end
 	var lastFrame : Float;
@@ -78,17 +78,17 @@ class Window {
 	public var opacity(get, set) : Float;
 	public var grab(get, set) : Bool;
 
+	public static var directXMode = false;
+
 	public function new( title : String, width : Int, height : Int, x : Int = SDL_WINDOWPOS_CENTERED, y : Int = SDL_WINDOWPOS_CENTERED, sdlFlags : Int = SDL_WINDOW_RESIZABLE ) {
 		var vk = (sdlFlags & SDL_WINDOW_VULKAN) != 0;
-		#if (dx11 || dx12)
-		if( vk )
+		if( directXMode && vk )
 			throw "Vulkan support is not available in DirectX mode";
-		sdlFlags &= ~SDL_WINDOW_OPENGL;
-		#else
-		if( !vk )
+		if( directXMode )
+			sdlFlags &= ~SDL_WINDOW_OPENGL;
+		else if( !vk )
 			sdlFlags |= SDL_WINDOW_OPENGL;
-		#end
-		#if vulkan
+		#if (gfx_vulkan || vulkan)
 		if( vk && !vkInit(Vulkan.ENABLE_VALIDATION) )
 			throw "Failed to initialize Vulkan";
 		#else
@@ -100,7 +100,7 @@ class Window {
 			win = winCreateEx(x, y, width, height, sdlFlags);
 			if( win == null ) throw "Failed to create window (" + winError() + ")";
 
-			#if vulkan
+			#if (gfx_vulkan || vulkan)
 			if( vk ) {
 				vkctx = winGetVulkan(win);
 				if( vkctx == null ) {
@@ -109,15 +109,15 @@ class Window {
 				}
 			} else {
 			#end
-			#if !(dx11 || dx12)
+			if( !directXMode ) {
 				glctx = winGetGLContext(win);
 				if( glctx == null || !GL.init() || !testGL() ) {
 					destroy();
 					if( Sdl.onGlContextRetry() ) continue;
 					Sdl.onGlContextError();
 				}
-			#end
-			#if vulkan
+			}
+			#if (gfx_vulkan || vulkan)
 			}
 			#end
 			break;
@@ -351,7 +351,7 @@ class Window {
 		try winDestroy(win, glctx) catch( e : Dynamic ) {};
 		win = null;
 		glctx = null;
-		#if vulkan
+		#if (gfx_vulkan || vulkan)
 		vkctx = null;
 		#end
 		windows.remove(this);
@@ -484,7 +484,7 @@ class Window {
 		return 0;
 	}
 
-	#if vulkan
+	#if (gfx_vulkan || vulkan)
 	@:hlNative("?sdl", "vk_init")
 	static function vkInit( debug : Bool ) : Bool {
 		return false;
