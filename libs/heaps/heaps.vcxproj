@@ -21,19 +21,23 @@
   <ItemGroup>
     <ClCompile Include="..\..\include\meshoptimizer\allocator.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\clusterizer.cpp" />
+    <ClCompile Include="..\..\include\meshoptimizer\indexanalyzer.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\indexcodec.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\indexgenerator.cpp" />
-    <ClCompile Include="..\..\include\meshoptimizer\overdrawanalyzer.cpp" />
+    <ClCompile Include="..\..\include\meshoptimizer\meshletcodec.cpp" />
+    <ClCompile Include="..\..\include\meshoptimizer\meshletutils.cpp" />
+    <ClCompile Include="..\..\include\meshoptimizer\opacitymap.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\overdrawoptimizer.cpp" />
+    <ClCompile Include="..\..\include\meshoptimizer\partition.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\quantization.cpp" />
+    <ClCompile Include="..\..\include\meshoptimizer\rasterizer.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\simplifier.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\spatialorder.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\stripifier.cpp" />
-    <ClCompile Include="..\..\include\meshoptimizer\vcacheanalyzer.cpp" />
+    <ClCompile Include="..\..\include\meshoptimizer\tangentspace.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\vcacheoptimizer.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\vertexcodec.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\vertexfilter.cpp" />
-    <ClCompile Include="..\..\include\meshoptimizer\vfetchanalyzer.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\vfetchoptimizer.cpp" />
     <ClCompile Include="..\..\include\mikktspace\mikktspace.c" />
     <ClCompile Include="meshoptimizer.cpp" />
