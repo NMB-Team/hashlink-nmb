@@ -79,6 +79,7 @@ class Window {
 	public var grab(get, set) : Bool;
 
 	public static var directXMode = false;
+	public var displayScale(get, null) : Float;
 
 	public function new( title : String, width : Int, height : Int, x : Int = SDL_WINDOWPOS_CENTERED, y : Int = SDL_WINDOWPOS_CENTERED, sdlFlags : Int = SDL_WINDOW_RESIZABLE ) {
 		var vk = (sdlFlags & SDL_WINDOW_VULKAN) != 0;
@@ -280,6 +281,15 @@ class Window {
 		var h = 0;
 		winGetMaxSize(win, null, h);
 		return h;
+	}
+
+	function get_displayScale() : Float {
+		return winGetDisplayScale(win);
+	}
+
+	@:hlNative("?sdl", "win_get_display_scale")
+	static function winGetDisplayScale(win : WinPtr) : Float {
+		return 0.0;
 	}
 
 	function get_x() {

@@ -22,6 +22,7 @@ if(WITH_DIRECTX)
         d3dcompiler
         xinput9_1_0
         dinput8
+		Shcore
     )
     if(TARGET SDL3::SDL3)
         target_link_libraries(directx.hdll SDL3::SDL3)
