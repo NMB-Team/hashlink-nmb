@@ -70,9 +70,9 @@ jobs:
 
       - name: Build and install SDL3
         run: |
-          wget https://github.com/libsdl-org/SDL/releases/download/release-3.4.10/SDL3-3.4.10.tar.gz
-          tar -xzvf SDL3-3.4.10.tar.gz
-          cd SDL3-3.4.10/
+          wget https://github.com/libsdl-org/SDL/releases/download/release-3.4.12/SDL3-3.4.12.tar.gz
+          tar -xzvf SDL3-3.4.12.tar.gz
+          cd SDL3-3.4.12/
           mkdir build
           cd build
           cmake ..
