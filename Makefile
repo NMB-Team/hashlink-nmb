@@ -6,6 +6,11 @@ INSTALL_DIR ?= $(PREFIX)
 INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_LIB_DIR ?= $(PREFIX)/lib
 INSTALL_INCLUDE_DIR ?= $(PREFIX)/include
+WITH_ANGLE ?= 0
+ANGLE_BUILD_DIR ?= build-angle-make
+ANGLE_BUILD_CONFIG ?= Release
+ANGLE_CMAKE_ARGS ?=
+ANGLE_CMAKE_PLATFORM_ARGS ?=
 
 LIBS = $(addsuffix .hdll,fmt sdl shaderc ssl openal ui uv mysql sqlite heaps)
 ARCH ?= $(shell uname -m)
@@ -61,7 +66,7 @@ FMT += include/zlib-ng/arch/generic/adler32_c.o include/zlib-ng/arch/generic/adl
 	include/zlib-ng/insert_string_roll.o include/zlib-ng/trees.o include/zlib-ng/uncompr.o \
 	include/zlib-ng/zutil.o include/zlib-ng/arch/generic/crc32_chorba_c.o
 
-SDL = libs/sdl/sdl.o libs/sdl/gl.o libs/sdl/vulkan.o
+SDL = libs/sdl/sdl.o libs/sdl/gl.o libs/sdl/gl_api.o libs/sdl/vulkan.o
 SHADERC = libs/sdl/shaderc.o
 SHADERC_CPPFLAGS = $(shell pkg-config --cflags shaderc 2>/dev/null)
 shaderc_LDLIBS = $(shell pkg-config --libs shaderc 2>/dev/null)
@@ -153,6 +158,7 @@ ifeq ($(OS),Windows_NT)
 EXE_SUFFIX = .exe
 LIBEXT = dll
 RELEASE_NAME=win
+ANGLE_CMAKE_PLATFORM_ARGS = -A x64
 # VS variables are for packaging Visual Studio builds
 VS_RUNTIME_LIBRARY ?= c:/windows/system32/vcruntime140.dll
 
@@ -268,6 +274,9 @@ ifeq ($(ARCH),arm64)
 else
 all: $(HL)
 endif
+ifeq ($(WITH_ANGLE),1)
+all: angle
+endif
 
 install:
 	$(UNAME)==Darwin && ${MAKE} uninstall
@@ -278,14 +287,45 @@ endif
 	mkdir -p $(INSTALL_LIB_DIR)
 	cp *.hdll $(INSTALL_LIB_DIR)
 	cp $(LIBHL) $(INSTALL_LIB_DIR)
+	@if ls libEGL.* >/dev/null 2>&1; then cp libEGL.* libGLESv2.* $(INSTALL_LIB_DIR); fi
 	mkdir -p $(INSTALL_INCLUDE_DIR)
 	cp src/hl.h src/hl_ffi.h src/hlc.h src/hlc_main.c $(INSTALL_INCLUDE_DIR)
 
 uninstall:
 	rm -f $(INSTALL_BIN_DIR)/$(HL) $(INSTALL_LIB_DIR)/$(LIBHL) $(INSTALL_LIB_DIR)/*.hdll
+	rm -f $(INSTALL_LIB_DIR)/libEGL.* $(INSTALL_LIB_DIR)/libGLESv2.*
 	rm -f $(INSTALL_INCLUDE_DIR)/hl.h $(INSTALL_INCLUDE_DIR)/hl_ffi.h $(INSTALL_INCLUDE_DIR)/hlc.h $(INSTALL_INCLUDE_DIR)/hlc_main.c
 
 libs: $(LIBS)
+
+.PHONY: angle
+angle: sdl.hdll
+	cmake -S . -B $(ANGLE_BUILD_DIR) \
+		-DWITH_SDL=ON \
+		-DWITH_SDL_ANGLE=ON \
+		-DANGLE_NMB_AUTO_DOWNLOAD=ON \
+		-DDOWNLOAD_DEPENDENCIES=OFF \
+		-DWITH_OPENAL=OFF \
+		-DWITH_VIDEO=OFF \
+		-DWITH_UI=OFF \
+		-DWITH_SSL=OFF \
+		-DWITH_UV=OFF \
+		-DWITH_HEAPS=OFF \
+		-DWITH_FMT=OFF \
+		-DWITH_SQLITE=OFF \
+		-DWITH_DX12=OFF \
+		-DWITH_SDL_DIRECTX=OFF \
+		-DWITH_SDL_DX12=OFF \
+		-DBUILD_TESTING=OFF \
+		$(ANGLE_CMAKE_PLATFORM_ARGS) \
+		$(ANGLE_CMAKE_ARGS)
+	cmake --build $(ANGLE_BUILD_DIR) --config $(ANGLE_BUILD_CONFIG) --target sdl.hdll --parallel
+	cp $(ANGLE_BUILD_DIR)/bin/sdl.hdll .
+	cp $(ANGLE_BUILD_DIR)/bin/libEGL.* $(ANGLE_BUILD_DIR)/bin/libGLESv2.* .
+ifeq ($(UNAME),Darwin)
+	@SDL3_INSTALL_NAME="$$(otool -L sdl.hdll | awk '/libSDL3.*dylib/{print $$1; exit}')"; \
+	if [ -n "$$SDL3_INSTALL_NAME" ]; then install_name_tool -change "$$SDL3_INSTALL_NAME" @rpath/libSDL3.0.dylib sdl.hdll; fi
+endif
 
 src/std/regexp.o $(PCRE): CPPFLAGS += $(PCRE_CPPFLAGS)
 $(LIB): CPPFLAGS += -D LIBHL_EXPORTS
@@ -385,6 +425,7 @@ release_win:
 	cp $(VS_SDL_LIBRARY) $(PACKAGE_NAME)
 	cp $(VS_OPENAL_LIBRARY) $(PACKAGE_NAME)/OpenAL32.dll
 	cp $(VS_DX_LIBRARY) $(PACKAGE_NAME)
+	@if [ -f "$(BUILD_DIR)/libEGL.dll" ]; then cp "$(BUILD_DIR)/libEGL.dll" "$(BUILD_DIR)/libGLESv2.dll" $(PACKAGE_NAME); fi
 	# 7z switches: https://sevenzip.osdn.jp/chm/cmdline/switches/
 	7z a -spf -y -mx9 -bt $(PACKAGE_NAME).zip $(PACKAGE_NAME)
 	rm -rf $(PACKAGE_NAME)
@@ -395,6 +436,18 @@ ifeq ($(ARCH),arm64)
 else
 	cp $(HL) $(LIBHL) *.hdll $(PACKAGE_NAME)
 endif
+ifeq ($(UNAME),Darwin)
+	cp -L "$(shell pkg-config --variable=libdir sdl3)/libSDL3.0.dylib" $(PACKAGE_NAME)
+	ln -sf libSDL3.0.dylib $(PACKAGE_NAME)/libSDL3.dylib
+	ln -sf libhl.dylib $(PACKAGE_NAME)/libhl.1.dylib
+else
+	@SDL_LIB_DIR="$(shell pkg-config --variable=libdir sdl3)"; \
+	for library in "$$SDL_LIB_DIR"/libSDL3.so*; do \
+		[ -e "$$library" ] && cp -P "$$library" $(PACKAGE_NAME) || true; \
+	done
+	ln -sf libhl.so $(PACKAGE_NAME)/libhl.so.1
+endif
+	@if ls libEGL.* >/dev/null 2>&1; then cp libEGL.* libGLESv2.* $(PACKAGE_NAME); fi
 	tar -cvzf $(PACKAGE_NAME).tar.gz $(PACKAGE_NAME)
 	rm -rf $(PACKAGE_NAME)
 
@@ -416,5 +469,7 @@ clean_o:
 
 clean: clean_o
 	rm -f $(HL) $(HLC) $(LIBHL) *.hdll
+	rm -f libEGL.* libGLESv2.*
+	rm -rf angle-nmb $(ANGLE_BUILD_DIR)
 
 .PHONY: libs release

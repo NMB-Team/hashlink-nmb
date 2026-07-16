@@ -27,11 +27,70 @@ abstract Query(Null<Int>) {
 abstract VertexArray(Null<Int>) {
 }
 
+class GLCapabilities {
+	public var isGLES(default, null):Bool;
+	public var isANGLE(default, null):Bool;
+	public var major(default, null):Int;
+	public var minor(default, null):Int;
+	public var compute(default, null):Bool;
+	public var shaderStorageBuffers(default, null):Bool;
+	public var polygonMode(default, null):Bool;
+	public var bufferReadback(default, null):Bool;
+	public var indexedColorMask(default, null):Bool;
+	public var multisampleTextures(default, null):Bool;
+	public var indirectDraw(default, null):Bool;
+	public var indirectCount(default, null):Bool;
+	public var drawBuffers(default, null):Bool;
+	public var framebufferTexture(default, null):Bool;
+	public var rgtc(default, null):Bool;
+	public var textureCubeMapSeamless(default, null):Bool;
+	public var queries(default, null):Bool;
+
+	public function new() {
+		isGLES = GL.getCapability(0) != 0;
+		isANGLE = GL.getCapability(1) != 0;
+		major = GL.getCapability(2);
+		minor = GL.getCapability(3);
+		compute = GL.getCapability(4) != 0;
+		shaderStorageBuffers = GL.getCapability(5) != 0;
+		polygonMode = GL.getCapability(6) != 0;
+		bufferReadback = GL.getCapability(7) != 0;
+		indexedColorMask = GL.getCapability(8) != 0;
+		multisampleTextures = GL.getCapability(9) != 0;
+		indirectDraw = GL.getCapability(10) != 0;
+		indirectCount = GL.getCapability(11) != 0;
+		drawBuffers = GL.getCapability(12) != 0;
+		framebufferTexture = GL.getCapability(13) != 0;
+		rgtc = GL.getCapability(14) != 0;
+		textureCubeMapSeamless = GL.getCapability(15) != 0;
+		queries = GL.getCapability(16) != 0;
+	}
+}
+
 @:hlNative("sdl","gl_")
 class GL {
 
 	public static function init() : Bool {
 		return false;
+	}
+
+	public static function getLastError():Null<String> {
+		final value = getLastErrorBytes();
+		return value == null ? null : @:privateAccess String.fromUTF8(value);
+	}
+
+	public static function getCapabilities():GLCapabilities {
+		return new GLCapabilities();
+	}
+
+	@:hlNative("?sdl", "gl_get_last_error")
+	private static function getLastErrorBytes():hl.Bytes {
+		return null;
+	}
+
+	@:hlNative("?sdl", "gl_get_capability")
+	public static function getCapability(capability:Int):Int {
+		return 0;
 	}
 
 	@:hlNative("?sdl","gl_set_debug")

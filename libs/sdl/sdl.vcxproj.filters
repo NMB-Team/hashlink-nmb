@@ -3,6 +3,12 @@
   <ItemGroup>
     <ClCompile Include="sdl.c" />
     <ClCompile Include="gl.c" />
+    <ClCompile Include="gl_api.c" />
+    <ClCompile Include="angle.c" />
     <ClCompile Include="vulkan.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="angle.h" />
+    <ClInclude Include="gl_api.h" />
   </ItemGroup>
 </Project>

@@ -3,6 +3,82 @@ add_library(sdl.hdll
     gl.c
 )
 
+if(NOT ANDROID AND NOT IOS_PLATFORM)
+    target_sources(
+        sdl.hdll
+        PRIVATE
+            gl_api.c
+            gl_api.h
+    )
+endif()
+
+option(WITH_SDL_ANGLE "Enable ANGLE support in sdl.hdll" OFF)
+option(ANGLE_NMB_AUTO_DOWNLOAD "Automatically download the prebuilt ANGLE NMB package" ON)
+set(
+    ANGLE_NMB_ROOT
+    ""
+    CACHE PATH
+    "Optional path to a manually extracted ANGLE NMB package"
+)
+set(
+    ANGLE_NMB_MANIFEST_URL
+    "https://github.com/NMB-Team/angle-nmb-builder/releases/download/nightly/latest.json"
+    CACHE STRING
+    "URL of the ANGLE NMB package manifest"
+)
+set(
+    ANGLE_NMB_BUILDER_COMMIT
+    ""
+    CACHE STRING
+    "Optional exact angle-nmb-builder commit to consume"
+)
+if(ANGLE_NMB_BUILDER_COMMIT STREQUAL "")
+    file(
+        STRINGS
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../other/angle-nmb-builder-commit.txt"
+        ANGLE_NMB_BUILDER_COMMIT
+        LIMIT_COUNT 1
+    )
+    string(STRIP "${ANGLE_NMB_BUILDER_COMMIT}" ANGLE_NMB_BUILDER_COMMIT)
+    set(
+        ANGLE_NMB_BUILDER_COMMIT
+        "${ANGLE_NMB_BUILDER_COMMIT}"
+        CACHE STRING
+        "Optional exact angle-nmb-builder commit to consume"
+        FORCE
+    )
+endif()
+set(
+    ANGLE_NMB_OFFLINE
+    OFF
+    CACHE BOOL
+    "Disallow all ANGLE package network downloads"
+)
+
+if(WITH_SDL_ANGLE)
+    include(FetchANGLENMB)
+    angle_nmb_resolve_package()
+
+    target_sources(
+        sdl.hdll
+        PRIVATE
+            angle.c
+            angle.h
+    )
+    target_link_libraries(
+        sdl.hdll
+        ANGLE_NMB::Headers
+        ANGLE_NMB::EGL
+        ANGLE_NMB::GLESv2
+    )
+    target_compile_definitions(
+        sdl.hdll
+        PRIVATE
+            HL_SDL_HAS_ANGLE
+            HL_ANGLE_REVISION="${ANGLE_NMB_RESOLVED_ANGLE_REVISION}"
+    )
+endif()
+
 if ((NOT WIN32) AND DOWNLOAD_DEPENDENCIES)
     FetchContent_Declare(
         SDL3
@@ -83,6 +159,46 @@ else()
 endif()
 if(APPLE)
     target_compile_definitions(sdl.hdll PRIVATE GL_SILENCE_DEPRECATION)
+endif()
+
+if(WITH_SDL_ANGLE)
+    add_custom_command(
+        TARGET sdl.hdll
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:ANGLE_NMB::EGL>"
+            "$<TARGET_FILE_DIR:sdl.hdll>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:ANGLE_NMB::GLESv2>"
+            "$<TARGET_FILE_DIR:sdl.hdll>"
+    )
+
+    if(APPLE)
+        set_property(
+            TARGET sdl.hdll
+            PROPERTY BUILD_RPATH "@loader_path;@loader_path/../Frameworks"
+        )
+        set_property(
+            TARGET sdl.hdll
+            PROPERTY INSTALL_RPATH "@loader_path;@loader_path/../Frameworks"
+        )
+    elseif(UNIX)
+        set_property(TARGET sdl.hdll PROPERTY BUILD_RPATH "$ORIGIN")
+        set_property(TARGET sdl.hdll PROPERTY INSTALL_RPATH "$ORIGIN")
+    endif()
+    set_property(TARGET sdl.hdll PROPERTY INSTALL_RPATH_USE_LINK_PATH FALSE)
+
+    if(WIN32)
+        set(ANGLE_NMB_RUNTIME_INSTALL_DESTINATION ${CMAKE_INSTALL_BINDIR})
+    else()
+        set(ANGLE_NMB_RUNTIME_INSTALL_DESTINATION ${HDLL_DESTINATION})
+    endif()
+    install(
+        FILES
+            "${ANGLE_NMB_EGL_RUNTIME}"
+            "${ANGLE_NMB_GLES_RUNTIME}"
+        DESTINATION ${ANGLE_NMB_RUNTIME_INSTALL_DESTINATION}
+    )
 endif()
 
 if(WIN32)

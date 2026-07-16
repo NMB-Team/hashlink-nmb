@@ -1,4 +1,4 @@
-﻿#define HL_NAME(n) sdl_##n
+#define HL_NAME(n) sdl_##n
 
 #include <locale.h>
 #include <stdint.h>
@@ -12,6 +12,7 @@
 
 #include <hl.h>
 #include "hlsystem.h"
+#include "angle.h"
 
 #ifdef HL_ANDROID
 // SDL3 no longer pulls SDL_main.h (where SDL_SetMainReady lives) in via SDL.h.
@@ -184,6 +185,9 @@ HL_PRIM bool HL_NAME(init_once)() {
 	SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
 	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "none");
 
+	if( !hl_angle_prepare_sdl() )
+		hl_error("ANGLE SDL configuration failed: %s", hl_angle_get_last_error());
+
 #	ifdef HL_ANDROID
 	// Pure HL binary has no Activity/SDL_main; tell SDL init was set up
 	SDL_SetMainReady();
@@ -198,7 +202,14 @@ HL_PRIM bool HL_NAME(init_once)() {
 	timeBeginPeriod(1);
 #	endif
 	// default GL parameters
-	if (!isGlOptionsSet) {
+	if( hl_angle_is_enabled() ) {
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+	} else if (!isGlOptionsSet) {
 #ifdef HL_MOBILE
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -800,6 +811,8 @@ HL_PRIM SDL_Window *HL_NAME(win_create_ex)(int x, int y, int width, int height, 
     SDL_Window* win = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
 #endif
+	if( win == NULL )
+		return NULL;
 #	ifdef HL_WIN
 	// force window to show even if the debugger force process windows to be hidden
 	if( !(sdlFlags & SDL_WINDOW_HIDDEN) && (SDL_GetWindowFlags(win) & SDL_WINDOW_INPUT_FOCUS) == 0 ) {
@@ -820,7 +833,10 @@ HL_PRIM SDL_Window *HL_NAME(win_create)(int width, int height) {
 }
 
 HL_PRIM SDL_GLContext HL_NAME(win_get_glcontext)(SDL_Window *win) {
-	return SDL_GL_CreateContext(win);
+	SDL_GLContext context = SDL_GL_CreateContext(win);
+	if( context == NULL && hl_angle_is_enabled() )
+		hl_angle_set_last_error("ANGLE context creation failed: %s", SDL_GetError());
+	return context;
 }
 
 #ifdef ALLOW_VULKAN

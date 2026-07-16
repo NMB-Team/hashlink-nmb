@@ -420,6 +420,17 @@ if(BUILD_TESTING)
     add_test(NAME uvsample
         COMMAND uvsample 6002
     )
+    add_test(
+        NAME angle-nmb-invalid-hash
+        COMMAND
+            ${CMAKE_COMMAND}
+            -DANGLE_NMB_MODULE=${CMAKE_SOURCE_DIR}/other/cmake/FetchANGLENMB.cmake
+            -DANGLE_NMB_TEST_SOURCE=${CMAKE_SOURCE_DIR}/LICENSE
+            -DANGLE_NMB_TEST_ROOT=${CMAKE_BINARY_DIR}/angle-nmb-invalid-hash
+            -DANGLE_NMB_TEST_CHILD=${CMAKE_SOURCE_DIR}/other/tests/cmake/angle_nmb_invalid_hash_child.cmake
+            -P
+            ${CMAKE_SOURCE_DIR}/other/tests/cmake/angle_nmb_invalid_hash.cmake
+    )
 endif()
 
 #####################
