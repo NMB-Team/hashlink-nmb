@@ -7,7 +7,7 @@ INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_LIB_DIR ?= $(PREFIX)/lib
 INSTALL_INCLUDE_DIR ?= $(PREFIX)/include
 
-LIBS = $(addsuffix .hdll,fmt sdl ssl openal ui uv mysql sqlite heaps)
+LIBS = $(addsuffix .hdll,fmt sdl shaderc ssl openal ui uv mysql sqlite heaps)
 ARCH ?= $(shell uname -m)
 
 CFLAGS = -Wall -O3 -std=c11 -fvisibility=hidden
@@ -62,6 +62,12 @@ FMT += include/zlib-ng/arch/generic/adler32_c.o include/zlib-ng/arch/generic/adl
 	include/zlib-ng/zutil.o include/zlib-ng/arch/generic/crc32_chorba_c.o
 
 SDL = libs/sdl/sdl.o libs/sdl/gl.o libs/sdl/vulkan.o
+SHADERC = libs/sdl/shaderc.o
+SHADERC_CPPFLAGS = $(shell pkg-config --cflags shaderc 2>/dev/null)
+shaderc_LDLIBS = $(shell pkg-config --libs shaderc 2>/dev/null)
+ifneq ($(strip $(shaderc_LDLIBS)),)
+SHADERC_CPPFLAGS += -D HL_VULKAN_HAS_SHADERC
+endif
 
 OPENAL = libs/openal/openal.o
 
@@ -157,13 +163,11 @@ BUILD_DIR = Release
 VS_SDL_LIBRARY ?= include/sdl/lib/x86/SDL3.dll
 VS_OPENAL_LIBRARY ?= include/openal/bin/Win32/soft_oal.dll
 VS_DX_LIBRARY ?= include/dx/bin/x86/dxcompiler.dll include/dx/bin/x86/dxil.dll
-VS_SHADERC_LIBRARY ?=
 else
 BUILD_DIR = x64/Release
 VS_SDL_LIBRARY ?= include/sdl/lib/x64/SDL3.dll
 VS_OPENAL_LIBRARY ?= include/openal/bin/Win64/soft_oal.dll
 VS_DX_LIBRARY ?= include/dx/bin/x64/dxcompiler.dll include/dx/bin/x64/dxil.dll
-VS_SHADERC_LIBRARY ?= $(VULKAN_SDK)/Bin/shaderc_shared.dll
 endif
 
 ifneq (, $(findstring MINGW64, $(UNAME)))
@@ -304,6 +308,9 @@ fmt.hdll: $(FMT) $(LIBHL)
 $(SDL): CPPFLAGS += $(SDL_CPPFLAGS)
 sdl.hdll: $(SDL) $(LIBHL)
 
+$(SHADERC): CPPFLAGS += $(SHADERC_CPPFLAGS)
+shaderc.hdll: $(SHADERC) $(LIBHL)
+
 $(OPENAL): CPPFLAGS += $(OPENAL_CPPFLAGS)
 openal.hdll: $(OPENAL) $(LIBHL)
 
@@ -378,7 +385,6 @@ release_win:
 	cp $(VS_SDL_LIBRARY) $(PACKAGE_NAME)
 	cp $(VS_OPENAL_LIBRARY) $(PACKAGE_NAME)/OpenAL32.dll
 	cp $(VS_DX_LIBRARY) $(PACKAGE_NAME)
-	if [ -n "$(VS_SHADERC_LIBRARY)" ] && [ -f "$(VS_SHADERC_LIBRARY)" ]; then cp "$(VS_SHADERC_LIBRARY)" $(PACKAGE_NAME); fi
 	# 7z switches: https://sevenzip.osdn.jp/chm/cmdline/switches/
 	7z a -spf -y -mx9 -bt $(PACKAGE_NAME).zip $(PACKAGE_NAME)
 	rm -rf $(PACKAGE_NAME)
@@ -406,7 +412,7 @@ codesign_osx:
 .SUFFIXES: .cpp .c .o
 
 clean_o:
-	rm -f ${STD} ${BOOT} ${RUNTIME} ${PCRE} ${HL_OBJ} ${FMT} ${SDL} ${SSL} ${OPENAL} ${UI} ${UV} ${MYSQL} ${SQLITE} ${HEAPS} ${HL_DEBUG}
+	rm -f ${STD} ${BOOT} ${RUNTIME} ${PCRE} ${HL_OBJ} ${FMT} ${SDL} ${SHADERC} ${SSL} ${OPENAL} ${UI} ${UV} ${MYSQL} ${SQLITE} ${HEAPS} ${HL_DEBUG}
 
 clean: clean_o
 	rm -f $(HL) $(HLC) $(LIBHL) *.hdll

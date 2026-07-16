@@ -128,6 +128,7 @@ jobs:
       run: |
         # see https://github.com/Homebrew/homebrew-core/issues/165793#issuecomment-1989441193
         # see https://github.com/Homebrew/brew/blob/master/.github/workflows/tests.yml
+        brew untap aws/tap || true
         brew unlink python && brew link --overwrite python
 
     - name: "Install: Required Dev Packages"
@@ -189,7 +190,7 @@ jobs:
           darwin)
             if [ "${{matrix.build_system}}" != "cmake" ]; then
               brew update
-              HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew bundle --no-upgrade
+              brew bundle --no-upgrade
             else
               brew update
               brew install vulkan-headers vulkan-loader
@@ -465,8 +466,6 @@ jobs:
 
   haxe-test-suite:
     needs: build
-    env:
-      HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
     strategy:
       fail-fast: false
       matrix:
@@ -528,6 +527,7 @@ jobs:
     - name: Install brew packages
       if: matrix.os == 'darwin'
       run: |
+        brew untap aws/tap || true
         brew update
         brew install jpeg-turbo libvorbis sqlite mbedtls
 

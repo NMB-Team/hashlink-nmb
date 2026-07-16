@@ -2127,6 +2127,7 @@ class Vulkan {
 		return @:privateAccess new haxe.io.Bytes(bytes, outSize);
 	}
 
+	@:hlNative("?shaderc", "compile_shader")
 	static function compile_shader( source : hl.Bytes, shaderFile : hl.Bytes, mainFunction : hl.Bytes, kind : ShaderKind, outSize : hl.Ref<Int> ) : hl.Bytes {
 		return null;
 	}

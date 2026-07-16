@@ -50,29 +50,34 @@ if(_WITH_SDL_VULKAN)
     target_sources(sdl.hdll PRIVATE vulkan.c)
     find_package(Vulkan REQUIRED)
     target_link_libraries(sdl.hdll Vulkan::Vulkan)
-    if(NOT APPLE)
+    add_library(shaderc.hdll shaderc.c)
+    set_as_hdll(shaderc)
+    target_include_directories(shaderc.hdll PRIVATE ${Vulkan_INCLUDE_DIRS})
+    target_link_libraries(shaderc.hdll libhl)
+    if(MSVC)
         if(CMAKE_SIZEOF_VOID_P EQUAL 4)
             set(_VULKAN_LIB_SUFFIX Lib32)
         else()
             set(_VULKAN_LIB_SUFFIX Lib)
         endif()
         find_library(SHADERC_LIBRARY
-            NAMES shaderc_shared shaderc
+            NAMES shaderc_combined
             HINTS $ENV{VULKAN_SDK}
             PATH_SUFFIXES ${_VULKAN_LIB_SUFFIX} lib
         )
+    elseif(NOT WIN32 AND NOT APPLE)
+        find_library(SHADERC_LIBRARY
+            NAMES shaderc_shared shaderc
+        )
     endif()
     if(SHADERC_LIBRARY)
-        target_link_libraries(sdl.hdll ${SHADERC_LIBRARY})
-        target_compile_definitions(sdl.hdll PRIVATE HL_VULKAN_HAS_SHADERC)
-        if(WIN32)
-            find_file(SHADERC_RUNTIME_LIBRARY
-                NAMES shaderc_shared.dll
-                HINTS $ENV{VULKAN_SDK}
-                PATH_SUFFIXES Bin
-            )
-        endif()
+        target_link_libraries(shaderc.hdll ${SHADERC_LIBRARY})
+        target_compile_definitions(shaderc.hdll PRIVATE HL_VULKAN_HAS_SHADERC)
     endif()
+    install(
+        TARGETS shaderc.hdll
+        DESTINATION ${HDLL_DESTINATION}
+    )
 else()
     target_compile_definitions(sdl.hdll PRIVATE HL_DISABLE_SDL_VULKAN_NATIVE)
 endif()
@@ -160,9 +165,3 @@ install(
     TARGETS sdl.hdll
     DESTINATION ${HDLL_DESTINATION}
 )
-if(SHADERC_RUNTIME_LIBRARY)
-    install(
-        FILES ${SHADERC_RUNTIME_LIBRARY}
-        DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
-endif()
