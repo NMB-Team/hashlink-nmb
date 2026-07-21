@@ -307,14 +307,21 @@ int main(int argc, pchar *argv[]) {
 	if( isExc ) {
 		hl_print_uncaught_exception(ctx.ret);
 		hl_debug_break();
+#ifdef HL_THREADS
+		hl_gc_major();
+#else
 		hl_global_free();
+#endif
 		return 1;
 	}
+#ifdef HL_THREADS
+	// other threads may still be running and crash if globals are freed, so only run a gc here
+	hl_gc_major();
+#else
 	hl_module_free(ctx.m);
 	hl_free(&ctx.code->alloc);
-	// do not call hl_unregister_thread() or hl_global_free will display error
-	// on global_lock if there are threads that are still running (such as debugger)
 	hl_global_free();
+#endif
 	return 0;
 }
 
