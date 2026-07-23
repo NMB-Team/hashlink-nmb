@@ -73,34 +73,6 @@ In short you'll probably need:
 - [SDL3-devel](https://github.com/libsdl-org/SDL/releases/download/release-3.4.12/SDL3-devel-3.4.12-VC.zip), extract to `<hashlink>/include/sdl`
 - [openal-soft](https://github.com/kcat/openal-soft/releases/download/1.23.1/openal-soft-1.23.1-bin.zip), extract to `<hashlink>/include/openal`
 
-## Building SDL with ANGLE
-
-ANGLE is an optional OpenGL ES provider for `sdl.hdll`. It preserves the existing system OpenGL, native Vulkan, DX11, and DX12 paths.
-
-```bash
-cmake -S . -B build \
-  -DWITH_SDL=ON \
-  -DWITH_SDL_ANGLE=ON
-
-cmake --build build --config Release
-```
-
-CMake downloads `latest.json`, resolves an immutable platform package, verifies its SHA-256 and ANGLE revision, caches it by builder commit, and copies `libEGL` and `libGLESv2` beside `sdl.hdll`.
-
-The standard Windows x64 VS2026/Release workflow also enables ANGLE and includes `libEGL.dll` and `libGLESv2.dll` in `hashlink-latest-win64.zip`. Build metadata remains internal and is not included in release packages. ANGLE remains an optional runtime provider; native DX11, DX12, Vulkan, and system OpenGL are preserved.
-
-The checked-in `hl.sln` supports ANGLE directly for x64 builds. Build the `sdl` project in Visual Studio; its pre-build step downloads and validates the immutable Windows package into `include/angle-nmb`, then links ANGLE and copies its runtime files beside `sdl.hdll`. Delete `include/angle-nmb` to force a fresh package resolution.
-
-Makefile builds can request the same provider and runtime packaging:
-
-```bash
-make WITH_ANGLE=1
-```
-
-The desktop Makefile release jobs use this mode where a matching ANGLE package exists.
-
-Advanced package controls are documented in [libs/sdl/README.md](libs/sdl/README.md).
-
 ## Debugging
 
 You can debug Haxe/HashLink applications by using the [Visual Studio Code Debugger](https://marketplace.visualstudio.com/items?itemName=HaxeFoundation.haxe-hl)

@@ -322,18 +322,16 @@ jobs:
               //p:Configuration=${{ matrix.msbuild_configuration }} \
               //p:Platform=${{ matrix.architecture_string }}
 
-            BUILD_FOLDER=x64/${{ matrix.msbuild_configuration }}
-            cmake -E copy_if_different \
-              include/sdl/lib/x64/SDL3.dll \
-              "$BUILD_FOLDER"
+            case "${{ matrix.architecture }}" in
+              64) BUILD_FOLDER=x64/${{ matrix.msbuild_configuration }} ;;
+              32) BUILD_FOLDER=${{ matrix.msbuild_configuration }} ;;
+            esac
             echo "WINDOWS_BUILD_FOLDER=$BUILD_FOLDER" >> $GITHUB_ENV
             ;;
 
           make*)
             if [[ ${{ matrix.target }}${{ matrix.architecture }} == linux32 ]]; then
               make -o sdl.hdll # 32 bit sdl cannot be installed
-            elif [[ ${{ matrix.build_system }} == make && (${{ matrix.target }}${{ matrix.architecture }} == darwin64 || ${{ matrix.target }}${{ matrix.architecture }} == linux64) ]]; then
-              make WITH_ANGLE=1
             else
               make
             fi
@@ -431,27 +429,13 @@ jobs:
             ;;
         esac
 
-    - name: "Verify standard Windows package contains ANGLE"
-      if: matrix.target == 'windows' && matrix.build_system == 'vs2026' && matrix.architecture == 64
-      run: |
-        archive_contents="$(7z l "${{ env.HASHLINK_DISTRIBUTION }}")"
-        grep -q "libEGL.dll" <<< "$archive_contents"
-        grep -q "libGLESv2.dll" <<< "$archive_contents"
-        ! grep -q "angle-nmb" <<< "$archive_contents"
-
-    - name: "Verify standard Make package contains ANGLE"
-      if: matrix.build_system == 'make' && matrix.architecture == 64 && (matrix.target == 'darwin' || matrix.target == 'linux')
-      run: |
-        archive_contents="$(tar -tzf "${{ env.HASHLINK_DISTRIBUTION }}")"
-        grep -q "libEGL" <<< "$archive_contents"
-        grep -q "libGLESv2" <<< "$archive_contents"
-        ! grep -q "angle-nmb" <<< "$archive_contents"
 
     - name: "Share: build artifact"
       uses: actions/upload-artifact@v7.0.1
       with:
         name: ${{ matrix.target }}-${{ matrix.build_system }}-${{ matrix.architecture }}
         path: ${{ env.HASHLINK_DISTRIBUTION }}
+
 
   build-android:
     runs-on: ubuntu-latest
@@ -538,14 +522,14 @@ jobs:
         fi
         sudo apt-get update -qqy
         sudo apt-get install -qqy libjpeg-turbo8${SUFFIX} libturbojpeg${SUFFIX} zlib1g${SUFFIX} libogg0${SUFFIX} libvorbis0a${SUFFIX} \
-          libvorbisfile3${SUFFIX} libvorbisenc2${SUFFIX} libsqlite3-0${SUFFIX} libvulkan1 mesa-vulkan-drivers xvfb ${EXTRA_APT_PKGS}
+          libvorbisfile3${SUFFIX} libvorbisenc2${SUFFIX} libsqlite3-0${SUFFIX} ${EXTRA_APT_PKGS}
 
     - name: Install brew packages
       if: matrix.os == 'darwin'
       run: |
         brew untap aws/tap || true
         brew update
-        brew install jpeg-turbo libvorbis sqlite mbedtls vulkan-loader
+        brew install jpeg-turbo libvorbis sqlite mbedtls
 
     - name: Install msbuild
       uses: microsoft/setup-msbuild@v3
@@ -569,17 +553,8 @@ jobs:
         else
           sudo cp hl /usr/local/bin/
         fi
-        sudo cp -P libhl.* *.hdll /usr/local/lib/
-        if ls libSDL3.* >/dev/null 2>&1; then
-          sudo cp -P libSDL3.* /usr/local/lib/
-        fi
-        if ls libEGL.* libGLESv2.* >/dev/null 2>&1; then
-          sudo cp libEGL.* libGLESv2.* /usr/local/lib/
-        fi
+        sudo cp libhl.* *.hdll /usr/local/lib/
         sudo cp include/* /usr/local/include/
-        if [[ "${{ matrix.os }}" == "linux" ]]; then
-          sudo ldconfig
-        fi
 
     - name: Install binary (Windows)
       if: matrix.os == 'windows'
@@ -595,15 +570,6 @@ jobs:
 
     - name: Setup haxelib
       run: haxelib dev hashlink ./other/haxelib
-
-    - name: Test ANGLE runtime
-      if: matrix.architecture == 'x86_64'
-      run: |
-        pushd other/tests/angle
-        haxe angle-smoke.hxml
-        popd
-
-        ANGLE_SMOKE_SKIP_CONTEXT=1 hl other/tests/angle/angle-smoke.hl
 
     - name: Get Haxe commit SHA
       id: haxe_sha

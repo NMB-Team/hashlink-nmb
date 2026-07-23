@@ -1,4 +1,0 @@
--cp ../../../libs/sdl
--cp .
--main AngleSmoke
--hl angle-smoke.hl

@@ -9,12 +9,13 @@
 #elif defined(HL_MAC)
 #	include <SDL3/SDL.h>
 #	include <OpenGL/gl3.h>
-#	define HL_DYNAMIC_GL
+#	define glBindImageTexture(...) hl_error("Not supported on OSX")
+#	define glDispatchCompute(...) hl_error("Not supported on OSX")
+#	define glMemoryBarrier(...) hl_error("Not supported on OSX")
 #elif defined(_WIN32)
 #	include <SDL3/SDL.h>
 #	include <GL/gl.h>
 #	include <GL/glext.h>
-#	define HL_DYNAMIC_GL
 #elif defined(HL_CONSOLE)
 #	include <graphic/glapi.h>
 #elif defined(HL_MESA)
@@ -29,13 +30,10 @@
 #else
 #	include <SDL3/SDL.h>
 #	include <GL/glcorearb.h>
-#	define HL_DYNAMIC_GL
 #endif
 
-#ifdef HL_DYNAMIC_GL
-#	define HL_GL_API_REMAP
-#	include "gl_api.h"
-#elif defined(HL_GLES)
+#ifdef HL_GLES
+#	define GL_IMPORT(fun, t)
 #	define ES_NOT_SUPPORTED hl_error("Not supported by GLES3")
 #	define glBindFragDataLocation(...) ES_NOT_SUPPORTED
 #	define glBindImageTexture(...) ES_NOT_SUPPORTED
@@ -51,15 +49,27 @@
 #	define glColorMaski(...) ES_NOT_SUPPORTED
 #endif
 
-static int GLLoadAPI() {
-#ifdef HL_DYNAMIC_GL
-	return hl_gl_api_load() ? 0 : 1;
-#else
-	return 0;
+#if !defined(HL_CONSOLE) && !defined(GL_IMPORT)
+#define GL_IMPORT(fun, t) PFNGL##t##PROC fun
+#include "GLImports.h"
+#undef GL_IMPORT
+#define GL_IMPORT(fun,t)	fun = (PFNGL##t##PROC)SDL_GL_GetProcAddress(#fun); if( fun == NULL ) return 1
+#ifndef __APPLE__
+#define GL_IMPORT_OPT(fun, t) PFNGL##t##PROC fun = NULL; if ( !fun ) { fun = (PFNGL##t##PROC)SDL_GL_GetProcAddress(#fun); if( fun == NULL ) hl_error("function not resolved"); }
 #endif
+#endif
+
+#if !defined GL_IMPORT_OPT
+#define GL_IMPORT_OPT(fun, t)
+#define glMultiDrawElementsIndirectCountARB(...) hl_error("function not resolved");
+#endif
+
+static int GLLoadAPI() {
+#	include "GLImports.h"
+	return 0;
 }
 
-#if defined(HL_DYNAMIC_GL) || defined(GL_VERSION_4_3)
+#ifdef GL_VERSION_4_3
 static void APIENTRY debug_message_callback( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam ) {
 	fprintf(stderr, "GL %s: type = 0x%x, severity = 0x%x, message = %s\n",
 		( type == GL_DEBUG_TYPE_ERROR ? "** ERROR **" : "DEBUG" ),
@@ -74,28 +84,8 @@ HL_PRIM bool HL_NAME(gl_init)() {
 	return GLLoadAPI() == 0;
 }
 
-HL_PRIM const char *HL_NAME(gl_get_last_error)() {
-#ifdef HL_DYNAMIC_GL
-	return hl_gl_api_get_last_error();
-#else
-	return NULL;
-#endif
-}
-
 HL_PRIM bool HL_NAME(gl_set_debug)( bool enable ) {
-#ifdef HL_DYNAMIC_GL
-	if( glApi.DebugMessageCallback == NULL || glApi.DebugMessageControl == NULL )
-		return false;
-	if( enable ) {
-		glEnable(GL_DEBUG_OUTPUT);
-		glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_PERFORMANCE, GL_DONT_CARE, 0, NULL, GL_FALSE);
-		glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_OTHER, GL_DONT_CARE, 0, NULL, GL_FALSE);
-		glDebugMessageCallback(debug_message_callback, 0);
-	} else {
-		glDisable(GL_DEBUG_OUTPUT);
-	}
-	return true;
-#elif defined(GL_VERSION_4_3)
+#ifdef GL_VERSION_4_3
 	if( enable ) {
 		glEnable(GL_DEBUG_OUTPUT);
 		glDebugMessageControl(GL_DONT_CARE, GL_DEBUG_TYPE_PERFORMANCE, GL_DONT_CARE, 0, NULL, GL_FALSE);
@@ -133,14 +123,7 @@ HL_PRIM void HL_NAME(gl_clear_color)( double r, double g, double b, double a ) {
 }
 
 HL_PRIM void HL_NAME(gl_clear_depth)( double value ) {
-#ifdef HL_DYNAMIC_GL
-	if( glCaps.profile == HL_GL_PROFILE_GLES )
-		glClearDepthf((float)value);
-	else
-		glClearDepth(value);
-#else
 	glClearDepth(value);
-#endif
 }
 
 HL_PRIM void HL_NAME(gl_clear_stencil)( int value ) {
@@ -170,13 +153,6 @@ HL_PRIM vbyte *HL_NAME(gl_get_string)(int name) {
 // state changes
 
 HL_PRIM void HL_NAME(gl_polygon_mode)(int face, int mode) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasPolygonMode ) {
-		if( mode == GL_FILL )
-			return;
-		hl_error("glPolygonMode line and point modes are unavailable under the active GLES context.");
-	}
-#endif
 	glPolygonMode(face, mode);
 }
 
@@ -229,10 +205,6 @@ HL_PRIM void HL_NAME(gl_color_mask)( bool r, bool g, bool b, bool a ) {
 }
 
 HL_PRIM void HL_NAME(gl_color_maski)( int i, bool r, bool g, bool b, bool a ) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasDrawBuffersIndexed )
-		hl_error("Indexed color masks are unavailable under the active GL context.");
-#endif
 	glColorMaski(i, r, g, b, a);
 }
 
@@ -269,10 +241,6 @@ HL_PRIM void HL_NAME(gl_delete_program)( vdynamic *s ) {
 
 HL_PRIM void HL_NAME(gl_bind_frag_data_location)( vdynamic *p, int colNum, vstring *name ) {
 	char *cname = hl_to_utf8(name->bytes);
-#ifdef HL_DYNAMIC_GL
-	if( glApi.BindFragDataLocation == NULL )
-		hl_error("glBindFragDataLocation is unavailable under the active GL context.");
-#endif
 	glBindFragDataLocation(p->v.i, colNum, cname);
 }
 
@@ -381,10 +349,6 @@ HL_PRIM void HL_NAME(gl_bind_texture)( int t, vdynamic *texture ) {
 }
 
 HL_PRIM void HL_NAME(gl_bind_image_texture)( int unit, int texture, int level, bool layered, int layer, int access, int format ) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasCompute || glApi.BindImageTexture == NULL )
-		hl_error("Image textures are unavailable under the active GL context.");
-#endif
 	glBindImageTexture(unit, texture, level, layered, layer, access, format);
 }
 
@@ -405,7 +369,7 @@ HL_PRIM void HL_NAME(gl_tex_image3d)( int target, int level, int internalFormat,
 }
 
 HL_PRIM void HL_NAME(gl_tex_storage2d)( int target, int levels, int internalFormat, int width, int height) {
-#if defined(HL_DYNAMIC_GL) || !defined(__APPLE__)
+#ifndef __APPLE__
 	glTexStorage2D(target, levels, internalFormat, width, height);
 #else
     hl_error("glTexStorage2d is not supported on Apple platforms");
@@ -413,7 +377,7 @@ HL_PRIM void HL_NAME(gl_tex_storage2d)( int target, int levels, int internalForm
 }
 
 HL_PRIM void HL_NAME(gl_tex_storage3d)( int target, int levels, int internalFormat, int width, int height, int depth) {
-#if defined(HL_DYNAMIC_GL) || !defined(__APPLE__)
+#ifndef __APPLE__
 	glTexStorage3D(target, levels, internalFormat, width, height, depth);
 #else
 	hl_error("glTexStorage3d is not supported on Apple platforms");
@@ -421,10 +385,6 @@ HL_PRIM void HL_NAME(gl_tex_storage3d)( int target, int levels, int internalForm
 }
 
 HL_PRIM void HL_NAME(gl_tex_image2d_multisample)( int target, int samples, int internalFormat, int width, int height, bool fixedsamplelocations) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasTextureMultisample )
-		hl_error("Multisample textures are unavailable under the active GL context.");
-#endif
 	glTexImage2DMultisample(target, samples, internalFormat, width, height, fixedsamplelocations);
 }
 
@@ -487,10 +447,6 @@ HL_PRIM void HL_NAME(gl_bind_framebuffer)( int target, vdynamic *f ) {
 }
 
 HL_PRIM void HL_NAME(gl_framebuffer_texture)( int target, int attach, vdynamic *t, int level ) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasFramebufferTexture )
-		hl_error("glFramebufferTexture is unavailable under the active GL context.");
-#endif
 	glFramebufferTexture(target, attach, ZIDX(t), level);
 }
 
@@ -587,24 +543,7 @@ HL_PRIM void HL_NAME(gl_buffer_sub_data)( int target, int offset, vbyte *data, i
 }
 
 HL_PRIM void HL_NAME(gl_get_buffer_sub_data)( int target, int offset, vbyte *data, int srcOffset, int srcLength ) {
-#ifdef HL_DYNAMIC_GL
-	if( glApi.GetBufferSubData != NULL ) {
-		glGetBufferSubData(target, offset, srcLength, data + srcOffset);
-		return;
-	}
-	if( glCaps.hasMapBufferRange ) {
-		void *mapped = glMapBufferRange(target, offset, srcLength, GL_MAP_READ_BIT);
-		if( mapped == NULL )
-			hl_error("GLES buffer readback failed to map the requested buffer range.");
-		memcpy(data + srcOffset, mapped, srcLength);
-		if( !glUnmapBuffer(target) )
-			hl_error("GLES buffer readback failed while unmapping the buffer.");
-		return;
-	}
-	hl_error("Buffer readback is unavailable under the active GL context.");
-#else
-	glGetBufferSubData(target, offset, srcLength, data + srcOffset);
-#endif
+	glGetBufferSubData(target, srcOffset, srcLength, data + offset);
 }
 
 HL_PRIM void HL_NAME(gl_enable_vertex_attrib_array)( int attrib ) {
@@ -672,18 +611,10 @@ HL_PRIM void HL_NAME(gl_uniform_matrix4fv)( vdynamic *u, bool transpose, vbyte *
 
 // compute
 HL_PRIM void HL_NAME(gl_dispatch_compute)( int num_groups_x, int num_groups_y, int num_groups_z ) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasCompute )
-		hl_error("Compute shaders are unavailable under the active GL context.");
-#endif
 	glDispatchCompute(num_groups_x, num_groups_y, num_groups_z);
 }
 
 HL_PRIM void HL_NAME(gl_memory_barrier)( int barriers ) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasCompute )
-		hl_error("Memory barriers are unavailable under the active GL context.");
-#endif
 	glMemoryBarrier(barriers);
 }
 
@@ -706,37 +637,24 @@ HL_PRIM void HL_NAME(gl_draw_arrays_instanced)( int mode, int first, int count, 
 }
 
 HL_PRIM void HL_NAME(gl_multi_draw_elements_indirect)( int mode, int type, vbyte *data, int count, int stride ) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasIndirectDraw )
-		hl_error("Indirect drawing is unavailable under the active GL context.");
+#	ifdef GL_VERSION_4_3
 	glMultiDrawElementsIndirect(mode, type, data, count, stride);
-#elif defined(GL_VERSION_4_3)
-	glMultiDrawElementsIndirect(mode, type, data, count, stride);
-#else
-	hl_error("Indirect drawing is unavailable under the active GL context.");
-#endif
+#	endif
 }
 
 HL_PRIM void HL_NAME(gl_multi_draw_elements_indirect_count)(int mode, int type, vbyte* data, vbyte* drawcount, int maxdrawcount, int stride) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasIndirectCount )
-		hl_error("Indirect-count drawing is unavailable under the active GL context.");
+	GL_IMPORT_OPT(glMultiDrawElementsIndirectCountARB, MULTIDRAWELEMENTSINDIRECTCOUNTARB)
 	glMultiDrawElementsIndirectCountARB(mode, type, data, (GLintptr)drawcount, maxdrawcount, stride);
-#else
-	hl_error("Indirect-count drawing is unavailable under the active GL context.");
-#endif
 }
 
 HL_PRIM int HL_NAME(gl_get_config_parameter)( int feature ) {
 	switch( feature ) {
 	case 0:
-#ifdef HL_DYNAMIC_GL
-		return glCaps.hasIndirectDraw;
-#elif defined(GL_VERSION_4_3)
+#		ifdef GL_VERSION_4_3
 		return 1;
-#else
+#		else
 		return 0;
-#endif
+#		endif
 	default:
 		{
 			int r = -1;
@@ -750,9 +668,6 @@ HL_PRIM int HL_NAME(gl_get_config_parameter)( int feature ) {
 
 HL_PRIM bool HL_NAME(gl_has_extension)(vstring *name) {
 	const char* cname = hl_to_utf8(name->bytes);
-#ifdef HL_DYNAMIC_GL
-	return hl_gl_api_has_extension(cname);
-#else
 	GLint numExtensions = 0;
 	glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
 	for (int i = 0; i < numExtensions; i++) {
@@ -762,44 +677,12 @@ HL_PRIM bool HL_NAME(gl_has_extension)(vstring *name) {
 		}
 	}
 	return false;
-#endif
-}
-
-HL_PRIM int HL_NAME(gl_get_capability)(int capability) {
-#ifdef HL_DYNAMIC_GL
-	switch( capability ) {
-	case 0: return glCaps.profile == HL_GL_PROFILE_GLES;
-	case 1: return glCaps.isANGLE;
-	case 2: return glCaps.major;
-	case 3: return glCaps.minor;
-	case 4: return glCaps.hasCompute;
-	case 5: return glCaps.hasSSBO;
-	case 6: return glCaps.hasPolygonMode;
-	case 7: return glCaps.hasBufferReadback;
-	case 8: return glCaps.hasDrawBuffersIndexed;
-	case 9: return glCaps.hasTextureMultisample;
-	case 10: return glCaps.hasIndirectDraw;
-	case 11: return glCaps.hasIndirectCount;
-	case 12: return glCaps.hasDrawBuffers;
-	case 13: return glCaps.hasFramebufferTexture;
-	case 14: return glCaps.hasRGTC;
-	case 15: return glCaps.hasTextureCubeMapSeamless;
-	case 16: return glCaps.hasQueries;
-	default: return 0;
-	}
-#else
-	return 0;
-#endif
 }
 
 // queries
 
 HL_PRIM vdynamic *HL_NAME(gl_create_query)() {
 	unsigned int t = 0;
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasQueries )
-		hl_error("GL queries are unavailable under the active GL context.");
-#endif
 	glGenQueries(1, &t);
 	return alloc_i32(t);
 }
@@ -817,13 +700,6 @@ HL_PRIM void HL_NAME(gl_end_query)( int target ) {
 }
 
 HL_PRIM bool HL_NAME(gl_query_result_available)( vdynamic *q ) {
-#ifdef HL_DYNAMIC_GL
-	if( glApi.GetQueryObjectiv == NULL && glApi.GetQueryObjectuiv != NULL ) {
-		unsigned int v = 0;
-		glGetQueryObjectuiv(q->v.i, GL_QUERY_RESULT_AVAILABLE, &v);
-		return v == GL_TRUE;
-	}
-#endif
 	int v = 0;
 	glGetQueryObjectiv(q->v.i, GL_QUERY_RESULT_AVAILABLE, &v);
 	return v == GL_TRUE;
@@ -831,31 +707,16 @@ HL_PRIM bool HL_NAME(gl_query_result_available)( vdynamic *q ) {
 
 HL_PRIM double HL_NAME(gl_query_result)( vdynamic *q ) {
 	GLuint64 v = -1;
-#ifdef HL_DYNAMIC_GL
-	if( glApi.GetQueryObjectui64v != NULL )
-		glGetQueryObjectui64v(q->v.i, GL_QUERY_RESULT, &v);
-	else if( glApi.GetQueryObjectuiv != NULL ) {
-		unsigned int value = 0;
-		glGetQueryObjectuiv(q->v.i, GL_QUERY_RESULT, &value);
-		v = value;
-	} else
-		hl_error("GL query results are unavailable under the active GL context.");
-#elif !defined(HL_MESA) && !defined(HL_MOBILE)
+#	if !defined(HL_MESA) && !defined(HL_MOBILE)
 	glGetQueryObjectui64v(q->v.i, GL_QUERY_RESULT, &v);
-#endif
+#	endif
 	return (double)v;
 }
 
 HL_PRIM void HL_NAME(gl_query_counter)( vdynamic *q, int target ) {
-#ifdef HL_DYNAMIC_GL
-	if( glApi.QueryCounter == NULL )
-		hl_error("Timestamp queries are unavailable under the active GL context.");
+#	if !defined(HL_MESA) && !defined(HL_MOBILE)
 	glQueryCounter(q->v.i, target);
-#elif !defined(HL_MESA) && !defined(HL_MOBILE)
-	glQueryCounter(q->v.i, target);
-#else
-	hl_error("Timestamp queries are unavailable under the active GL context.");
-#endif
+#	endif
 }
 
 // vertex array
@@ -890,12 +751,7 @@ HL_PRIM void HL_NAME(gl_uniform_block_binding)( vdynamic *p, int index, int bind
 // SSBOs
 
 HL_PRIM int HL_NAME(gl_get_program_resource_index)( vdynamic *p, int type, vstring *name ) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasSSBO )
-		hl_error("Shader storage buffers are unavailable under the active GL context.");
-	char *cname = hl_to_utf8(name->bytes);
-	return (int)glGetProgramResourceIndex(p->v.i, type, cname);
-#elif !defined(__APPLE__)
+#ifndef __APPLE__
 	char *cname = hl_to_utf8(name->bytes);
 	return (int)glGetProgramResourceIndex(p->v.i, type, cname);
 #else
@@ -904,11 +760,7 @@ HL_PRIM int HL_NAME(gl_get_program_resource_index)( vdynamic *p, int type, vstri
 }
 
 HL_PRIM void HL_NAME(gl_shader_storage_block_binding)( vdynamic *p, int index, int binding ) {
-#ifdef HL_DYNAMIC_GL
-	if( !glCaps.hasSSBO )
-		hl_error("Shader storage buffers are unavailable under the active GL context.");
-	glShaderStorageBlockBinding(p->v.i, index, binding);
-#elif !defined(__APPLE__)
+#ifndef __APPLE__
 	glShaderStorageBlockBinding(p->v.i, index, binding);
 #else
 	hl_error("glShaderStorageBlockBinding is not supported on Apple platforms");
@@ -916,7 +768,6 @@ HL_PRIM void HL_NAME(gl_shader_storage_block_binding)( vdynamic *p, int index, i
 }
 
 DEFINE_PRIM(_BOOL,gl_init,_NO_ARG);
-DEFINE_PRIM(_BYTES,gl_get_last_error,_NO_ARG);
 DEFINE_PRIM(_BOOL,gl_set_debug,_BOOL);
 DEFINE_PRIM(_BOOL,gl_is_context_lost,_NO_ARG);
 DEFINE_PRIM(_VOID,gl_clear,_I32);
@@ -1047,4 +898,3 @@ DEFINE_PRIM(_VOID, gl_shader_storage_block_binding, _NULL(_I32) _I32 _I32);
 
 DEFINE_PRIM(_I32, gl_get_config_parameter, _I32);
 DEFINE_PRIM(_BOOL, gl_has_extension, _STRING);
-DEFINE_PRIM(_I32, gl_get_capability, _I32);

@@ -112,16 +112,7 @@ class Window {
 			#end
 			if( !directXMode ) {
 				glctx = winGetGLContext(win);
-				var glReady = glctx != null;
-				if (glReady) {
-					glReady = GL.init();
-					if (!glReady)
-						@:privateAccess Sdl.setGLContextError(GL.getLastError());
-				} else
-					@:privateAccess Sdl.setGLContextError(Angle.getLastError() ?? Sdl.getError());
-				if (glReady)
-					glReady = testGL();
-				if( !glReady ) {
+				if( glctx == null || !GL.init() || !testGL() ) {
 					destroy();
 					if( Sdl.onGlContextRetry() ) continue;
 					Sdl.onGlContextError();
@@ -137,18 +128,22 @@ class Window {
 		vsync = true;
 	}
 
-	private function testGL() {
+	function testGL() {
 		try {
+
 			var reg = ~/[0-9]+\.[0-9]+/;
 			var v : String = GL.getParameter(GL.SHADING_LANGUAGE_VERSION);
 
 			var glv : String = GL.getParameter(GL.VERSION);
 			var isOpenGLES : Bool = ((glv!=null) && (glv.indexOf("ES") >= 0));
 
-			var shaderVersion = 130;
+			var shaderVersion = 120;
 			if (isOpenGLES) {
-				shaderVersion = 300;
-			} else {
+				if( reg.match(v) )
+					shaderVersion = Std.int(Math.min( 100, Math.round( Std.parseFloat(reg.matched(0)) * 100 ) ));
+			}
+			else {
+				shaderVersion = 130;
 				if( reg.match(v) ) {
 					var minVer = 150;
 					shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
@@ -157,25 +152,13 @@ class Window {
 			}
 
 			var vertex = GL.createShader(GL.VERTEX_SHADER);
-			if (isOpenGLES)
-				GL.shaderSource(vertex, [
-					"#version 300 es",
-					"precision highp float;",
-					"void main() { gl_Position = vec4(1.0); }"
-				].join("\n"));
-			else
-				GL.shaderSource(vertex, ["#version " + shaderVersion, "void main() { gl_Position = vec4(1.0); }"].join("\n"));
+			GL.shaderSource(vertex, ["#version " + shaderVersion, "void main() { gl_Position = vec4(1.0); }"].join("\n"));
 			GL.compileShader(vertex);
 			if( GL.getShaderParameter(vertex, GL.COMPILE_STATUS) != 1 ) throw "Failed to compile VS ("+GL.getShaderInfoLog(vertex)+")";
 
 			var fragment = GL.createShader(GL.FRAGMENT_SHADER);
 			if (isOpenGLES)
-				GL.shaderSource(fragment, [
-					"#version 300 es",
-					"precision mediump float;",
-					"out vec4 color;",
-					"void main() { color = vec4(1.0); }"
-				].join("\n"));
+				GL.shaderSource(fragment, ["#version " + shaderVersion, "lowp vec4 color; void main() { color = vec4(1.0); }"].join("\n"));
 			else
 				GL.shaderSource(fragment, ["#version " + shaderVersion, "out vec4 color; void main() { color = vec4(1.0); }"].join("\n"));
 			GL.compileShader(fragment);
@@ -190,12 +173,9 @@ class Window {
 
 			GL.deleteShader(vertex);
 			GL.deleteShader(fragment);
-			GL.deleteProgram(p);
 
-			var error = GL.getError();
-			if (error != 0) throw "GL validation failed with error " + error;
 		} catch( e : Dynamic ) {
-			@:privateAccess Sdl.setGLContextError(Std.string(e));
+
 			return false;
 		}
 		return true;

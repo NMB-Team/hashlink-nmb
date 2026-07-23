@@ -21,11 +21,9 @@ class Sdl {
 
 	static var initDone = false;
 	static var isWin32 = false;
-	static var glContextError:Null<String>;
 
 	public static var requiredGLMajor(default,null) = 3;
 	public static var requiredGLMinor(default,null) = 2;
-	public static var currentGLProvider(default,null):GLContextProvider = System;
 
 	public static function init() {
 		if( initDone ) return;
@@ -44,26 +42,6 @@ class Sdl {
 		setGLOptions(major, minor);
 	}
 
-	public static function configureGLProvider(
-		provider:GLContextProvider,
-		angleBackend:AngleBackend = Auto,
-		debugLayers:Bool = false
-	):Void {
-		if (initDone)
-			throw "GL context provider was selected after SDL initialization.";
-
-		switch (provider) {
-			case System:
-				if (sdl.Angle.isEnabled())
-					throw "ANGLE is already configured for this SDL process.";
-			case Angle:
-				sdl.Angle.configure(angleBackend, debugLayers);
-				setGLOptions(3, 0, 24, 8, DOUBLE_BUFFER | GL_ES);
-		}
-
-		currentGLProvider = provider;
-	}
-
 	public static function setHint(name:String, value:String) {
 		return @:privateAccess hintValue(name.toUtf8(), value.toUtf8());
 	}
@@ -73,31 +51,14 @@ class Sdl {
 	}
 
 	public static dynamic function onGlContextError() {
-		final details = glContextError ?? GL.getLastError() ?? sdl.Angle.getLastError() ?? getError();
-		if (sdl.Angle.isEnabled()) {
-			final backend = switch (sdl.Angle.getActiveBackend()) {
-				case Vulkan: "Vulkan";
-				case Metal: "Metal";
-				case Auto: "Auto";
-				default: "Unknown";
-			};
-			throw 'ANGLE $backend context initialization failed: ${details ?? "Unknown error"}';
-		}
-
 		var devices = Sdl.getDevices();
 		var device = devices[0];
 		if( device == null ) device = "Unknown";
 		var flags = new haxe.EnumFlags<hl.UI.DialogFlags>();
 		flags.set(IsError);
 		var msg = 'The application was unable to create an OpenGL context\nfor your $device video card.\nOpenGL $requiredGLMajor.$requiredGLMinor+ is required, please update your driver.';
-		if (details != null)
-			msg += '\n\n$details';
 		hl.UI.dialog("OpenGL Error", msg, flags);
 		Sys.exit( -1);
-	}
-
-	private static function setGLContextError(error:Null<String>):Void {
-		glContextError = error;
 	}
 
 	public static inline var DOUBLE_BUFFER            = 1 << 0;
