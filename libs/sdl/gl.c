@@ -50,7 +50,9 @@
 #endif
 
 #if !defined(HL_CONSOLE) && !defined(GL_IMPORT)
+#ifndef __APPLE__
 #define HL_GL_DYNAMIC_IMPORTS
+#endif
 #define GL_IMPORT(fun, t) PFNGL##t##PROC fun
 #include "GLImports.h"
 #undef GL_IMPORT
