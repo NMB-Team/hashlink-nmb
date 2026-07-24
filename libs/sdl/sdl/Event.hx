@@ -20,6 +20,15 @@ package sdl;
 	public var dropFile : hl.Bytes;
 	public var inputChar : hl.Bytes;
 
+	/**
+		Monotonic timestamp of the native SDL event, in seconds.
+
+		The value originates from SDL_Event.common.timestamp and shares the
+		SDL_GetTicksNS() clock domain with Sdl.getTime(). It is unrelated to
+		wall-clock time and is not necessarily the hardware interrupt time.
+	**/
+	public var timestamp : Float;
+
 	// for compile-time backward compatibility
 	public var controller(get,never) : Int;
 	public var joystick(get,never) : Int;

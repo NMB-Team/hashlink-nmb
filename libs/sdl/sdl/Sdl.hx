@@ -167,6 +167,16 @@ class Sdl {
 	public static function delay(time:Int) {
 	}
 
+	/**
+		Returns the current SDL monotonic clock in seconds.
+
+		This uses the same SDL_GetTicksNS() clock domain as Event.timestamp
+		and is unrelated to wall-clock time.
+	**/
+	public static function getTime() : Float {
+		return 0.;
+	}
+
 	public static function getScreenWidth(?win : sdl.Window) : Int {
 		return
 			if(win == null)

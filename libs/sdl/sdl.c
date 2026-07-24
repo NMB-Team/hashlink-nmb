@@ -115,6 +115,7 @@ typedef struct {
 	int window;
 	vbyte* dropFile;
 	uchar* inputChar;
+	double timestamp;
 } event_data;
 
 static bool isGlOptionsSet = false;
@@ -123,10 +124,15 @@ static vclosure *window_event_watch_callback = NULL;
 static event_data *window_event_watch_event = NULL;
 static bool window_event_watch_registered = false;
 
+static inline void fill_event_timestamp( SDL_Event *e, event_data *event ) {
+	event->timestamp = (double)e->common.timestamp / 1000000000.0;
+}
+
 static bool fill_window_event( SDL_Event *e, event_data *event ) {
 	if( e->type < SDL_EVENT_WINDOW_FIRST || e->type > SDL_EVENT_WINDOW_LAST )
 		return false;
 
+	fill_event_timestamp(e, event);
 	event->type = WindowState;
 	event->window = e->window.windowID;
 	switch( e->type ) {
@@ -319,6 +325,7 @@ HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
 		if( fill_window_event(&e, event) )
 			return true;
 
+		fill_event_timestamp(&e, event);
 		switch (e.type) {
 		case SDL_EVENT_QUIT:
 			event->type = Quit;
@@ -538,6 +545,10 @@ HL_PRIM void HL_NAME(delay)( int time ) {
 	hl_blocking(false);
 }
 
+HL_PRIM double HL_NAME(get_time)() {
+	return (double)SDL_GetTicksNS() / 1000000000.0;
+}
+
 // SDL2 compat: Assume display 0.
 HL_PRIM int HL_NAME(get_screen_width)() {
 	int count;
@@ -730,6 +741,7 @@ DEFINE_PRIM(_I32, event_poll, _STRUCT );
 DEFINE_PRIM(_VOID, set_window_event_watch, _DYN _DYN);
 DEFINE_PRIM(_VOID, quit, _NO_ARG);
 DEFINE_PRIM(_VOID, delay, _I32);
+DEFINE_PRIM(_F64, get_time, _NO_ARG);
 DEFINE_PRIM(_I32, get_screen_width, _NO_ARG);
 DEFINE_PRIM(_I32, get_screen_height, _NO_ARG);
 DEFINE_PRIM(_I32, get_screen_width_of_window, TWIN);
