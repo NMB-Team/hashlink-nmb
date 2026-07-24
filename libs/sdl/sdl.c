@@ -223,7 +223,9 @@ HL_PRIM void HL_NAME(gl_options)( int major, int minor, int depth, int stencil, 
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, depth);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, stencil);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, (flags&1));
-	if( flags&2 )
+	if( !(flags&8) && (major < 3 || (major == 3 && minor < 2)) )
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, 0);
+	else if( flags&2 )
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	else if( flags&4 )
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);

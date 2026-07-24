@@ -81,6 +81,16 @@ enum abstract DriverInitFlags(Int) {
 	@:op(a | b) static function or(a:DriverInitFlags, b:DriverInitFlags) : DriverInitFlags;
 }
 
+enum abstract FeatureLevel(Int) to Int {
+	var Level9_1 = 0x9100;
+	var Level9_2 = 0x9200;
+	var Level9_3 = 0x9300;
+	var Level10_0 = 0xA000;
+	var Level10_1 = 0xA100;
+	var Level11_0 = 0xB000;
+	var Level11_1 = 0xB100;
+}
+
 enum abstract ResourceUsage(Int) {
 	var Default = 0;
 	var Immutable = 1;
@@ -492,6 +502,7 @@ enum abstract PresentFlags(Int) {
 class Driver {
 
 	public static var fullScreen(get, set) : Bool;
+	public static var minimumFeatureLevel = FeatureLevel.Level9_1;
 
 	/**
 		Setup an error handler instead of getting String exceptions:
@@ -503,8 +514,8 @@ class Driver {
 	public static function setErrorHandler( f : Int -> Int -> Int -> Void ) {
 	}
 
-	public static function create( win : Window, format : Format, flags : DriverInitFlags = None, restrictLevel = 0 ) {
-		return dxCreate(@:privateAccess win.win, format, flags, restrictLevel);
+	public static function create( win : Window, format : Format, flags : DriverInitFlags = None, ?minimumFeatureLevel : FeatureLevel ) {
+		return dxCreate(@:privateAccess win.win, format, flags, minimumFeatureLevel ?? Driver.minimumFeatureLevel);
 	}
 
 	public static function disposeDriver( driver : DriverInstance ) {
@@ -707,7 +718,7 @@ class Driver {
 	}
 
 	@:hlNative("directx","create_sdl")
-	static function dxCreate( win : hl.Abstract<"sdl_window">, format : Format, flags : DriverInitFlags, restrictLevel : Int ) : DriverInstance { return null; }
+	static function dxCreate( win : hl.Abstract<"sdl_window">, format : Format, flags : DriverInitFlags, minimumFeatureLevel : FeatureLevel ) : DriverInstance { return null; }
 
 	@:hlNative("directx","get_device_name")
 	static function dxGetDeviceName() : hl.Bytes { return null; }

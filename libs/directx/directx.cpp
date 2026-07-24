@@ -89,7 +89,7 @@ HL_PRIM void HL_NAME(set_error_handler)( vclosure *c ) {
 	on_dx_error = c;
 }
 
-HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int restrictLevel ) {
+HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int minimumFeatureLevel ) {
 	static D3D_FEATURE_LEVEL levels[] = {
 		D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
@@ -99,7 +99,18 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int rest
 		D3D_FEATURE_LEVEL_9_2,
 		D3D_FEATURE_LEVEL_9_1,
 	};
-	static int maxLevels = sizeof(levels) / sizeof(D3D_FEATURE_LEVEL);
+	int levelCount;
+	switch( minimumFeatureLevel ) {
+	case D3D_FEATURE_LEVEL_11_1: levelCount = 1; break;
+	case D3D_FEATURE_LEVEL_11_0: levelCount = 2; break;
+	case D3D_FEATURE_LEVEL_10_1: levelCount = 3; break;
+	case D3D_FEATURE_LEVEL_10_0: levelCount = 4; break;
+	case D3D_FEATURE_LEVEL_9_3: levelCount = 5; break;
+	case D3D_FEATURE_LEVEL_9_2: levelCount = 6; break;
+	case D3D_FEATURE_LEVEL_9_1: levelCount = 7; break;
+	default:
+		hl_error("Unsupported minimum Direct3D feature level 0x%X", minimumFeatureLevel);
+	}
 	DWORD result;
 	DXGI_SWAP_CHAIN_DESC desc;
 	RECT r;
@@ -109,21 +120,22 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int rest
 	d->back_buffer_count = BACK_BUFFER_COUNT;
 #ifdef HL_WIN_DESKTOP
 	d->allow_tearing = CheckTearingSupport();
-	if( restrictLevel >= maxLevels ) restrictLevel = maxLevels - 1;
 	d->init_flags = flags;
-	result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + restrictLevel,maxLevels - restrictLevel,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
+	result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels,levelCount,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
 
 	if( result == E_INVALIDARG ) {
 		flags &= ~D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT;
 		d->init_flags = flags;
-		result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,NULL,0,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
+		result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels,levelCount,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
+		if( result == E_INVALIDARG && levelCount > 1 )
+			result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + 1,1,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
 	}
 	if( result == DXGI_ERROR_SDK_COMPONENT_MISSING && (flags & D3D11_CREATE_DEVICE_DEBUG) != 0 ) {
 		flags &= ~D3D11_CREATE_DEVICE_DEBUG;
 		d->init_flags = flags;
-		result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + restrictLevel,maxLevels - restrictLevel,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
-		if( result == E_INVALIDARG )
-			result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,NULL,0,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
+		result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels,levelCount,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
+		if( result == E_INVALIDARG && levelCount > 1 )
+			result = D3D11CreateDevice(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + 1,1,D3D11_SDK_VERSION,&d->device,&d->feature,&d->context);
 	}
 
 	if( result == S_OK ) {
@@ -182,26 +194,26 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int rest
 	desc.Windowed = false;
 #endif
 	desc.OutputWindow = window;
-	if( restrictLevel >= maxLevels ) restrictLevel = maxLevels - 1;
 	d->init_flags = flags;
-	result = D3D11CreateDeviceAndSwapChain(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + restrictLevel,maxLevels - restrictLevel,D3D11_SDK_VERSION,&desc,&d->swapchain,&d->device,&d->feature,&d->context);
+	result = D3D11CreateDeviceAndSwapChain(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels,levelCount,D3D11_SDK_VERSION,&desc,&d->swapchain,&d->device,&d->feature,&d->context);
 
 #ifdef HL_WIN_DESKTOP
 	if( result == E_INVALIDARG ) {
-		// disable flags not available in DX<11.1
 		flags &= ~D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT;
 		d->init_flags = flags;
+		result = D3D11CreateDeviceAndSwapChain(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels,levelCount,D3D11_SDK_VERSION,&desc,&d->swapchain,&d->device,&d->feature,&d->context);
+		if( result == E_INVALIDARG && levelCount > 1 )
+			result = D3D11CreateDeviceAndSwapChain(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + 1,1,D3D11_SDK_VERSION,&desc,&d->swapchain,&d->device,&d->feature,&d->context);
 	}
 	if( result == DXGI_ERROR_SDK_COMPONENT_MISSING && (flags & D3D11_CREATE_DEVICE_DEBUG) != 0 ) {
 		// no debug driver available, retry
 		flags &= ~D3D11_CREATE_DEVICE_DEBUG;
 		d->init_flags = flags;
-		result = E_INVALIDARG;
+		result = D3D11CreateDeviceAndSwapChain(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels,levelCount,D3D11_SDK_VERSION,&desc,&d->swapchain,&d->device,&d->feature,&d->context);
+		if( result == E_INVALIDARG && levelCount > 1 )
+			result = D3D11CreateDeviceAndSwapChain(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,levels + 1,1,D3D11_SDK_VERSION,&desc,&d->swapchain,&d->device,&d->feature,&d->context);
 	}
 #endif
-
-	if( result == E_INVALIDARG ) // most likely no DX11.1 support, try again
-		result = D3D11CreateDeviceAndSwapChain(NULL,D3D_DRIVER_TYPE_HARDWARE,NULL,flags,NULL,0,D3D11_SDK_VERSION, &desc, &d->swapchain, &d->device, &d->feature, &d->context);
 #ifdef HL_WIN_DESKTOP
 	}
 #endif
@@ -213,12 +225,12 @@ HL_PRIM dx_driver *HL_NAME(create)( HWND window, int format, int flags, int rest
 }
 
 #ifdef HL_DIRECTX_HAS_SDL
-HL_PRIM dx_driver *HL_NAME(create_sdl)( SDL_Window *window, int format, int flags, int restrictLevel ) {
+HL_PRIM dx_driver *HL_NAME(create_sdl)( SDL_Window *window, int format, int flags, int minimumFeatureLevel ) {
 	HWND hwnd = (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 	if( hwnd == NULL )
 		hl_error("Failed to get Win32 window handle from SDL");
 	flags &= ~D3D11_CREATE_DEVICE_DEBUG;
-	return HL_NAME(create)(hwnd, format, flags, restrictLevel);
+	return HL_NAME(create)(hwnd, format, flags, minimumFeatureLevel);
 }
 #endif
 

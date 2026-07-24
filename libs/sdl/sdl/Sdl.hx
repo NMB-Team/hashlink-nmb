@@ -16,30 +16,90 @@ typedef ScreenMode = {
 	var framerate : Int;
 };
 
+private typedef GLVersion = {
+	var major : Int;
+	var minor : Int;
+}
+
 @:hlNative("sdl")
 class Sdl {
 
 	static var initDone = false;
 	static var isWin32 = false;
+	static var glOptionsConfigured = false;
+	static var autoGLVersions = false;
+	static var glVersions : Array<GLVersion> = [];
+	static var glVersionIndex = 0;
+	static var glDepth = 24;
+	static var glStencil = 8;
+	static var glFlags = DOUBLE_BUFFER;
+	static var glSamples = 1;
 
-	public static var requiredGLMajor(default,null) = 3;
-	public static var requiredGLMinor(default,null) = 2;
+	public static var requiredGLMajor(default,null) = 2;
+	public static var requiredGLMinor(default,null) = 1;
 
 	public static function init() {
 		if( initDone ) return;
 		initDone = true;
 		if( !initOnce() ) throw "Failed to init SDL";
 		isWin32 = detectWin32();
+		if( !glOptionsConfigured ) {
+			#if (android || ios || tvos)
+			setGLVersionRange(2, 0, 3, 2, DOUBLE_BUFFER | GL_ES);
+			#else
+			setGLVersionRange(2, 1, 4, 6);
+			#end
+		}
 	}
 
 	public static function setGLOptions( major : Int = 3, minor : Int = 2, depth : Int = 24, stencil : Int = 8, flags : Int = 1, samples : Int = 1 ) {
+		glOptionsConfigured = true;
+		autoGLVersions = false;
 		requiredGLMajor = major;
 		requiredGLMinor = minor;
-		glOptions(major, minor, depth, stencil, flags, samples);
+		glVersions = [{ major: major, minor: minor }];
+		glVersionIndex = 0;
+		glDepth = depth;
+		glStencil = stencil;
+		glFlags = flags;
+		glSamples = samples;
+		applyGLVersion();
 	}
 
 	public static function setGLVersion( major : Int, minor : Int) {
 		setGLOptions(major, minor);
+	}
+
+	public static function setGLVersionRange( minimumMajor : Int, minimumMinor : Int, maximumMajor : Int = 4, maximumMinor : Int = 6, flags : Int = DOUBLE_BUFFER, depth : Int = 24, stencil : Int = 8, samples : Int = 1 ) {
+		var minimum = minimumMajor * 10 + minimumMinor;
+		var maximum = maximumMajor * 10 + maximumMinor;
+		if( minimum > maximum )
+			throw "Minimum OpenGL version cannot be higher than maximum OpenGL version";
+
+		var supported = (flags & GL_ES) != 0
+			? [{ major: 3, minor: 2 }, { major: 3, minor: 1 }, { major: 3, minor: 0 }, { major: 2, minor: 0 }]
+			: [
+				{ major: 4, minor: 6 }, { major: 4, minor: 5 }, { major: 4, minor: 4 }, { major: 4, minor: 3 },
+				{ major: 4, minor: 2 }, { major: 4, minor: 1 }, { major: 4, minor: 0 }, { major: 3, minor: 3 },
+				{ major: 3, minor: 2 }, { major: 3, minor: 1 }, { major: 3, minor: 0 }, { major: 2, minor: 1 }
+			];
+		glVersions = supported.filter(version -> {
+			var value = version.major * 10 + version.minor;
+			return value >= minimum && value <= maximum;
+		});
+		if( glVersions.length == 0 )
+			throw "OpenGL version range does not contain a supported context version";
+
+		glOptionsConfigured = true;
+		autoGLVersions = true;
+		requiredGLMajor = minimumMajor;
+		requiredGLMinor = minimumMinor;
+		glVersionIndex = 0;
+		glDepth = depth;
+		glStencil = stencil;
+		glFlags = flags;
+		glSamples = samples;
+		applyGLVersion();
 	}
 
 	public static function setHint(name:String, value:String) {
@@ -47,16 +107,21 @@ class Sdl {
 	}
 
 	public static dynamic function onGlContextRetry() {
-		return false;
+		if( !autoGLVersions || glVersionIndex == glVersions.length - 1 )
+			return false;
+		glVersionIndex++;
+		applyGLVersion();
+		return true;
 	}
 
-	public static dynamic function onGlContextError() {
+	public static dynamic function onGlContextError(currentGLVersion : String) {
 		var devices = Sdl.getDevices();
 		var device = devices[0];
 		if( device == null ) device = "Unknown";
 		var flags = new haxe.EnumFlags<hl.UI.DialogFlags>();
 		flags.set(IsError);
-		var msg = 'The application was unable to create an OpenGL context\nfor your $device video card.\nOpenGL $requiredGLMajor.$requiredGLMinor+ is required, please update your driver.';
+		if( currentGLVersion == null ) currentGLVersion = "Unavailable";
+		var msg = 'The application was unable to create an OpenGL context\nfor your $device video card.\nCurrent OpenGL version: $currentGLVersion\nOpenGL $requiredGLMajor.$requiredGLMinor+ is required, please update your driver.';
 		hl.UI.dialog("OpenGL Error", msg, flags);
 		Sys.exit( -1);
 	}
@@ -65,6 +130,11 @@ class Sdl {
 	public static inline var GL_CORE_PROFILE          = 1 << 1;
 	public static inline var GL_COMPATIBILITY_PROFILE = 1 << 2;
 	public static inline var GL_ES                    = 1 << 3;
+
+	private static function applyGLVersion() {
+		var version = glVersions[glVersionIndex];
+		glOptions(version.major, version.minor, glDepth, glStencil, glFlags, glSamples);
+	}
 
 	static function glOptions( major : Int, minor : Int, depth : Int, stencil : Int, flags : Int, samples : Int ) {}
 

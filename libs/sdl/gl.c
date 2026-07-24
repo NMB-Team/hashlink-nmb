@@ -50,10 +50,11 @@
 #endif
 
 #if !defined(HL_CONSOLE) && !defined(GL_IMPORT)
+#define HL_GL_DYNAMIC_IMPORTS
 #define GL_IMPORT(fun, t) PFNGL##t##PROC fun
 #include "GLImports.h"
 #undef GL_IMPORT
-#define GL_IMPORT(fun,t)	fun = (PFNGL##t##PROC)SDL_GL_GetProcAddress(#fun); if( fun == NULL ) return 1
+#define GL_IMPORT(fun,t)	fun = (PFNGL##t##PROC)SDL_GL_GetProcAddress(#fun)
 #ifndef __APPLE__
 #define GL_IMPORT_OPT(fun, t) PFNGL##t##PROC fun = NULL; if ( !fun ) { fun = (PFNGL##t##PROC)SDL_GL_GetProcAddress(#fun); if( fun == NULL ) hl_error("function not resolved"); }
 #endif
@@ -66,6 +67,50 @@
 
 static int GLLoadAPI() {
 #	include "GLImports.h"
+#ifdef HL_GL_DYNAMIC_IMPORTS
+	if( glGenFramebuffers == NULL )
+		glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glGenFramebuffersEXT");
+	if( glBindFramebuffer == NULL )
+		glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)SDL_GL_GetProcAddress("glBindFramebufferEXT");
+	if( glFramebufferTexture2D == NULL )
+		glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)SDL_GL_GetProcAddress("glFramebufferTexture2DEXT");
+	if( glDeleteFramebuffers == NULL )
+		glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteFramebuffersEXT");
+	if( glGenRenderbuffers == NULL )
+		glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC)SDL_GL_GetProcAddress("glGenRenderbuffersEXT");
+	if( glBindRenderbuffer == NULL )
+		glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC)SDL_GL_GetProcAddress("glBindRenderbufferEXT");
+	if( glRenderbufferStorage == NULL )
+		glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC)SDL_GL_GetProcAddress("glRenderbufferStorageEXT");
+	if( glFramebufferRenderbuffer == NULL )
+		glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)SDL_GL_GetProcAddress("glFramebufferRenderbufferEXT");
+	if( glDeleteRenderbuffers == NULL )
+		glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC)SDL_GL_GetProcAddress("glDeleteRenderbuffersEXT");
+	if( glGenerateMipmap == NULL )
+		glGenerateMipmap = (PFNGLGENERATEMIPMAPPROC)SDL_GL_GetProcAddress("glGenerateMipmapEXT");
+	if( glVertexAttribDivisor == NULL )
+		glVertexAttribDivisor = (PFNGLVERTEXATTRIBDIVISORPROC)SDL_GL_GetProcAddress("glVertexAttribDivisorARB");
+	if( glDrawArraysInstanced == NULL )
+		glDrawArraysInstanced = (PFNGLDRAWARRAYSINSTANCEDPROC)SDL_GL_GetProcAddress("glDrawArraysInstancedARB");
+	if( glDrawElementsInstanced == NULL )
+		glDrawElementsInstanced = (PFNGLDRAWELEMENTSINSTANCEDPROC)SDL_GL_GetProcAddress("glDrawElementsInstancedARB");
+
+	if( glCreateProgram == NULL || glDeleteProgram == NULL || glLinkProgram == NULL || glAttachShader == NULL
+		|| glGetProgramInfoLog == NULL || glGetUniformLocation == NULL || glGetAttribLocation == NULL
+		|| glCreateShader == NULL || glDeleteShader == NULL || glShaderSource == NULL || glCompileShader == NULL
+		|| glGetShaderInfoLog == NULL || glGetShaderiv == NULL || glGetProgramiv == NULL || glUseProgram == NULL
+		|| glGenBuffers == NULL || glBindBuffer == NULL || glBufferData == NULL || glBufferSubData == NULL
+		|| glDeleteBuffers == NULL || glEnableVertexAttribArray == NULL || glDisableVertexAttribArray == NULL
+		|| glVertexAttribPointer == NULL || glDrawBuffers == NULL
+		|| glGenFramebuffers == NULL || glBindFramebuffer == NULL || glFramebufferTexture2D == NULL
+		|| glDeleteFramebuffers == NULL
+		|| glGenRenderbuffers == NULL || glBindRenderbuffer == NULL || glRenderbufferStorage == NULL
+		|| glFramebufferRenderbuffer == NULL || glDeleteRenderbuffers == NULL || glGenerateMipmap == NULL
+		|| glUniform1i == NULL || glUniform3fv == NULL || glUniform4fv == NULL
+		|| glUniformMatrix3fv == NULL || glUniformMatrix4fv == NULL || glUniform1f == NULL
+		|| glUniform2f == NULL || glUniform3f == NULL || glUniform4f == NULL )
+		return 1;
+#endif
 	return 0;
 }
 
@@ -668,13 +713,34 @@ HL_PRIM int HL_NAME(gl_get_config_parameter)( int feature ) {
 
 HL_PRIM bool HL_NAME(gl_has_extension)(vstring *name) {
 	const char* cname = hl_to_utf8(name->bytes);
-	GLint numExtensions = 0;
-	glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
-	for (int i = 0; i < numExtensions; i++) {
-		const char* ext = (const char*)glGetStringi(GL_EXTENSIONS, i);
-		if (ext && strcmp(cname, ext) == 0) {
-			return true;
+	const char* version = (const char*)glGetString(GL_VERSION);
+	int major = 0;
+	if( version != NULL ) {
+		const char* number = strstr(version, "OpenGL ES ");
+		number = number == NULL ? version : number + 10;
+		major = atoi(number);
+	}
+#ifdef HL_GL_DYNAMIC_IMPORTS
+	if( major >= 3 && glGetStringi != NULL ) {
+#else
+	if( major >= 3 ) {
+#endif
+		GLint numExtensions = 0;
+		glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
+		for( int i = 0; i < numExtensions; i++ ) {
+			const char* ext = (const char*)glGetStringi(GL_EXTENSIONS, i);
+			if( ext && strcmp(cname, ext) == 0 )
+				return true;
 		}
+	}
+
+	const char* extensions = (const char*)glGetString(GL_EXTENSIONS);
+	if( extensions == NULL )
+		return false;
+	size_t nameLength = strlen(cname);
+	for( const char* ext = strstr(extensions, cname); ext != NULL; ext = strstr(ext + nameLength, cname) ) {
+		if( (ext == extensions || ext[-1] == ' ') && (ext[nameLength] == 0 || ext[nameLength] == ' ') )
+			return true;
 	}
 	return false;
 }

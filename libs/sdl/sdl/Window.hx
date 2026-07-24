@@ -112,10 +112,12 @@ class Window {
 			#end
 			if( !directXMode ) {
 				glctx = winGetGLContext(win);
-				if( glctx == null || !GL.init() || !testGL() ) {
+				var glInitialized = glctx != null && GL.init();
+				var glVersion : String = glctx != null ? GL.getParameter(GL.VERSION) : null;
+				if( !glInitialized || !testGL() ) {
 					destroy();
 					if( Sdl.onGlContextRetry() ) continue;
-					Sdl.onGlContextError();
+					Sdl.onGlContextError(glVersion);
 				}
 			}
 			#if gfx_vulkan
@@ -128,7 +130,7 @@ class Window {
 		vsync = true;
 	}
 
-	function testGL() {
+	private function testGL() {
 		try {
 
 			var reg = ~/[0-9]+\.[0-9]+/;
@@ -137,30 +139,23 @@ class Window {
 			var glv : String = GL.getParameter(GL.VERSION);
 			var isOpenGLES : Bool = ((glv!=null) && (glv.indexOf("ES") >= 0));
 
-			var shaderVersion = 120;
-			if (isOpenGLES) {
-				if( reg.match(v) )
-					shaderVersion = Std.int(Math.min( 100, Math.round( Std.parseFloat(reg.matched(0)) * 100 ) ));
-			}
-			else {
-				shaderVersion = 130;
-				if( reg.match(v) ) {
-					var minVer = 150;
-					shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
-					if( shaderVersion < minVer ) shaderVersion = minVer;
-				}
-			}
+			var shaderVersion = isOpenGLES ? 100 : 120;
+			if( reg.match(v) )
+				shaderVersion = Math.round(Std.parseFloat(reg.matched(0)) * 100);
+			var versionDirective = "#version " + shaderVersion + (isOpenGLES && shaderVersion >= 300 ? " es" : "");
 
 			var vertex = GL.createShader(GL.VERTEX_SHADER);
-			GL.shaderSource(vertex, ["#version " + shaderVersion, "void main() { gl_Position = vec4(1.0); }"].join("\n"));
+			GL.shaderSource(vertex, [versionDirective, "void main() { gl_Position = vec4(1.0); }"].join("\n"));
 			GL.compileShader(vertex);
 			if( GL.getShaderParameter(vertex, GL.COMPILE_STATUS) != 1 ) throw "Failed to compile VS ("+GL.getShaderInfoLog(vertex)+")";
 
 			var fragment = GL.createShader(GL.FRAGMENT_SHADER);
-			if (isOpenGLES)
-				GL.shaderSource(fragment, ["#version " + shaderVersion, "lowp vec4 color; void main() { color = vec4(1.0); }"].join("\n"));
+			if( isOpenGLES && shaderVersion < 300 )
+				GL.shaderSource(fragment, [versionDirective, "precision lowp float; void main() { gl_FragColor = vec4(1.0); }"].join("\n"));
+			else if( !isOpenGLES && shaderVersion < 130 )
+				GL.shaderSource(fragment, [versionDirective, "void main() { gl_FragColor = vec4(1.0); }"].join("\n"));
 			else
-				GL.shaderSource(fragment, ["#version " + shaderVersion, "out vec4 color; void main() { color = vec4(1.0); }"].join("\n"));
+				GL.shaderSource(fragment, [versionDirective, "out vec4 color; void main() { color = vec4(1.0); }"].join("\n"));
 			GL.compileShader(fragment);
 			if( GL.getShaderParameter(fragment, GL.COMPILE_STATUS) != 1 ) throw "Failed to compile FS ("+GL.getShaderInfoLog(fragment)+")";
 
