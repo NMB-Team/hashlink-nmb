@@ -16,35 +16,19 @@ Here's the dependencies that you install in order to compile all the libraries:
 
 * fmt: libpng-dev libturbojpeg-dev libvorbis-dev
 * openal: libopenal-dev
-* sdl: libsdl3-dev libglu1-mesa-dev
 * ssl: libmbedtls-dev
 * uv: libuv1-dev
 * sqlite: libsqlite3-dev
 
 To install all dependencies on the latest **Ubuntu**, for example:
 
-`sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libsdl3-dev libglu1-mesa-dev libmbedtls-dev libuv1-dev libsqlite3-dev`
-
-
-`libsdl3-dev` is not released yet, build from source is needed, see [this note](https://wiki.libsdl.org/SDL3/README-linux).
-
-```
-sudo apt-get install build-essential git make pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev libusb-1.0-0-dev
-wget https://github.com/libsdl-org/SDL/releases/download/release-3.4.12/SDL3-3.4.12.tar.gz
-tar -xzvf SDL3-3.4.12.tar.gz
-cd SDL3-3.4.12/
-mkdir build
-cd build
-cmake ..
-make
-sudo make install
-```
+`sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libmbedtls-dev libuv1-dev libsqlite3-dev`
 
 For 16.04, see [this note](https://github.com/HaxeFoundation/hashlink/issues/147).
 
 To install all dependencies on the latest **Fedora**, for example:
 
-`sudo dnf install libpng-devel turbojpeg-devel libvorbis-devel openal-soft-devel SDL3-devel mesa-libGLU-devel mbedtls-devel libuv-devel  sqlite-devel`
+`sudo dnf install libpng-devel turbojpeg-devel libvorbis-devel openal-soft-devel mbedtls-devel libuv-devel sqlite-devel`
 
 **And on OSX:**
 
@@ -64,14 +48,57 @@ To install hashlink binaries on your system you can then call:
 
 ## Building on Windows
 
-Open `hl.sln` using Visual Studio C++ and compile.
+Open `hl.sln` using Visual Studio C++ to build HashLink without LIMEN, or use CMake to build the complete runtime.
 
 To build all of HashLink libraries it is required to download several additional distributions, read each library README file (in hashlink/libs/xxx/README.md) for additional information.
 
 In short you'll probably need:
 
-- [SDL3-devel](https://github.com/libsdl-org/SDL/releases/download/release-3.4.12/SDL3-devel-3.4.12-VC.zip), extract to `<hashlink>/include/sdl`
 - [openal-soft](https://github.com/kcat/openal-soft/releases/download/1.23.1/openal-soft-1.23.1-bin.zip), extract to `<hashlink>/include/openal`
+
+## LIMEN
+
+LIMEN is maintained in [NMB-Team/Limen](https://github.com/NMB-Team/Limen).
+The `libs/limen` submodule is the single source of truth for the pinned revision.
+CMake initializes the submodule automatically when necessary and builds LIMEN with HashLink for local source builds.
+GitHub Actions verifies that LIMEN's `latest` release targets the exact pinned commit, downloads the matching platform package, and includes its modules and runtime libraries in every HashLink package.
+CI never substitutes binaries from a different LIMEN revision.
+LIMEN revisions are never advanced automatically. To update the pin, run the
+`Pin LIMEN revision` workflow manually and provide a full 40-character commit
+SHA. HashLink tests that exact revision across the complete build matrix and
+updates the submodule only after every integration job succeeds.
+
+To update and test the pin locally:
+
+```
+git -C libs/limen fetch origin <commit-sha>
+git -C libs/limen checkout --detach <commit-sha>
+git add libs/limen
+```
+
+Clone everything and build manually:
+
+```
+git clone --recurse-submodules https://github.com/NMB-Team/hashlink-nmb.git
+cd hashlink-nmb
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release --parallel
+cmake --install build --config Release --prefix dist
+```
+
+To package prebuilt LIMEN binaries instead of compiling the submodule:
+
+```
+cmake -S . -B build \
+  -DWITH_LIMEN=OFF \
+  -DLIMEN_PREBUILT_DIR=/path/to/extracted/limen-package
+```
+
+For LIMEN development, use a separate checkout:
+
+```
+cmake -S . -B build -DLIMEN_SOURCE_DIR=/path/to/Limen
+```
 
 ## Debugging
 

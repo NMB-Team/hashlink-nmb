@@ -58,6 +58,40 @@ jobs:
             pkg-config \
             wget
 
+      - name: Download LIMEN binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          revision=$(git rev-parse HEAD:libs/limen)
+          release_revision=$(gh release view latest \
+            --repo NMB-Team/Limen \
+            --json targetCommitish \
+            --jq .targetCommitish)
+          if [[ "$release_revision" != "$revision" ]]; then
+            echo "::error::LIMEN latest release targets $release_revision, but HashLink pins $revision"
+            exit 1
+          fi
+
+          asset=limen-linux-x64.tar.gz
+          download_dir="$RUNNER_TEMP/limen-release"
+          mkdir -p "$download_dir" limen-prebuilt
+          gh release download latest \
+            --repo NMB-Team/Limen \
+            --pattern "$asset" \
+            --dir "$download_dir"
+          tar -xzf "$download_dir/$asset" -C limen-prebuilt
+
+          for file in limen.hdll limen_opengl.hdll limen_vulkan.hdll libshaderc.so.1; do
+            if [[ ! -f "limen-prebuilt/$file" ]]; then
+              echo "::error::$asset does not contain $file"
+              exit 1
+            fi
+          done
+
+          echo "LIMEN_PREBUILT_DIR=$PWD/limen-prebuilt" >> "$GITHUB_ENV"
+
       - name: Install Haxe
         uses: krdlab/setup-haxe@master
         with:
@@ -68,19 +102,11 @@ jobs:
           haxelib setup ~/haxelib
           haxelib install hashlink
 
-      - name: Build and install SDL3
-        run: |
-          wget https://github.com/libsdl-org/SDL/releases/download/release-3.4.12/SDL3-3.4.12.tar.gz
-          tar -xzvf SDL3-3.4.12.tar.gz
-          cd SDL3-3.4.12/
-          mkdir build
-          cd build
-          cmake ..
-          make
-          sudo make install
-
       - name: Build and install HashLink
         run: |
-          make
-          sudo make install
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+            -DWITH_LIMEN=OFF \
+            -DLIMEN_PREBUILT_DIR="$LIMEN_PREBUILT_DIR"
+          cmake --build build --parallel
+          sudo cmake --install build
           sudo ldconfig

@@ -6,8 +6,7 @@ INSTALL_DIR ?= $(PREFIX)
 INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_LIB_DIR ?= $(PREFIX)/lib
 INSTALL_INCLUDE_DIR ?= $(PREFIX)/include
-
-LIBS = $(addsuffix .hdll,fmt sdl shaderc ssl openal ui uv mysql sqlite heaps)
+LIBS = $(addsuffix .hdll,fmt ssl openal ui uv mysql sqlite heaps)
 ARCH ?= $(shell uname -m)
 
 CFLAGS = -Wall -O3 -std=c11 -fvisibility=hidden
@@ -60,14 +59,6 @@ FMT += include/zlib-ng/arch/generic/adler32_c.o include/zlib-ng/arch/generic/adl
 	include/zlib-ng/inflate.o include/zlib-ng/inftrees.o include/zlib-ng/insert_string.o \
 	include/zlib-ng/insert_string_roll.o include/zlib-ng/trees.o include/zlib-ng/uncompr.o \
 	include/zlib-ng/zutil.o include/zlib-ng/arch/generic/crc32_chorba_c.o
-
-SDL = libs/sdl/sdl.o libs/sdl/gl.o libs/sdl/vulkan.o
-SHADERC = libs/sdl/shaderc.o
-SHADERC_CPPFLAGS = $(shell pkg-config --cflags shaderc 2>/dev/null)
-shaderc_LDLIBS = $(shell pkg-config --libs shaderc 2>/dev/null)
-ifneq ($(strip $(shaderc_LDLIBS)),)
-SHADERC_CPPFLAGS += -D HL_VULKAN_HAS_SHADERC
-endif
 
 OPENAL = libs/openal/openal.o
 
@@ -160,14 +151,10 @@ ifeq ($(MARCH),32)
 CFLAGS += -msse2 -mfpmath=sse
 CC=i686-pc-cygwin-gcc
 BUILD_DIR = Release
-VS_SDL_LIBRARY ?= include/sdl/lib/x86/SDL3.dll
 VS_OPENAL_LIBRARY ?= include/openal/bin/Win32/soft_oal.dll
-VS_DX_LIBRARY ?= include/dx/bin/x86/dxcompiler.dll include/dx/bin/x86/dxil.dll
 else
 BUILD_DIR = x64/Release
-VS_SDL_LIBRARY ?= include/sdl/lib/x64/SDL3.dll
 VS_OPENAL_LIBRARY ?= include/openal/bin/Win64/soft_oal.dll
-VS_DX_LIBRARY ?= include/dx/bin/x64/dxcompiler.dll include/dx/bin/x64/dxil.dll
 endif
 
 ifneq (, $(findstring MINGW64, $(UNAME)))
@@ -187,12 +174,9 @@ LIBEXT=dylib
 BREW_PREFIX := $(shell brew --prefix)
 # prefixes for keg-only packages
 BREW_OPENAL_PREFIX := $(shell brew --prefix openal-soft)
-BREW_SDL_PREFIX := $(shell brew --prefix sdl3)
-
 CFLAGS += -arch $(ARCH)
 CPPFLAGS += -I include -I $(BREW_PREFIX)/include
 
-SDL_CPPFLAGS = -DGL_SILENCE_DEPRECATION
 OPENAL_CPPFLAGS = -I $(BREW_OPENAL_PREFIX)/include -Dopenal_soft
 
 ifdef OSX_SDK
@@ -201,8 +185,6 @@ CFLAGS += -isysroot $(ISYSROOT)
 endif
 
 LDFLAGS += -L$(BREW_PREFIX)/lib
-sdl_LDFLAGS = -L$(BREW_SDL_PREFIX)/lib
-sdl_LDLIBS = -lSDL3 -framework OpenGL -lvulkan
 openal_LDFLAGS = -L$(BREW_OPENAL_PREFIX)/lib
 openal_LDLIBS = -lopenal
 ssl_LDLIBS += -framework Security -framework CoreFoundation
@@ -239,17 +221,10 @@ else
 fmt_LDFLAGS = -L/opt/libjpeg-turbo/lib64
 endif
 
-SDL_CPPFLAGS = $(shell pkg-config --cflags sdl3)
-sdl_LDFLAGS = $(shell pkg-config --libs-only-L --libs-only-other sdl3)
-sdl_LDLIBS = $(shell pkg-config --libs-only-l sdl3) -lGL -lvulkan
 openal_LDLIBS = -lopenal
 RELEASE_NAME = linux
+LIMEN_RUNTIME_LIBS = $(wildcard libshaderc.so*)
 
-endif
-
-
-ifdef MESA
-LIBS += mesa
 endif
 
 ifdef DEBUG
@@ -305,12 +280,6 @@ $(FMT): CPPFLAGS += $(FMT_CPPFLAGS)
 fmt_LDLIBS = -lturbojpeg -lvorbisfile -lm
 fmt.hdll: $(FMT) $(LIBHL)
 
-$(SDL): CPPFLAGS += $(SDL_CPPFLAGS)
-sdl.hdll: $(SDL) $(LIBHL)
-
-$(SHADERC): CPPFLAGS += $(SHADERC_CPPFLAGS)
-shaderc.hdll: $(SHADERC) $(LIBHL)
-
 $(OPENAL): CPPFLAGS += $(OPENAL_CPPFLAGS)
 openal.hdll: $(OPENAL) $(LIBHL)
 
@@ -338,15 +307,10 @@ heaps_LDLIBS = -ldl
 heaps.hdll: HDLL_LINK = $(CXX) $(LDFLAGS)
 heaps.hdll: $(HEAPS) $(LIBHL)
 
-mesa:
-	(cd libs/mesa && ${MAKE})
-
 release: release_prepare release_$(RELEASE_NAME)
 
 release_haxelib:
 	${MAKE} HLIB=hashlink release_haxelib_package
-	${MAKE} HLIB=directx release_haxelib_package
-	${MAKE} HLIB=sdl release_haxelib_package
 	${MAKE} HLIB=openal release_haxelib_package
 
 ifeq ($(HLIB),hashlink)
@@ -354,12 +318,8 @@ HLDIR=other/haxelib
 HLPACK=templates hlmem memory.hxml Run.hx
 else
 HLDIR=libs/$(HLIB)
-ifeq ($(HLIB),directx)
-HLPACK=dx *.h *.c *.cpp
-else
-HLPACK=$(HLIB) *.h *.c
 endif
-endif
+HLPACK=$(HLIB) src include cmake CMakeLists.txt *.h *.c
 
 release_haxelib_package:
 	rm -rf $(HLIB)_release
@@ -379,21 +339,19 @@ release_prepare:
 	cp src/hl.h src/hl_ffi.h src/hlc.h src/hlc_main.c $(PACKAGE_NAME)/include
 
 release_win:
-	cp $(BUILD_DIR)/{$(HL),libhl.dll,*.hdll,*.lib} $(PACKAGE_NAME)
+	cp $(BUILD_DIR)/{$(HL),*.dll,*.hdll,*.lib} $(PACKAGE_NAME)
 	rm  $(PACKAGE_NAME)/hl.lib # avoid confusion between hl.lib and libhl.lib
 	cp $(VS_RUNTIME_LIBRARY) $(PACKAGE_NAME)
-	cp $(VS_SDL_LIBRARY) $(PACKAGE_NAME)
 	cp $(VS_OPENAL_LIBRARY) $(PACKAGE_NAME)/OpenAL32.dll
-	cp $(VS_DX_LIBRARY) $(PACKAGE_NAME)
 	# 7z switches: https://sevenzip.osdn.jp/chm/cmdline/switches/
 	7z a -spf -y -mx9 -bt $(PACKAGE_NAME).zip $(PACKAGE_NAME)
 	rm -rf $(PACKAGE_NAME)
 
 release_linux release_osx:
 ifeq ($(ARCH),arm64)
-	cp $(LIBHL) *.hdll $(PACKAGE_NAME)
+	cp $(LIBHL) *.hdll $(LIMEN_RUNTIME_LIBS) $(PACKAGE_NAME)
 else
-	cp $(HL) $(LIBHL) *.hdll $(PACKAGE_NAME)
+	cp $(HL) $(LIBHL) *.hdll $(LIMEN_RUNTIME_LIBS) $(PACKAGE_NAME)
 endif
 	tar -cvzf $(PACKAGE_NAME).tar.gz $(PACKAGE_NAME)
 	rm -rf $(PACKAGE_NAME)
@@ -412,7 +370,7 @@ codesign_osx:
 .SUFFIXES: .cpp .c .o
 
 clean_o:
-	rm -f ${STD} ${BOOT} ${RUNTIME} ${PCRE} ${HL_OBJ} ${FMT} ${SDL} ${SHADERC} ${SSL} ${OPENAL} ${UI} ${UV} ${MYSQL} ${SQLITE} ${HEAPS} ${HL_DEBUG}
+	rm -f ${STD} ${BOOT} ${RUNTIME} ${PCRE} ${HL_OBJ} ${FMT} ${SSL} ${OPENAL} ${UI} ${UV} ${MYSQL} ${SQLITE} ${HEAPS} ${HL_DEBUG}
 
 clean: clean_o
 	rm -f $(HL) $(HLC) $(LIBHL) *.hdll

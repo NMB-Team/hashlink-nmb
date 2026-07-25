@@ -5,7 +5,7 @@
 HashLink is a virtual machine for the [Haxe](https://haxe.org) programming language. It can either execute `.hl` bytecode produced by the Haxe compiler (using the `hl` binary), or compile Haxe code to C for standalone native execution (HLC mode, requiring all dependent libraries but not the `hl` binary). This repository contains:
 
 - The HashLink VM (`hl` binary) and runtime library (`libhl.so`)
-- Optional native extension libraries (cross-platform: `fmt.hdll`, `sdl.hdll`, `ssl.hdll`, `openal.hdll`, `uv.hdll`, `mysql.hdll`, `sqlite.hdll`, `heaps.hdll`, `ui.hdll`; platform-specific: `mesa.hdll` on Linux game servers, `directx.hdll`/`dx12.hdll`/`dx12debug.hdll` on Windows)
+- Optional native extension libraries (cross-platform: `fmt.hdll`, `ssl.hdll`, `openal.hdll`, `uv.hdll`, `mysql.hdll`, `sqlite.hdll`, `heaps.hdll`, `ui.hdll`, plus LIMEN's `limen.hdll`, `limen_opengl.hdll`, and `limen_vulkan.hdll`; platform-specific: LIMEN's `limen_d3d11.hdll`/`limen_d3d12.hdll` renderers on Windows)
 - Source code of the HashLink core library (hl/libhl) in `src/` and native extension library implementations in `libs/`
 - Test programs in `other/tests/`
 - CMake build support alongside the classic `Makefile`
@@ -20,7 +20,6 @@ sudo apt-get install --no-install-recommends -y \
   libmbedtls-dev \
   libopenal-dev \
   libpng-dev \
-  libsdl3-dev \
   libturbojpeg-dev \
   libuv1-dev \
   libvorbis-dev \
@@ -91,12 +90,12 @@ HashLink is mostly tested as part of the Haxe tests over at https://github.com/H
 |------|-------------|
 | `src/` | Source code of the HashLink core library (hl/libhl): JIT compiler, GC, module loader, debugger |
 | `src/hl.h` | Main public header for embedding HashLink |
-| `libs/` | Native extension libraries (fmt, sdl, ssl, openal, uv, mysql, sqlite, heaps, mesa, ui, directx, etc.) |
-| `include/` | Vendored third-party headers (pcre2, mbedtls, sdl, etc.) |
+| `libs/` | Native extension libraries. LIMEN is pinned as the `libs/limen` submodule and initialized automatically for CMake builds. |
+| `include/` | Vendored third-party headers and libraries. |
 | `other/tests/` | Haxe test programs |
 | `other/haxelib/` | HashLink haxelib package sources |
-| `Makefile` | Primary build file for Linux/macOS |
-| `CMakeLists.txt` | CMake build file (cross-platform) |
+| `Makefile` | Legacy HashLink build file for Linux/macOS; it does not build LIMEN |
+| `CMakeLists.txt` | Cross-platform build file and the supported LIMEN build path |
 
 ## Code Style and Conventions
 

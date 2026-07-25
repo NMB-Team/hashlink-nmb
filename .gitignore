@@ -23,7 +23,6 @@ x64
 .cache
 .vs
 /hl
-/include/sdl
 /include/openal
 ReleaseStatic
 /other/benchs/bench.*

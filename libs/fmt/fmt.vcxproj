@@ -256,7 +256,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <OutputFile>../../$(Configuration)/$(TargetName).hdll</OutputFile>
       <AdditionalDependencies>libhl.lib;simd.lib</AdditionalDependencies>
-      <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -296,7 +295,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <OutputFile>../../$(Configuration)/$(TargetName).hdll</OutputFile>
       <AdditionalDependencies>libhl.lib;simd.lib</AdditionalDependencies>
-      <IgnoreSpecificDefaultLibraries>LIBCMT</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
