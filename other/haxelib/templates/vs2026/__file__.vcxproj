@@ -99,7 +99,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;::if (jumboBuild != "true")::HL_MAKE;::end::%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;::if (jumboBuild != "true")::HL_MAKE;::end::%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)\%(RelativeDir)</ObjectFileName>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -108,7 +108,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
       <DisableSpecificWarnings>4703;4100;4101;4102;4204;4221;4244;4700;4701;4702;4703;4715;4716;4723</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libhl.lib::foreach libraries::;::name::.lib::end::</AdditionalDependencies>
     </Link>
@@ -120,7 +120,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;::if (jumboBuild != "true")::HL_MAKE;::end::%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;::if (jumboBuild != "true")::HL_MAKE;::end::%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)\%(RelativeDir)</ObjectFileName>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -129,7 +129,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
       <DisableSpecificWarnings>4703;4100;4101;4102;4204;4221;4244;4700;4701;4702;4703;4715;4716;4723</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -141,7 +141,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;::if (jumboBuild != "true")::HL_MAKE;::end::%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;::if (jumboBuild != "true")::HL_MAKE;::end::%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)\%(RelativeDir)</ObjectFileName>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -150,7 +150,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
       <DisableSpecificWarnings>4703;4100;4101;4102;4204;4221;4244;4700;4701;4702;4703;4715;4716;4723</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libhl.lib::foreach libraries::;::name::.lib::end::</AdditionalDependencies>
     </Link>
@@ -162,7 +162,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;::if (jumboBuild != "true")::HL_MAKE;::end::%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;::if (jumboBuild != "true")::HL_MAKE;::end::%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <ObjectFileName>$(IntDir)\%(RelativeDir)</ObjectFileName>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -171,7 +171,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
       <DisableSpecificWarnings>4703;4100;4101;4102;4204;4221;4244;4700;4701;4702;4703;4715;4716;4723</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
