@@ -325,7 +325,7 @@ int main(int argc, pchar *argv[]) {
 	return 0;
 }
 
-#if (defined(HL_WIN_DESKTOP) HL_WIN && !defined(_CONSOLE)) || defined(HL_XBS)
+#if (defined(HL_WIN_DESKTOP) && !defined(_CONSOLE)) || defined(HL_XBS)
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
 	return wmain(__argc, __wargv);
 }
