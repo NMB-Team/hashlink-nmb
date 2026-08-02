@@ -5,7 +5,7 @@
 HashLink is a virtual machine for the [Haxe](https://haxe.org) programming language. It can either execute `.hl` bytecode produced by the Haxe compiler (using the `hl` binary), or compile Haxe code to C for standalone native execution (HLC mode, requiring all dependent libraries but not the `hl` binary). This repository contains:
 
 - The HashLink VM (`hl` binary) and runtime library (`libhl.so`)
-- Optional native extension libraries (cross-platform: `fmt.hdll`, `ssl.hdll`, `openal.hdll`, `uv.hdll`, `mysql.hdll`, `sqlite.hdll`, `heaps.hdll`, `ui.hdll`, plus LIMEN's `limen.hdll`, `limen_opengl.hdll`, and `limen_vulkan.hdll`; platform-specific: LIMEN's `limen_d3d11.hdll`/`limen_d3d12.hdll` renderers on Windows)
+- Optional native extension libraries (cross-platform: `fmt.hdll`, `ssl.hdll`, `openal.hdll`, `uv.hdll`, `mysql.hdll`, `sqlite.hdll`, `heaps.hdll`, `ui.hdll`, plus LIMEN's `limen.hdll`, `opengl.limen`, and `vulkan.limen`; platform-specific: LIMEN's `d3d11.limen`/`d3d12.limen` renderers on Windows)
 - Source code of the HashLink core library (hl/libhl) in `src/` and native extension library implementations in `libs/`
 - Test programs in `other/tests/`
 - CMake build support alongside the classic `Makefile`

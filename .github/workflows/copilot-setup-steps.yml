@@ -83,7 +83,7 @@ jobs:
             --dir "$download_dir"
           tar -xzf "$download_dir/$asset" -C limen-prebuilt
 
-          for file in limen.hdll limen_opengl.hdll limen_vulkan.hdll libshaderc.so.1; do
+          for file in limen.hdll opengl.limen vulkan.limen libshaderc.so.1; do
             if [[ ! -f "limen-prebuilt/$file" ]]; then
               echo "::error::$asset does not contain $file"
               exit 1

@@ -7,6 +7,7 @@ INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_LIB_DIR ?= $(PREFIX)/lib
 INSTALL_INCLUDE_DIR ?= $(PREFIX)/include
 LIBS = $(addsuffix .hdll,fmt ssl openal ui uv mysql sqlite heaps)
+LIMEN_MODULES = $(wildcard *.limen)
 ARCH ?= $(shell uname -m)
 
 CFLAGS = -Wall -O3 -std=c11 -fvisibility=hidden
@@ -251,13 +252,13 @@ ifneq ($(ARCH),arm64)
 	cp $(HL) $(INSTALL_BIN_DIR)
 endif
 	mkdir -p $(INSTALL_LIB_DIR)
-	cp *.hdll $(INSTALL_LIB_DIR)
+	cp *.hdll $(LIMEN_MODULES) $(INSTALL_LIB_DIR)
 	cp $(LIBHL) $(INSTALL_LIB_DIR)
 	mkdir -p $(INSTALL_INCLUDE_DIR)
 	cp src/hl.h src/hl_ffi.h src/hlc.h src/hlc_main.c $(INSTALL_INCLUDE_DIR)
 
 uninstall:
-	rm -f $(INSTALL_BIN_DIR)/$(HL) $(INSTALL_LIB_DIR)/$(LIBHL) $(INSTALL_LIB_DIR)/*.hdll
+	rm -f $(INSTALL_BIN_DIR)/$(HL) $(INSTALL_LIB_DIR)/$(LIBHL) $(INSTALL_LIB_DIR)/*.hdll $(INSTALL_LIB_DIR)/*.limen
 	rm -f $(INSTALL_INCLUDE_DIR)/hl.h $(INSTALL_INCLUDE_DIR)/hl_ffi.h $(INSTALL_INCLUDE_DIR)/hlc.h $(INSTALL_INCLUDE_DIR)/hlc_main.c
 
 libs: $(LIBS)
@@ -330,6 +331,7 @@ release_haxelib_package:
 	rm -rf $(HLIB)_release
 
 BUILD_DIR ?= .
+LIMEN_BUILD_MODULES = $(wildcard $(BUILD_DIR)/*.limen)
 PACKAGE_NAME = $(eval PACKAGE_NAME := hashlink-$(shell $(BUILD_DIR)/$(HL) --version)-$(RELEASE_NAME))$(PACKAGE_NAME)
 
 release_prepare:
@@ -339,7 +341,7 @@ release_prepare:
 	cp src/hl.h src/hl_ffi.h src/hlc.h src/hlc_main.c $(PACKAGE_NAME)/include
 
 release_win:
-	cp $(BUILD_DIR)/{$(HL),*.dll,*.hdll,*.lib} $(PACKAGE_NAME)
+	cp $(BUILD_DIR)/{$(HL),*.dll,*.hdll,*.lib} $(LIMEN_BUILD_MODULES) $(PACKAGE_NAME)
 	rm  $(PACKAGE_NAME)/hl.lib # avoid confusion between hl.lib and libhl.lib
 	cp $(VS_RUNTIME_LIBRARY) $(PACKAGE_NAME)
 	cp $(VS_OPENAL_LIBRARY) $(PACKAGE_NAME)/OpenAL32.dll
@@ -349,9 +351,9 @@ release_win:
 
 release_linux release_osx:
 ifeq ($(ARCH),arm64)
-	cp $(LIBHL) *.hdll $(LIMEN_RUNTIME_LIBS) $(PACKAGE_NAME)
+	cp $(LIBHL) *.hdll $(LIMEN_MODULES) $(LIMEN_RUNTIME_LIBS) $(PACKAGE_NAME)
 else
-	cp $(HL) $(LIBHL) *.hdll $(LIMEN_RUNTIME_LIBS) $(PACKAGE_NAME)
+	cp $(HL) $(LIBHL) *.hdll $(LIMEN_MODULES) $(LIMEN_RUNTIME_LIBS) $(PACKAGE_NAME)
 endif
 	tar -cvzf $(PACKAGE_NAME).tar.gz $(PACKAGE_NAME)
 	rm -rf $(PACKAGE_NAME)
@@ -373,6 +375,6 @@ clean_o:
 	rm -f ${STD} ${BOOT} ${RUNTIME} ${PCRE} ${HL_OBJ} ${FMT} ${SSL} ${OPENAL} ${UI} ${UV} ${MYSQL} ${SQLITE} ${HEAPS} ${HL_DEBUG}
 
 clean: clean_o
-	rm -f $(HL) $(HLC) $(LIBHL) *.hdll
+	rm -f $(HL) $(HLC) $(LIBHL) *.hdll *.limen
 
 .PHONY: libs release

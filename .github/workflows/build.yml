@@ -192,16 +192,16 @@ jobs:
           tar.gz) tar -xzf "$download_dir/$asset" -C limen-prebuilt ;;
         esac
 
-        expected=(limen.hdll limen_opengl.hdll)
+        expected=(limen.hdll opengl.limen)
         case "$platform" in
-          linux-*) expected+=(limen_vulkan.hdll libshaderc.so.1) ;;
+          linux-*) expected+=(vulkan.limen libshaderc.so.1) ;;
           windows-x64-mingw)
-            expected+=(limen_vulkan.hdll limen_d3d11.hdll)
-            expected+=(liblimen.dll.a liblimen_opengl.dll.a liblimen_vulkan.dll.a liblimen_d3d11.dll.a)
+            expected+=(vulkan.limen d3d11.limen)
+            expected+=(liblimen.dll.a libopengl.dll.a libvulkan.dll.a libd3d11.dll.a)
             ;;
           windows-x64)
-            expected+=(limen_vulkan.hdll limen_d3d11.hdll limen_d3d12.hdll)
-            expected+=(limen.lib limen_opengl.lib limen_vulkan.lib limen_d3d11.lib limen_d3d12.lib)
+            expected+=(vulkan.limen d3d11.limen d3d12.limen)
+            expected+=(limen.lib opengl.lib vulkan.lib d3d11.lib d3d12.lib)
             expected+=(dxcompiler.dll dxil.dll)
             ;;
         esac
@@ -613,9 +613,9 @@ jobs:
         else
           sudo cp "$binary_dir/hl" /usr/local/bin/
         fi
-        sudo cp "$library_dir"/libhl.* "$library_dir"/*.hdll /usr/local/lib/
+        sudo cp "$library_dir"/libhl.* "$library_dir"/*.hdll "$library_dir"/*.limen /usr/local/lib/
         if [[ "${{ matrix.os }}" == "darwin" ]]; then
-          sudo cp "$library_dir"/*.hdll "$library_dir"/*.dylib /usr/local/bin/
+          sudo cp "$library_dir"/*.hdll "$library_dir"/*.limen "$library_dir"/*.dylib /usr/local/bin/
         fi
         if compgen -G "$library_dir/libshaderc.so*" > /dev/null; then
           sudo cp "$library_dir"/libshaderc.so* /usr/local/lib/
