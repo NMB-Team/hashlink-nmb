@@ -404,6 +404,14 @@ static void *resolve_library( const char *lib, bool is_opt ) {
 	}
 
 	strcpy(tmp,lib);
+	if( strncmp(lib,"limen_",6) == 0 ) {
+		strcpy(tmp,lib+6);
+		strcpy(tmp+strlen(lib)-6,".limen");
+		h = dlopen(tmp,RTLD_LAZY);
+		if( h == NULL && !is_opt )
+			hl_fatal1("Failed to load library %s",tmp);
+		return h;
+	}
 
 #	ifdef HL_64
 	strcpy(tmp+strlen(lib),"64.hdll");
