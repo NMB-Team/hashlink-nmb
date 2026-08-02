@@ -673,6 +673,7 @@ jobs:
     concurrency: publish-latest-release # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idconcurrency
 
     permissions:
+      actions: read
       contents: write
 
     steps:
@@ -680,22 +681,33 @@ jobs:
     - name: "SCM Checkout"
       uses: actions/checkout@v7
 
-    - name: "Get: all build artifacts"
-      id: download-artifacts
-      continue-on-error: true
-      uses: actions/download-artifact@v8.0.1
-      with:
-        path: artifacts
+    - name: "Get: release artifacts"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -eu
 
-    - name: "Clean up partial artifact download"
-      if: steps.download-artifacts.outcome == 'failure'
-      run: rm -rf artifacts
+        artifacts=(
+          darwin-cmake-64
+          darwin-cmake-arm64
+          linux-cmake-64
+          linux-cmake-arm64
+          windows-cmake-64
+          windows-cmake-mingw-64
+        )
 
-    - name: "Retry: get all build artifacts"
-      if: steps.download-artifacts.outcome == 'failure'
-      uses: actions/download-artifact@v8.0.1
-      with:
-        path: artifacts
+        for artifact in "${artifacts[@]}"; do
+          for attempt in 1 2 3 4 5; do
+            rm -rf "artifacts/$artifact"
+            if gh run download "$GITHUB_RUN_ID" --name "$artifact" --dir "artifacts/$artifact"; then
+              continue 2
+            fi
+            sleep $((attempt * 10))
+          done
+
+          echo "::error::Failed to download $artifact after 5 attempts"
+          exit 1
+        done
 
     - name: "Delete previous 'latest' release"
       env:
