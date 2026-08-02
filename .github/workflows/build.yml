@@ -197,11 +197,11 @@ jobs:
           linux-*) expected+=(vulkan.limen libshaderc.so.1) ;;
           windows-x64-mingw)
             expected+=(vulkan.limen d3d11.limen)
-            expected+=(liblimen.dll.a libopengl.dll.a libvulkan.dll.a libd3d11.dll.a)
+            expected+=(liblimen.dll.a liblimen_opengl.dll.a liblimen_vulkan.dll.a liblimen_d3d11.dll.a)
             ;;
           windows-x64)
             expected+=(vulkan.limen d3d11.limen d3d12.limen)
-            expected+=(limen.lib opengl.lib vulkan.lib d3d11.lib d3d12.lib)
+            expected+=(limen.lib limen_opengl.lib limen_vulkan.lib limen_d3d11.lib limen_d3d12.lib)
             expected+=(dxcompiler.dll dxil.dll)
             ;;
         esac
