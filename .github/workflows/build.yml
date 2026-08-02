@@ -681,7 +681,21 @@ jobs:
       uses: actions/checkout@v7
 
     - name: "Get: all build artifacts"
+      id: download-artifacts
+      continue-on-error: true
       uses: actions/download-artifact@v8.0.1
+      with:
+        path: artifacts
+
+    - name: "Clean up partial artifact download"
+      if: steps.download-artifacts.outcome == 'failure'
+      run: rm -rf artifacts
+
+    - name: "Retry: get all build artifacts"
+      if: steps.download-artifacts.outcome == 'failure'
+      uses: actions/download-artifact@v8.0.1
+      with:
+        path: artifacts
 
     - name: "Delete previous 'latest' release"
       env:
@@ -703,9 +717,9 @@ jobs:
         gh release create latest \
           --prerelease \
           --title "HashLink Nightly Build" \
-          "darwin-cmake-64/hashlink-${short_commit}-darwin-cmake.tar.gz#hashlink-latest-darwin.tar.gz" \
-          "darwin-cmake-arm64/hashlink-${short_commit}-darwin-arm64-cmake.tar.gz#hashlink-latest-darwin-arm64.tar.gz" \
-          "linux-cmake-64/hashlink-${short_commit}-linux-amd64-cmake.tar.gz#hashlink-latest-linux-amd64.tar.gz" \
-          "linux-cmake-arm64/hashlink-${short_commit}-linux-arm64-cmake.tar.gz#hashlink-latest-linux-arm64.tar.gz" \
-          "windows-cmake-64/hashlink-${short_commit}-win64-cmake.zip#hashlink-latest-win64.zip" \
-          "windows-cmake-mingw-64/hashlink-${short_commit}-win64-cmake-mingw.zip#hashlink-latest-win64-mingw.zip"
+          "artifacts/darwin-cmake-64/hashlink-${short_commit}-darwin-cmake.tar.gz#hashlink-latest-darwin.tar.gz" \
+          "artifacts/darwin-cmake-arm64/hashlink-${short_commit}-darwin-arm64-cmake.tar.gz#hashlink-latest-darwin-arm64.tar.gz" \
+          "artifacts/linux-cmake-64/hashlink-${short_commit}-linux-amd64-cmake.tar.gz#hashlink-latest-linux-amd64.tar.gz" \
+          "artifacts/linux-cmake-arm64/hashlink-${short_commit}-linux-arm64-cmake.tar.gz#hashlink-latest-linux-arm64.tar.gz" \
+          "artifacts/windows-cmake-64/hashlink-${short_commit}-win64-cmake.zip#hashlink-latest-win64.zip" \
+          "artifacts/windows-cmake-mingw-64/hashlink-${short_commit}-win64-cmake-mingw.zip#hashlink-latest-win64-mingw.zip"
