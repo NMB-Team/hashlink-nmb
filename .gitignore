@@ -9,10 +9,7 @@
 *.user
 *.n
 Debug
-DebugAll
 Release
-ReleaseAll
-ReleaseDX12Agility
 x64
 *.stackdump
 *.hdll
