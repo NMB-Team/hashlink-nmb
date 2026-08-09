@@ -709,29 +709,42 @@ jobs:
           exit 1
         done
 
-    - name: "Delete previous 'latest' release"
+    - name: "Update 'latest' Release"
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        set -eu
-        gh release delete latest --cleanup-tag --yes || true
-
-    - name: "Create 'latest' Release"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        set -eux
-
-        # https://hub.github.com/hub-release.1.html
+        set -euo pipefail
 
         short_commit=$(git rev-parse --short HEAD)
-
-        gh release create latest \
-          --prerelease \
-          --title "HashLink Nightly Build" \
-          "artifacts/darwin-cmake-64/hashlink-${short_commit}-darwin-cmake.tar.gz#hashlink-latest-darwin.tar.gz" \
-          "artifacts/darwin-cmake-arm64/hashlink-${short_commit}-darwin-arm64-cmake.tar.gz#hashlink-latest-darwin-arm64.tar.gz" \
-          "artifacts/linux-cmake-64/hashlink-${short_commit}-linux-amd64-cmake.tar.gz#hashlink-latest-linux-amd64.tar.gz" \
-          "artifacts/linux-cmake-arm64/hashlink-${short_commit}-linux-arm64-cmake.tar.gz#hashlink-latest-linux-arm64.tar.gz" \
-          "artifacts/windows-cmake-64/hashlink-${short_commit}-win64-cmake.zip#hashlink-latest-win64.zip" \
+        assets=(
+          "artifacts/darwin-cmake-64/hashlink-${short_commit}-darwin-cmake.tar.gz#hashlink-latest-darwin.tar.gz"
+          "artifacts/darwin-cmake-arm64/hashlink-${short_commit}-darwin-arm64-cmake.tar.gz#hashlink-latest-darwin-arm64.tar.gz"
+          "artifacts/linux-cmake-64/hashlink-${short_commit}-linux-amd64-cmake.tar.gz#hashlink-latest-linux-amd64.tar.gz"
+          "artifacts/linux-cmake-arm64/hashlink-${short_commit}-linux-arm64-cmake.tar.gz#hashlink-latest-linux-arm64.tar.gz"
+          "artifacts/windows-cmake-64/hashlink-${short_commit}-win64-cmake.zip#hashlink-latest-win64.zip"
           "artifacts/windows-cmake-mingw-64/hashlink-${short_commit}-win64-cmake-mingw.zip#hashlink-latest-win64-mingw.zip"
+        )
+
+        if ! gh release view latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          gh release create latest \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "HashLink Nightly Build" \
+            "${assets[@]}"
+          exit 0
+        fi
+
+        gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/latest" \
+          -f sha="$GITHUB_SHA" \
+          -F force=true
+
+        release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/latest" --jq '.id')
+        while IFS= read -r asset_id; do
+          [[ -z "$asset_id" ]] && continue
+          gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id"
+        done < <(gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" --jq '.[].id')
+
+        gh release upload latest \
+          --repo "$GITHUB_REPOSITORY" \
+          "${assets[@]}"
