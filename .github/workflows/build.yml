@@ -131,6 +131,8 @@ jobs:
     steps:
     - name: "SCM Checkout"
       uses: actions/checkout@v7
+      with:
+        submodules: recursive
 
     - name: "Download: LIMEN binaries"
       env:
@@ -138,23 +140,22 @@ jobs:
       run: |
         set -euo pipefail
 
-        revision="${LIMEN_GIT_TAG:-}"
-        if [[ -z "$revision" ]]; then
-          revision=$(git rev-parse HEAD:libs/limen)
-        fi
-        if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
-          echo "::error::HashLink LIMEN revision must be a full lowercase commit SHA, got '$revision'"
-          exit 1
-        fi
-
         release_revision=$(gh release view latest \
           --repo NMB-Team/Limen \
           --json targetCommitish \
           --jq .targetCommitish)
-        if [[ "$release_revision" != "$revision" ]]; then
-          echo "::error::LIMEN latest release targets $release_revision, but HashLink pins $revision"
+        revision="${LIMEN_GIT_TAG:-$release_revision}"
+        if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "::error::LIMEN revision must be a full lowercase commit SHA, got '$revision'"
           exit 1
         fi
+        if [[ -n "${LIMEN_GIT_TAG:-}" && "$release_revision" != "$revision" ]]; then
+          echo "::error::LIMEN latest release targets $release_revision, not requested revision $revision"
+          exit 1
+        fi
+
+        git -C libs/limen fetch --depth 1 origin "$revision"
+        git -C libs/limen checkout --detach "$revision"
 
         case "${{ matrix.target }}${{ matrix.architecture }}" in
           linux64) platform=linux-x64 ;;

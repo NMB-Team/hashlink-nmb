@@ -61,8 +61,7 @@ In short you'll probably need:
 LIMEN is maintained in [NMB-Team/Limen](https://github.com/NMB-Team/Limen).
 The `libs/limen` submodule is the single source of truth for the pinned revision.
 CMake initializes the submodule automatically when necessary and builds LIMEN with HashLink for local source builds.
-GitHub Actions verifies that LIMEN's `latest` release targets the exact pinned commit, downloads the matching platform package, and includes its modules and runtime libraries in every HashLink package.
-CI never substitutes binaries from a different LIMEN revision.
+GitHub Actions synchronizes the LIMEN submodule checkout to the commit targeted by its `latest` release, downloads the matching platform package, and includes its modules and runtime libraries in every HashLink package.
 LIMEN revisions are never advanced automatically. To update the pin, run the
 `Pin LIMEN revision` workflow manually and provide a full 40-character commit
 SHA. HashLink tests that exact revision across the complete build matrix and

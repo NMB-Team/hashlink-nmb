@@ -15,6 +15,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: recursive
 
       - name: Install system dependencies
         run: |
@@ -64,15 +66,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          revision=$(git rev-parse HEAD:libs/limen)
           release_revision=$(gh release view latest \
             --repo NMB-Team/Limen \
             --json targetCommitish \
             --jq .targetCommitish)
-          if [[ "$release_revision" != "$revision" ]]; then
-            echo "::error::LIMEN latest release targets $release_revision, but HashLink pins $revision"
-            exit 1
-          fi
+          git -C libs/limen fetch --depth 1 origin "$release_revision"
+          git -C libs/limen checkout --detach "$release_revision"
 
           asset=limen-linux-x64.tar.gz
           download_dir="$RUNNER_TEMP/limen-release"
