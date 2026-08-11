@@ -78,7 +78,7 @@ static void free_result( result *r ) {
 
 HL_PRIM int HL_NAME(result_get_length)( result *r ) {
 	if( r->r == NULL )
-		return r->nfields;	
+		return r->nfields;
 	return (int)mysql_num_rows(r->r);
 }
 
@@ -105,13 +105,13 @@ HL_PRIM vdynamic *HL_NAME(result_next)( result *r ) {
 	vdynamic *obj = (vdynamic*)hl_alloc_dynobj();
 	vdynamic arg;
 	vdynamic length;
-	vdynamic *pargs[2];	
+	vdynamic *pargs[2];
 	pargs[0] = &arg;
 	pargs[1] = &length;
 	length.t = &hlt_i32;
 	r->current = row;
 	for(i=0;i<r->nfields;i++) {
-		if( row[i] == NULL ) continue;		
+		if( row[i] == NULL ) continue;
 		vdynamic *value = NULL;
 		switch( r->fields_convs[i] ) {
 		case CONV_INT:
@@ -276,7 +276,7 @@ static result *alloc_result( connection *c, MYSQL_RES *r ) {
 	res->current = NULL;
 	res->nfields = num_fields;
 	res->fields_ids = (int*)malloc(sizeof(int)*num_fields);
-	res->fields_convs = (CONV*)malloc(sizeof(CONV)*num_fields);	
+	res->fields_convs = (CONV*)malloc(sizeof(CONV)*num_fields);
 	for(i=0;i<num_fields;i++) {
 		int id;
 		if( strchr(fields[i].name,'(') )
@@ -292,7 +292,7 @@ static result *alloc_result( connection *c, MYSQL_RES *r ) {
 // ---------------------------------------------------------------
 // Connection
 
-HL_PRIM void HL_NAME(close_wrap)( connection *c ) {	
+HL_PRIM void HL_NAME(close_wrap)( connection *c ) {
 	if( c->c ) {
 		mp_close(c->c);
 		c->c = NULL;
@@ -352,6 +352,7 @@ HL_PRIM connection *HL_NAME(connect_wrap)( cnx_params *p ) {
 		hl_buffer_cstr(b, "Failed to connect to mysql server : ");
 		hl_buffer_cstr(b,mysql_error(c->c));
 		mysql_close(c->c);
+		c->c = NULL;
 		hl_throw_buffer(b);
 	}
 	return c;

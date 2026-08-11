@@ -108,13 +108,6 @@ if(WITH_UV)
     add_subdirectory(uv)
 endif()
 
-# option(WITH_VIDEO "Build video.hdll." ON)
-# if(WIN32)
-#     if(WITH_VIDEO)
-#         add_subdirectory(video)
-#     endif()
-# endif()
-
 option(WITH_HEAPS "Build heaps.hdll." ON)
 if(WITH_HEAPS)
     add_subdirectory(heaps)

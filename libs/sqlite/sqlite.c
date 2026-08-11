@@ -86,7 +86,11 @@ static void HL_NAME(finalize_database)( sqlite_database *db ) {
 HL_PRIM sqlite_database *HL_NAME(connect)( vbyte *filename ) {
 	sqlite_database *db;
 	sqlite3 *sqlite;
-	if( sqlite3_open16(filename, &sqlite) != SQLITE_OK ) {
+	int ret;
+	hl_blocking(true);
+	ret = sqlite3_open16(filename, &sqlite);
+	hl_blocking(false);
+	if( ret != SQLITE_OK ) {
 		HL_NAME(error)(sqlite, true);
 	}
 	db = (sqlite_database*)hl_gc_alloc_finalizer(sizeof(sqlite_database));
@@ -111,13 +115,16 @@ HL_PRIM int HL_NAME(last_id)(sqlite_database *db ) {
 HL_PRIM sqlite_result *HL_NAME(request)(sqlite_database *db, vbyte *sql ) {
 	sqlite_result *r;
 	const char *tl;
-	int i,j;
+	int i,j,ret;
 
 	r = (sqlite_result*)hl_gc_alloc_finalizer(sizeof(sqlite_result));
 	r->finalize = HL_NAME(finalize_result);
 	r->db = NULL;
 
-	if( sqlite3_prepare16_v2(db->db, sql, -1, &r->r, (const void**)&tl) != SQLITE_OK ) {
+	hl_blocking(true);
+	ret = sqlite3_prepare16_v2(db->db, sql, -1, &r->r, (const void**)&tl);
+	hl_blocking(false);
+	if( ret != SQLITE_OK ) {
 		HL_NAME(error)(db->db, false);
 	}
 
@@ -205,9 +212,13 @@ HL_PRIM varray *HL_NAME(result_get_fields)( sqlite_result *r ) {
 	<doc>Returns the next row in the result or [null] if no more result.</doc>
 **/
 HL_PRIM varray *HL_NAME(result_next)( sqlite_result *r ) {
+	int step;
 	if( r->done )
 		return NULL;
-	switch( sqlite3_step(r->r) ) {
+	hl_blocking(true);
+	step = sqlite3_step(r->r);
+	hl_blocking(false);
+	switch( step ) {
 	case SQLITE_ROW:
 		r->first = 0;
 		varray *a = hl_alloc_array(&hlt_dyn, r->ncols);
