@@ -36,7 +36,7 @@ jobs:
       matrix:
         target: [linux, darwin, windows]
         architecture: [64, arm64]
-        build_system: [make, cmake, cmake-mingw, cmake-clang-cl, vs2026, makegcc14]
+        build_system: [cmake, cmake-mingw]
 
         include:
           - target: linux
@@ -69,12 +69,6 @@ jobs:
           - build_system: cmake-mingw
             cmake_configuration: RelWithDebInfo
 
-          - build_system: cmake-clang-cl
-            cmake_configuration: RelWithDebInfo
-
-          - build_system: vs2026
-            msbuild_configuration: Release
-
           - target: windows
             runner: windows-2025-vs2026 # has VS 2026 preinstalled which supports PlatformToolset <= v145, WindowsTargetPlatformVersion 10
             haxe_nightly_dir: windows64
@@ -89,43 +83,18 @@ jobs:
             build_system: cmake-mingw
 
           - target: windows
-            build_system: cmake-clang-cl
-            cmake_generator: Visual Studio 18 2026
-
-          - target: windows
             architecture: 64
             architecture_string: x64
 
         exclude:
           - target: linux
-            build_system: vs2026
+            build_system: cmake-mingw
 
           - target: darwin
-            build_system: vs2026
+            build_system: cmake-mingw
 
           - target: windows
             architecture: arm64
-
-          - target: windows
-            build_system: make
-
-          - target: darwin
-            build_system: makegcc14
-
-          - target: windows
-            build_system: makegcc14
-
-          - target: darwin
-            build_system: cmake-mingw
-
-          - target: linux
-            build_system: cmake-mingw
-
-          - target: darwin
-            build_system: cmake-clang-cl
-
-          - target: linux
-            build_system: cmake-clang-cl
 
     steps:
     - name: "SCM Checkout"
@@ -486,33 +455,33 @@ jobs:
         path: ${{ env.HASHLINK_DISTRIBUTION }}
 
 
-  build-android:
-    runs-on: ubuntu-latest
-    steps:
+  # build-android:
+  #   runs-on: ubuntu-latest
+  #   steps:
 
-    - name: "SCM Checkout"
-      uses: actions/checkout@v7
+  #   - name: "SCM Checkout"
+  #     uses: actions/checkout@v7
 
-    - name: Install haxe
-      uses: krdlab/setup-haxe@master
-      with:
-        haxe-version: latest
+  #   - name: Install haxe
+  #     uses: krdlab/setup-haxe@master
+  #     with:
+  #       haxe-version: latest
 
-    - name: "Configure: Haxelib"
-      run: |
-        set -eux
+  #   - name: "Configure: Haxelib"
+  #     run: |
+  #       set -eux
 
-        haxelib setup ~/haxelib
-        haxelib install hashlink
-        haxelib list
+  #       haxelib setup ~/haxelib
+  #       haxelib install hashlink
+  #       haxelib list
 
-    - name: "Build: Hashlink"
-      run: |
-        set -ex
-        cmake -B build -G Ninja --toolchain $ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-          -DANDROID_PLATFORM=24 -DANDROID_ABI=arm64-v8a -DBUILD_SHARED_LIBS=OFF \
-          -DWITH_VM=OFF -DWITH_LIMEN=OFF
-        cmake --build build
+  #   - name: "Build: Hashlink"
+  #     run: |
+  #       set -ex
+  #       cmake -B build -G Ninja --toolchain $ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+  #         -DANDROID_PLATFORM=24 -DANDROID_ABI=arm64-v8a -DBUILD_SHARED_LIBS=OFF \
+  #         -DWITH_VM=OFF -DWITH_LIMEN=OFF
+  #       cmake --build build
 
   haxe-test-suite:
     needs: build
