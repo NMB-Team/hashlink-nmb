@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
 
-if(MSVC)
-	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif()
-
 set(HL_VERSION_MAJOR 1)
 set(HL_VERSION_MINOR 17)
 set(HL_VERSION_PATCH 0)
@@ -18,6 +14,24 @@ if(WIN32)
     set(CMAKE_SYSTEM_VERSION 10.0)
 endif()
 project(hashlink)
+
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+    add_compile_options(
+        $<$<CONFIG:Release>:/Oi>
+        $<$<CONFIG:Release>:/Gy>
+        $<$<CONFIG:Release>:/Ot>
+        $<$<CONFIG:Release>:/Oy>
+        $<$<CONFIG:Release>:/GT>
+        $<$<CONFIG:Release>:/GS->
+        $<$<CONFIG:Release>:/Zc:inline>
+    )
+    add_link_options(
+        $<$<CONFIG:Release>:/OPT:REF>
+        $<$<CONFIG:Release>:/OPT:ICF>
+    )
+endif()
 
 include(GNUInstallDirs)
 include(FindPkgConfig)
