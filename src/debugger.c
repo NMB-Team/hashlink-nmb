@@ -35,8 +35,8 @@ HL_API int hl_socket_recv( hl_socket *s, vbyte *buf, int pos, int len );
 HL_API void hl_sys_sleep( double t );
 HL_API int hl_sys_getpid();
 
-static hl_socket *debug_socket = NULL;
-static hl_socket *client_socket = NULL;
+static hl_socket *debug_socket = nullptr;
+static hl_socket *client_socket = nullptr;
 static bool debugger_connected = false;
 static bool debugger_stopped = false;
 
@@ -67,7 +67,7 @@ static void hl_debug_loop( hl_module *m ) {
 		int i;
 		vbyte cmd;
 		hl_socket *s = hl_socket_accept(debug_socket);
-		if( s == NULL ) break;
+		if( s == nullptr ) break;
 		client_socket = s;
 		send("HLD1",4);
 		send(&flags,4);
@@ -109,7 +109,7 @@ static void hl_debug_loop( hl_module *m ) {
 		hl_socket_recv(s,&cmd,0,1);
 		hl_socket_close(s);
 		debugger_connected = true;
-		client_socket = NULL;
+		client_socket = nullptr;
 	} while( loop );
 	debugger_stopped = true;
 }
@@ -118,7 +118,7 @@ h_bool hl_module_debug( hl_module *m, int port, h_bool wait ) {
 	hl_socket *s;
 	hl_socket_init();
 	s = hl_socket_new(false);
-	if( s == NULL ) return false;
+	if( s == nullptr ) return false;
 	if( !hl_socket_bind(s,0x0100007F/*127.0.0.1*/,port) || !hl_socket_listen(s, 10) ) {
 		hl_socket_close(s);
 		return false;
@@ -139,7 +139,7 @@ h_bool hl_module_debug( hl_module *m, int port, h_bool wait ) {
 	// imply --debug-wait
 	hl_debug_loop(m);
 	hl_socket_close(debug_socket);
-	debug_socket = NULL;
+	debug_socket = nullptr;
 #	endif
 	hl_setup.is_debugger_enabled = true;
 	return true;

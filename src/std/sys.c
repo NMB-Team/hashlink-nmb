@@ -125,7 +125,7 @@ HL_PRIM vbyte *hl_sys_locale() {
 #if defined(HL_WIN_DESKTOP)
 	wchar_t loc[LOCALE_NAME_MAX_LENGTH];
 	int len = GetSystemDefaultLocaleName(loc,LOCALE_NAME_MAX_LENGTH);
-	return len == 0 ? NULL : hl_copy_bytes((vbyte*)loc,(len+1)*2);
+	return len == 0 ? nullptr : hl_copy_bytes((vbyte*)loc,(len+1)*2);
 #elif defined(HL_CONSOLE)
 	return (vbyte*)sys_get_user_lang();
 #else
@@ -175,8 +175,8 @@ HL_PRIM bool hl_sys_load_plugin( vbyte *file ) {
 }
 
 HL_PRIM vdynamic *hl_sys_resolve_type( hl_type *t, hl_type *gt ) {
-	if( hl_setup.resolve_type == NULL )
-		return NULL;
+	if( hl_setup.resolve_type == nullptr )
+		return nullptr;
 	return hl_setup.resolve_type(t,gt);
 }
 
@@ -211,7 +211,7 @@ HL_PRIM double hl_sys_time() {
 	return time_diff + ((double)time.QuadPart) / freq;
 #else
 	struct timeval tv;
-	if( gettimeofday(&tv,NULL) != 0 )
+	if( gettimeofday(&tv,nullptr) != 0 )
 		return 0.;
 	return tv.tv_sec + ((double)tv.tv_usec) / 1000000.0;
 #endif
@@ -243,9 +243,9 @@ HL_PRIM bool hl_sys_put_env( vbyte *e, vbyte *v ) {
 	hl_buffer_str(b,(uchar*)e);
 	hl_buffer_char(b,'=');
 	if( v ) hl_buffer_str(b,(uchar*)v);
-	return putenv(hl_buffer_content(b,NULL)) == 0;
+	return putenv(hl_buffer_content(b,nullptr)) == 0;
 #else
-	if( v == NULL ) return unsetenv((char*)e) == 0;
+	if( v == nullptr ) return unsetenv((char*)e) == 0;
 	return setenv((char*)e,(char*)v,1) == 0;
 #endif
 }
@@ -267,14 +267,14 @@ HL_PRIM varray *hl_sys_env() {
 	pchar **arr;
 	int count = 0;
 #	ifdef HL_WIN_DESKTOP
-	if( e == NULL ) {
+	if( e == nullptr ) {
 		_wgetenv(L"");
 		e = environ;
 	}
 #	endif
 	while( *e ) {
 		pchar *x = pstrchr(*e,'=');
-		if( x == NULL ) {
+		if( x == nullptr ) {
 			e++;
 			continue;
 		}
@@ -286,7 +286,7 @@ HL_PRIM varray *hl_sys_env() {
 	arr = hl_aptr(a,pchar*);
 	while( *e ) {
 		pchar *x = pstrchr(*e,'=');
-		if( x == NULL ) {
+		if( x == nullptr ) {
 			e++;
 			continue;
 		}
@@ -312,7 +312,7 @@ HL_PRIM void hl_sys_sleep( double f ) {
 	struct timespec t;
 	t.tv_sec = (int)f;
 	t.tv_nsec = (int)((f - t.tv_sec) * 1e9);
-	nanosleep(&t,NULL);
+	nanosleep(&t,nullptr);
 #endif
 	hl_blocking(false);
 }
@@ -320,10 +320,10 @@ HL_PRIM void hl_sys_sleep( double f ) {
 HL_PRIM bool hl_sys_set_time_locale( vbyte *l ) {
 #ifdef HL_POSIX
 	locale_t lc, old;
-	lc = newlocale(LC_TIME_MASK,(char*)l,NULL);
-	if( lc == NULL ) return false;
+	lc = newlocale(LC_TIME_MASK,(char*)l,nullptr);
+	if( lc == nullptr ) return false;
 	old = uselocale(lc);
-	if( old == NULL ) {
+	if( old == nullptr ) {
 		freelocale(lc);
 		return false;
 	}
@@ -331,7 +331,7 @@ HL_PRIM bool hl_sys_set_time_locale( vbyte *l ) {
 		freelocale(old);
 	return true;
 #else
-	return setlocale(LC_TIME,(char*)l) != NULL;
+	return setlocale(LC_TIME,(char*)l) != nullptr;
 #endif
 }
 
@@ -339,8 +339,8 @@ HL_PRIM bool hl_sys_set_time_locale( vbyte *l ) {
 HL_PRIM vbyte *hl_sys_get_cwd() {
 	pchar buf[256];
 	int l;
-	if( getcwd(buf,256) == NULL )
-		return NULL;
+	if( getcwd(buf,256) == nullptr )
+		return nullptr;
 	l = (int)pstrlen(buf);
 	if( buf[l-1] != '/' && buf[l-1] != '\\' ) {
 		buf[l] = '/';
@@ -400,7 +400,7 @@ HL_PRIM varray *hl_sys_stat( vbyte *path ) {
 	varray *a;
 	int *i;
 	if( stat((pchar*)path,&s) != 0 )
-		return NULL;
+		return nullptr;
 	a = hl_alloc_array(&hlt_i32,12);
 	i = hl_aptr(a,int);
 	*i++ = s.st_gid;
@@ -477,8 +477,8 @@ HL_PRIM varray *hl_sys_read_dir( vbyte *_path ) {
 	pchar *path = (pchar*)_path;
 	int count = 0;
 	int pos = 0;
-	varray *a = NULL;
-	pchar **current = NULL;
+	varray *a = nullptr;
+	pchar **current = nullptr;
 
 #ifdef HL_WIN
 	WIN32_FIND_DATAW d;
@@ -490,10 +490,10 @@ HL_PRIM varray *hl_sys_read_dir( vbyte *_path ) {
 		hl_buffer_str(b,USTR("/*.*"));
 	else
 		hl_buffer_str(b,USTR("*.*"));
-	path = hl_buffer_content(b,NULL);
+	path = hl_buffer_content(b,nullptr);
 	handle = FindFirstFileW(path,&d);
 	if( handle == INVALID_HANDLE_VALUE )
-		return NULL;
+		return nullptr;
 	while( true ) {
 		// skip magic dirs
 		if( d.cFileName[0] != '.' || (d.cFileName[1] != 0 && (d.cFileName[1] != '.' || d.cFileName[2] != 0)) ) {
@@ -516,11 +516,11 @@ HL_PRIM varray *hl_sys_read_dir( vbyte *_path ) {
 	DIR *d;
 	struct dirent *e;
 	d = opendir(path);
-	if( d == NULL )
-		return NULL;
+	if( d == nullptr )
+		return nullptr;
 	while( true ) {
 		e = readdir(d);
-		if( e == NULL )
+		if( e == nullptr )
 			break;
 		// skip magic dirs
 		if( e->d_name[0] == '.' && (e->d_name[1] == 0 || (e->d_name[1] == '.' && e->d_name[2] == 0)) )
@@ -538,7 +538,7 @@ HL_PRIM varray *hl_sys_read_dir( vbyte *_path ) {
 	}
 	closedir(d);
 #endif
-	if( a == NULL ) a = hl_alloc_array(&hlt_bytes,0);
+	if( a == nullptr ) a = hl_alloc_array(&hlt_bytes,0);
 	a->size = pos;
 	return a;
 }
@@ -550,8 +550,8 @@ HL_PRIM vbyte *hl_sys_full_path( vbyte *path ) {
 	HANDLE handle;
 	WIN32_FIND_DATA data;
 	const char sep = '\\';
-	if( GetFullPathNameW((pchar*)path,MAX_PATH+1,out,NULL) == 0 )
-		return NULL;
+	if( GetFullPathNameW((pchar*)path,MAX_PATH+1,out,nullptr) == 0 )
+		return nullptr;
 	len = (int)ustrlen(out);
 	i = 0;
 
@@ -593,8 +593,8 @@ HL_PRIM vbyte *hl_sys_full_path( vbyte *path ) {
 	return (vbyte*)pstrdup(out,len);
 #else
 	pchar buf[PATH_MAX];
-	if( realpath((pchar*)path,buf) == NULL )
-		return NULL;
+	if( realpath((pchar*)path,buf) == nullptr )
+		return nullptr;
 	return (vbyte*)pstrdup(buf,-1);
 #endif
 }
@@ -602,14 +602,14 @@ HL_PRIM vbyte *hl_sys_full_path( vbyte *path ) {
 HL_PRIM vbyte *hl_sys_exe_path() {
 #if defined(HL_WIN)
 	pchar path[MAX_PATH];
-	if( GetModuleFileNameW(NULL,path,MAX_PATH) == 0 )
-		return NULL;
+	if( GetModuleFileNameW(nullptr,path,MAX_PATH) == 0 )
+		return nullptr;
 	return (vbyte*)pstrdup(path,-1);
 #elif defined(HL_MAC)
 	pchar path[PATH_MAX+1];
 	uint32_t path_len = PATH_MAX;
 	if( _NSGetExecutablePath(path, &path_len) )
-		return NULL;
+		return nullptr;
 	return (vbyte*)pstrdup(path,-1);
 #elif defined(HL_CONSOLE)
 	return sys_exe_path();
@@ -618,9 +618,9 @@ HL_PRIM vbyte *hl_sys_exe_path() {
 	int length = readlink("/proc/self/exe", path, sizeof(path));
 	if( length < 0 ) {
 		const pchar *p = getenv("_");
-		if( p != NULL )
+		if( p != nullptr )
 			return (vbyte*)pstrdup(p,-1);
-		return NULL;
+		return nullptr;
 	}
 	path[length] = '\0';
 	return (vbyte*)pstrdup(path,-1);
@@ -680,7 +680,7 @@ HL_PRIM vbyte *hl_sys_hl_file() {
 }
 
 HL_PRIM bool hl_sys_check_reload( vbyte *debug_alt_file ) {
-	return hl_setup.reload_check != NULL && hl_setup.reload_check(debug_alt_file);
+	return hl_setup.reload_check != nullptr && hl_setup.reload_check(debug_alt_file);
 }
 
 HL_PRIM bool hl_sys_has_debugger() {
@@ -690,7 +690,7 @@ HL_PRIM bool hl_sys_has_debugger() {
 #ifndef HL_MOBILE
 const char *hl_sys_special( const char *key ) {
 	 hl_error("Unknown sys_special key");
-	 return NULL;
+	 return nullptr;
 }
 DEFINE_PRIM(_BYTES, sys_special, _BYTES);
 #endif

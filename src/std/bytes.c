@@ -62,19 +62,19 @@ memfind_rb (const void  *in_block,      /*  Block containing data            */
         byte_nbr,                       /*  Distance through block           */
         match_size;                     /*  Size of matched part             */
     const byte
-        *match_base = NULL,             /*  Base of match of pattern         */
-        *match_ptr  = NULL,             /*  Point within current match       */
-        *limit      = NULL;             /*  Last potiental match point       */
+        *match_base = nullptr,             /*  Base of match of pattern         */
+        *match_ptr  = nullptr,             /*  Point within current match       */
+        *limit      = nullptr;             /*  Last potiental match point       */
     const byte
         *block   = (byte *) in_block,   /*  Concrete pointer to block data   */
         *pattern = (byte *) in_pattern; /*  Concrete pointer to search value */
 
-    if (block == NULL || pattern == NULL || shift == NULL)
-        return (NULL);
+    if (block == nullptr || pattern == nullptr || shift == nullptr)
+        return (nullptr);
 
     /*  Pattern must be smaller or equal in size to string                   */
     if (block_size < pattern_size)
-        return (NULL);                  /*  Otherwise it's not found         */
+        return (nullptr);                  /*  Otherwise it's not found         */
 
     if (pattern_size == 0)              /*  Empty patterns match at start    */
         return ((void *)block);
@@ -119,14 +119,14 @@ memfind_rb (const void  *in_block,      /*  Block containing data            */
 
           }
       }
-    return NULL;
+    return nullptr;
 }
 
 HL_PRIM int hl_bytes_find( vbyte *where, int pos, int len, vbyte *which, int wpos, int wlen ) {
 	size_t searchbuf [256];
 	bool repeat_find = false;
 	vbyte *found = (vbyte*)memfind_rb(where + pos,len,which+wpos,wlen,searchbuf,&repeat_find);
-	if( found == NULL ) return -1;
+	if( found == nullptr ) return -1;
 	return (int)(size_t)(found - where);
 }
 
@@ -192,7 +192,7 @@ static inline bool is_space_char(uchar c) {
 
 HL_PRIM double hl_parse_float( vbyte *bytes, int pos, int len ) {
 	const uchar *str = (uchar*)(bytes+pos);
-	uchar *end = NULL;
+	uchar *end = nullptr;
 	while( is_space_char(*str) ) str++;
 	double d = utod(str,&end);
 	if( end == str )
@@ -229,10 +229,10 @@ HL_PRIM vdynamic *hl_parse_int( vbyte *bytes, int pos, int len ) {
 		}
 		if( sign == '-' ) h = -h;
 	} else {
-		uchar *end = NULL;
+		uchar *end = nullptr;
 		h = utoi(c,&end);
 		if( c == end )
-			return NULL;
+			return nullptr;
 	}
 	return hl_make_dyn(&h,&hlt_i32);
 }

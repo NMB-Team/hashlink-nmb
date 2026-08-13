@@ -35,17 +35,17 @@ HL_PRIM void *hl_fatal_error( const char *msg, const char *file, int line ) {
     HWND consoleWnd = GetConsoleWindow();
     DWORD pid;
     GetWindowThreadProcessId(consoleWnd, &pid);
-    if( consoleWnd == NULL || GetActiveWindow() != NULL || GetCurrentProcessId() == pid ) {
+    if( consoleWnd == nullptr || GetActiveWindow() != nullptr || GetCurrentProcessId() == pid ) {
 		char buf[256];
 		sprintf(buf,"%s\n\n%s(%d)",msg,file,line);
-		MessageBoxA(NULL,buf,"Fatal Error", MB_OK | MB_ICONERROR);
+		MessageBoxA(nullptr,buf,"Fatal Error", MB_OK | MB_ICONERROR);
 	}
 #	endif
 	printf("%s(%d) : FATAL ERROR : %s\n",file,line,msg);
 	hl_blocking(false);
 	hl_debug_break();
 	exit(1);
-	return NULL;
+	return nullptr;
 }
 
 HL_PRIM uchar *hl_resolve_symbol( void *addr, uchar *out, int *outSize ) {
@@ -60,23 +60,23 @@ HL_PRIM void hl_set_error_handler( vclosure *d ) {
 
 static bool break_on_trap( hl_thread_info *t, hl_trap_ctx *trap, vdynamic *v ) {
 	bool unwrapped = false;
-	vdynamic *vvalue = NULL;
+	vdynamic *vvalue = nullptr;
 	if( !hl_setup.is_debugger_attached ) return false;
 	while( true ) {
-		if( trap == NULL || trap == t->trap_uncaught || t->trap_current == NULL || trap->prev == NULL ) return true;
+		if( trap == nullptr || trap == t->trap_uncaught || t->trap_current == nullptr || trap->prev == nullptr ) return true;
 		if( !trap->tcheck || !v ) return false;
 		if( !unwrapped ) {
 			unwrapped = true;
 			hl_type *vt = v->t;
 			if( vt->kind == HOBJ && ucmp(vt->obj->name, USTR("haxe.ValueException")) == 0 ) {
 				hl_field_lookup *f = hl_lookup_find(vt->obj->rt->lookup, vt->obj->rt->nlookup, hl_hash_gen(USTR("value"), true));
-				if( f != NULL && f->field_index >= 0 )
+				if( f != nullptr && f->field_index >= 0 )
 					vvalue = *(vdynamic**)((char*)(v) + f->field_index);
 			}
 		}
 		hl_type *ot = ((hl_type**)trap->tcheck)[1]; // it's an obj with first field is a hl_type
 		if( !ot || hl_safe_cast(v->t,ot) ) return false;
-		if( vvalue != NULL && hl_safe_cast(vvalue->t,ot) ) return false;
+		if( vvalue != nullptr && hl_safe_cast(vvalue->t,ot) ) return false;
 		trap = trap->prev;
 	}
 	return false;
@@ -92,16 +92,16 @@ HL_PRIM void hl_throw( vdynamic *v ) {
 		t->exc_stack_count = hl_setup.capture_stack(t->exc_stack_trace, HL_EXC_MAX_STACK);
 	t->exc_value = v;
 	t->trap_current = trap->prev;
-	call_handler = trap == t->trap_uncaught || t->trap_current == NULL;
+	call_handler = trap == t->trap_uncaught || t->trap_current == nullptr;
 	if( (t->flags&HL_EXC_CATCH_ALL) || break_on_trap(t,trap,v) ) {
 		t->flags |= HL_EXC_IS_THROW;
 		hl_debug_break();
 		t->flags &= ~HL_EXC_IS_THROW;
 	}
-	if( trap == t->trap_uncaught ) t->trap_uncaught = NULL;
+	if( trap == t->trap_uncaught ) t->trap_uncaught = nullptr;
 	t->flags &= ~HL_EXC_RETHROW;
 	if( t->exc_handler && call_handler ) hl_dyn_call_safe(t->exc_handler,&v,1,&call_handler);
-	if( hl_setup.throw_jump == NULL ) hl_setup.throw_jump = longjmp;
+	if( hl_setup.throw_jump == nullptr ) hl_setup.throw_jump = longjmp;
 	hl_setup.throw_jump(trap->buf,1);
 	HL_UNREACHABLE;
 }
@@ -113,7 +113,7 @@ HL_PRIM void hl_null_access() {
 
 HL_PRIM void hl_throw_buffer( hl_buffer *b ) {
 	vdynamic *d = hl_alloc_dynamic(&hlt_bytes);
-	d->v.ptr = hl_buffer_content(b,NULL);
+	d->v.ptr = hl_buffer_content(b,nullptr);
 	hl_throw(d);
 }
 
@@ -126,7 +126,7 @@ HL_PRIM void hl_dump_stack() {
 		uchar sym[512];
 		int size = 512;
 		uchar *str = hl_setup.resolve_symbol(addr, sym, &size);
-		if( str == NULL ) {
+		if( str == nullptr ) {
 			int iaddr = (int)(int_val)addr;
 			usprintf(sym,512,USTR("@0x%X"),iaddr);
 			str = sym;
@@ -139,12 +139,12 @@ HL_PRIM void hl_dump_stack() {
 static bool maybe_print_custom_stack( vdynamic *exc ) {
 	hl_type *ot = exc->t;
 	while( ot->kind == HOBJ ) {
-		if( ot->obj->super == NULL ) {
+		if( ot->obj->super == nullptr ) {
 			if( ucmp(ot->obj->name, USTR("haxe.Exception")) == 0 ) {
 				hl_field_lookup *f = hl_lookup_find(ot->obj->rt->lookup, ot->obj->rt->nlookup, hl_hash_gen(USTR("__customStack"), true));
-				if( f == NULL || f->field_index < 0 ) break;
+				if( f == nullptr || f->field_index < 0 ) break;
 				vdynamic *customStack = *(vdynamic**)((char*)(exc) + f->field_index);
-				if( customStack != NULL ) {
+				if( customStack != nullptr ) {
 					uprintf(USTR("%s\n"), hl_to_string(customStack));
 					return true;
 				}
@@ -175,7 +175,7 @@ HL_PRIM varray *hl_exception_stack() {
 		uchar sym[512];
 		int size = 512;
 		uchar *str = hl_setup.resolve_symbol(addr, sym, &size);
-		if( str == NULL ) continue;
+		if( str == nullptr ) continue;
 		hl_aptr(a,vbyte*)[pos++] = hl_copy_bytes((vbyte*)str,sizeof(uchar)*(size+1));
 	}
 	a->size = pos;
@@ -190,7 +190,7 @@ HL_PRIM int hl_exception_stack_raw( varray *arr ) {
 
 HL_PRIM int hl_call_stack_raw( varray *arr ) {
 	if( !arr )
-		return hl_setup.capture_stack(NULL,0);
+		return hl_setup.capture_stack(nullptr,0);
 	return hl_setup.capture_stack(hl_aptr(arr,void*), arr->size);
 }
 

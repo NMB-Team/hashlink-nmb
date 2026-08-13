@@ -132,7 +132,7 @@ static const char *hl_read_string( hl_reader *r ) {
 
 const uchar *hl_get_ustring( hl_code *code, int index ) {
 	uchar *str = code->ustrings[index];
-	if( str == NULL ) {
+	if( str == nullptr ) {
 		int size = hl_utf8_length((vbyte*)code->strings[index],0);
 		str = hl_malloc(&code->alloc,(size+1)<<1);
 		hl_from_utf8(str,size,code->strings[index]);
@@ -178,7 +178,7 @@ static void hl_read_type( hl_reader *r, hl_type *t ) {
 			int nbindings = UINDEX();
 			t->obj = (hl_type_obj*)hl_malloc(&r->code->alloc,sizeof(hl_type_obj));
 			t->obj->name = name;
-			t->obj->super = super < 0 ? NULL : r->code->types + super;
+			t->obj->super = super < 0 ? nullptr : r->code->types + super;
 			t->obj->global_value = (void**)(int_val)global;
 			t->obj->nfields = nfields;
 			t->obj->nproto = nproto;
@@ -186,8 +186,8 @@ static void hl_read_type( hl_reader *r, hl_type *t ) {
 			t->obj->fields = (hl_obj_field*)hl_malloc(&r->code->alloc,sizeof(hl_obj_field)*nfields);
 			t->obj->proto = (hl_obj_proto*)hl_malloc(&r->code->alloc,sizeof(hl_obj_proto)*nproto);
 			t->obj->bindings = (int*)hl_malloc(&r->code->alloc,sizeof(int)*nbindings*2);
-			t->obj->rt = NULL;
-			t->obj->m = NULL;
+			t->obj->rt = nullptr;
+			t->obj->m = nullptr;
 			for(i=0;i<nfields;i++) {
 				hl_obj_field *f = t->obj->fields + i;
 				f->name = hl_read_ustring(r);
@@ -345,7 +345,7 @@ static void hl_read_function( hl_reader *r, hl_function *f ) {
 }
 
 #undef CHK_ERROR
-#define CHK_ERROR() if( r->error ) { if( c ) hl_free(&c->alloc); *error_msg = (char*)r->error; return NULL; }
+#define CHK_ERROR() if( r->error ) { if( c ) hl_free(&c->alloc); *error_msg = (char*)r->error; return nullptr; }
 #define EXIT(msg) { ERROR(msg); CHK_ERROR(); }
 #define ALLOC(v,ptr,count) v = (ptr *)hl_zalloc(&c->alloc,(count)*sizeof(ptr))
 
@@ -373,7 +373,7 @@ static char **hl_read_strings( hl_reader *r, int nstrings, int **out_lens ) {
 		sdata += sz;
 		if( sdata >= sbase + size || *sdata ) {
 			ERROR("Invalid string");
-			return NULL;
+			return nullptr;
 		}
 		sdata++;
 	}
@@ -422,7 +422,7 @@ static int *hl_read_debug_infos( hl_reader *r, int nops ) {
 }
 
 hl_code *hl_code_read( const unsigned char *data, int size, char **error_msg ) {
-	hl_reader _r = { data, size, 0, 0, NULL };
+	hl_reader _r = { data, size, 0, 0, nullptr };
 	hl_reader *r = &_r;
 	hl_code *c;
 	hl_alloc alloc;

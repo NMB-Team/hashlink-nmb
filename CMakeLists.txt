@@ -81,8 +81,10 @@ list(APPEND CMAKE_MODULE_PATH
     ${CMAKE_CURRENT_SOURCE_DIR}/other/cmake
 )
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 
@@ -185,8 +187,8 @@ target_include_directories(libhl
     PUBLIC src
 )
 
-# C11 / C++11 are required for features such as unicode strings
-target_compile_features(libhl PUBLIC cxx_std_11 c_std_11)
+# C23 / C++23 are required for features such as unicode strings
+target_compile_features(libhl PUBLIC cxx_std_23 c_std_23)
 
 set(public_headers
     src/hl.h

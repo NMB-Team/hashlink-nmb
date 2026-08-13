@@ -31,7 +31,7 @@ HL_PRIM vclosure *hl_alloc_closure_void( hl_type *t, void *fvalue ) {
 	c->t = t;
 	c->fun = fvalue;
 	c->hasValue = 0;
-	c->value = NULL;
+	c->value = nullptr;
 	return c;
 }
 
@@ -42,7 +42,7 @@ static hl_type *hl_get_closure_type( hl_type *t ) {
 		ft->closure_type.kind = HFUN;
 		ft->closure_type.p = &ft->closure;
 		ft->closure.nargs = ft->nargs - 1;
-		ft->closure.args = ft->closure.nargs ? ft->args + 1 : NULL;
+		ft->closure.args = ft->closure.nargs ? ft->args + 1 : nullptr;
 		ft->closure.ret = ft->ret;
 		ft->closure.parent = t;
 	}
@@ -78,18 +78,18 @@ HL_PRIM vdynamic *hl_make_closure( vdynamic *c, vdynamic *v ) {
 	if( cl->hasValue == 2 )
 		return hl_make_closure((vdynamic*)((vclosure_wrapper*)c)->wrappedFun, v);
 	if( t->fun->nargs == 0 || !v || !hl_safe_cast(v->t,t->fun->args[0]) )
-		return NULL;
+		return nullptr;
 	return (vdynamic*)hl_alloc_closure_ptr( t, cl->fun, v );
 }
 
 HL_PRIM vdynamic* hl_get_closure_value( vdynamic *c ) {
 	vclosure *cl = (vclosure*)c;
 	if( !cl->hasValue )
-		return NULL;
+		return nullptr;
 	if( cl->hasValue == 2 )
 		return hl_get_closure_value((vdynamic*)((vclosure_wrapper*)c)->wrappedFun);
 	if( cl->fun == fun_var_args )
-		return NULL;
+		return nullptr;
 	return hl_make_dyn(&cl->value, cl->t->fun->parent->fun->args[0]);
 }
 
@@ -143,9 +143,9 @@ HL_PRIM vdynamic* hl_call_method( vdynamic *c, varray *args ) {
 		vdynamic *v = vargs[i];
 		hl_type *t = cl->t->fun->args[i];
 		void *p;
-		if( v == NULL ) {
+		if( v == nullptr ) {
 			if( hl_is_ptr(t) )
-				p = NULL;
+				p = nullptr;
 			else {
 				tmp[i].d = 0;
 				p = &tmp[i].d;
@@ -183,7 +183,7 @@ HL_PRIM vdynamic* hl_call_method( vdynamic *c, varray *args ) {
 		vdynamic *r;
 		switch( tret->kind ) {
 		case HVOID:
-			return NULL;
+			return nullptr;
 		case HBOOL:
 			return hl_alloc_dynbool(out.v.b);
 		default:
@@ -193,7 +193,7 @@ HL_PRIM vdynamic* hl_call_method( vdynamic *c, varray *args ) {
 			return r;
 		}
 	}
-	if( ret == NULL || hl_is_dynamic(tret) )
+	if( ret == nullptr || hl_is_dynamic(tret) )
 		return (vdynamic*)ret;
 	dret = hl_alloc_dynamic(tret);
 	dret->v.ptr = ret;
@@ -211,7 +211,7 @@ HL_PRIM vdynamic *hl_dyn_call( vclosure *c, vdynamic **args, int nargs ) {
 	tmp.a.t = &hlt_array;
 	tmp.a.at = &hlt_dyn;
 	tmp.a.size = nargs;
-	if( c->hasValue && c->t->fun->nargs >= 0 && c->t->fun->parent != NULL ) {
+	if( c->hasValue && c->t->fun->nargs >= 0 && c->t->fun->parent != nullptr ) {
 		ctmp.t = c->t->fun->parent;
 		ctmp.hasValue = 0;
 		ctmp.fun = c->fun;
@@ -237,7 +237,7 @@ HL_PRIM void *hl_wrapper_call( void *_c, void **args, vdynamic *ret ) {
 	int i;
 	int p = 0;
 	void *pret, *aret;
-	if( ret == NULL )
+	if( ret == nullptr )
 		ret = &out;
 	if( w->fun == fun_var_args ) {
 		varray *a;
@@ -288,10 +288,10 @@ HL_PRIM void *hl_wrapper_call( void *_c, void **args, vdynamic *ret ) {
 	}
 	pret = hl_setup.static_call(hl_setup.static_call_ref ? &w->fun : w->fun,w->hasValue ? w->t->fun->parent : w->t,vargs,ret);
 	aret = hl_is_ptr(w->t->fun->ret) ? &pret : pret;
-	if( aret == NULL ) aret = &pret;
+	if( aret == nullptr ) aret = &pret;
 	switch( tfun->ret->kind ) {
 	case HVOID:
-		return NULL;
+		return nullptr;
 	case HUI8:
 	case HUI16:
 	case HI32:
@@ -321,7 +321,7 @@ HL_PRIM void *hl_dyn_call_obj( vdynamic *o, hl_type *ft, int hfield, void **args
 		{
 			vdynobj *d = (vdynobj*)o;
 			hl_field_lookup *l = hl_lookup_find(d->lookup,d->nfields, hfield);
-			if( l != NULL && l->t->kind != HFUN )
+			if( l != nullptr && l->t->kind != HFUN )
 				hl_error("Field %s is of type %s and cannot be called", hl_field_name(hfield), hl_type_str(l->t));
 			vclosure *tmp = (vclosure*)d->values[l->field_index&HL_DYNOBJ_INDEX_MASK];
 			if( tmp ) {
@@ -344,9 +344,9 @@ HL_PRIM void *hl_dyn_call_obj( vdynamic *o, hl_type *ft, int hfield, void **args
 			hl_runtime_obj *rt = o->t->obj->rt;
 			while( true ) {
 				hl_field_lookup *l = hl_lookup_find(rt->lookup,rt->nlookup, hfield);
-				if( l != NULL && l->t->kind != HFUN )
+				if( l != nullptr && l->t->kind != HFUN )
 					hl_error("Field %s is of type %s and cannot be called", hl_field_name(hfield), hl_type_str(l->t));
-				if( l != NULL ) {
+				if( l != nullptr ) {
 					vclosure_wrapper w;
 					vclosure tmp;
 					w.cl.t = ft;
@@ -373,7 +373,7 @@ HL_PRIM void *hl_dyn_call_obj( vdynamic *o, hl_type *ft, int hfield, void **args
 					return hl_wrapper_call(&w,args,ret);
 				}
 				rt = rt->parent;
-				if( rt == NULL ) break;
+				if( rt == nullptr ) break;
 			}
 			hl_error("%s has no method %s",o->t->obj->name,hl_field_name(hfield));
 		}
@@ -382,16 +382,16 @@ HL_PRIM void *hl_dyn_call_obj( vdynamic *o, hl_type *ft, int hfield, void **args
 		hl_error("Invalid field access");
 		break;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
 HL_PRIM vclosure *hl_make_fun_wrapper( vclosure *v, hl_type *to ) {
 	vclosure_wrapper *c;
 	void *wrap = hl_setup.get_wrapper(to);
-	if( wrap == NULL ) return NULL;
+	if( wrap == nullptr ) return nullptr;
 	if( v->fun != fun_var_args && v->t->fun->nargs != to->fun->nargs )
-		return NULL;
+		return nullptr;
 	c = (vclosure_wrapper*)hl_gc_alloc(to, sizeof(vclosure_wrapper));
 	c->cl.t = to;
 	c->cl.fun = wrap;
@@ -405,7 +405,7 @@ HL_PRIM vclosure *hl_make_fun_wrapper( vclosure *v, hl_type *to ) {
 }
 
 static hl_type hlt_var_args = { HFUN };
-static hl_type_fun hlt_var_fun = { NULL, &hlt_void, -1, &hlt_var_args, { HFUN, NULL }, { NULL, &hlt_void, -1, &hlt_var_args} };
+static hl_type_fun hlt_var_fun = { nullptr, &hlt_void, -1, &hlt_var_args, { HFUN, nullptr }, { nullptr, &hlt_void, -1, &hlt_var_args} };
 
 HL_PRIM vdynamic *hl_make_var_args( vclosure *c ) {
 	hlt_var_args.fun = &hlt_var_fun;
@@ -431,7 +431,7 @@ DEFINE_PRIM(_BOOL, is_prim_loaded, _DYN);
 
 #if defined(HL_VCC) && !defined(HL_XBO)
 static LONG CALLBACK global_handler( PEXCEPTION_POINTERS inf ) {
-	if( hl_get_thread() == NULL ) return EXCEPTION_CONTINUE_SEARCH;
+	if( hl_get_thread() == nullptr ) return EXCEPTION_CONTINUE_SEARCH;
 	switch( inf->ExceptionRecord->ExceptionCode ) {
 	case EXCEPTION_ACCESS_VIOLATION: hl_error("Access violation");
 	case EXCEPTION_STACK_OVERFLOW: hl_error("Stack overflow");

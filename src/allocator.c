@@ -63,8 +63,8 @@ static const int GC_SIZES[GC_PARTITIONS] = {4,8,12,16,20,	8,64,1<<13,0};
 #define GC_ALL_PAGES	(GC_PARTITIONS << PAGE_KIND_BITS)
 #define	GC_ALIGN		(1 << GC_ALIGN_BITS)
 
-static gc_pheader *gc_pages[GC_ALL_PAGES] = {NULL};
-static gc_pheader *gc_free_pages[GC_ALL_PAGES] = {NULL};
+static gc_pheader *gc_pages[GC_ALL_PAGES] = {nullptr};
+static gc_pheader *gc_free_pages[GC_ALL_PAGES] = {nullptr};
 
 #define MAX_FL_CACHED 16
 
@@ -159,7 +159,7 @@ static gc_pheader *gc_allocator_new_page( int pid, int block, int size, int kind
 	if( block != (1<<p->size_bits) )
 		p->size_bits = 0;
 	p->max_blocks = max_blocks;
-	p->sizes = NULL;
+	p->sizes = nullptr;
 	if( p->max_blocks > GC_PAGE_SIZE )
 		hl_fatal("Too many blocks for this page");
 	if( varsize ) {
@@ -196,9 +196,9 @@ static void flush_free_list( gc_pheader *ph ) {
 	gc_freelist new_fl;
 	alloc_freelist(&new_fl,p->free.size_bits);
 	gc_freelist old_fl = p->free;
-	gc_fl *cur_pos = NULL;
+	gc_fl *cur_pos = nullptr;
 	int reuse_index = old_fl.current;
-	gc_fl *reuse = reuse_index < old_fl.count ? GET_FL(&old_fl,reuse_index++) : NULL;
+	gc_fl *reuse = reuse_index < old_fl.count ? GET_FL(&old_fl,reuse_index++) : nullptr;
 	int next_bid = reuse ? reuse->pos : -1;
 	unsigned char *bmp = ph->bmp;
 
@@ -210,7 +210,7 @@ static void flush_free_list( gc_pheader *ph ) {
 				freelist_append(&new_fl,reuse->pos,reuse->count);
 				cur_pos = GET_FL(&new_fl,new_fl.count - 1);
 			}
-			reuse = reuse_index < old_fl.count ? GET_FL(&old_fl,reuse_index++) : NULL;
+			reuse = reuse_index < old_fl.count ? GET_FL(&old_fl,reuse_index++) : nullptr;
 			bid = cur_pos->count + cur_pos->pos;
 			next_bid = reuse ? reuse->pos : -1;
 			continue;
@@ -279,7 +279,7 @@ static void flush_free_list( gc_pheader *ph ) {
 static void *gc_alloc_fixed( int part, int kind ) {
 	int pid = (part << PAGE_KIND_BITS) | kind;
 	gc_pheader *ph = gc_free_pages[pid];
-	gc_allocator_page_data *p = NULL;
+	gc_allocator_page_data *p = nullptr;
 	int bid = -1;
 	while( ph ) {
 		p = &ph->alloc;
@@ -298,7 +298,7 @@ static void *gc_alloc_fixed( int part, int kind ) {
 		}
 		ph = ph->next_page;
 	}
-	if( ph == NULL ) {
+	if( ph == nullptr ) {
 		ph = gc_allocator_new_page(pid, GC_SIZES[part], GC_PAGE_SIZE, kind, false);
 		p = &ph->alloc;
 		bid = p->free.data->pos++;
@@ -322,7 +322,7 @@ static void *gc_alloc_fixed( int part, int kind ) {
 static void *gc_alloc_var( int part, int size, int kind ) {
 	int pid = (part << PAGE_KIND_BITS) | kind;
 	gc_pheader *ph = gc_free_pages[pid];
-	gc_allocator_page_data *p = NULL;
+	gc_allocator_page_data *p = nullptr;
 	unsigned char *ptr;
 	fl_cursor nblocks = (fl_cursor)(size >> GC_SBITS[part]);
 	int bid = -1;
@@ -347,7 +347,7 @@ static void *gc_alloc_var( int part, int size, int kind ) {
 		}
 		ph = ph->next_page;
 	}
-	if( ph == NULL ) {
+	if( ph == nullptr ) {
 		int psize = GC_PAGE_SIZE;
 		while( psize < size + 1024 )
 			psize <<= 1;
@@ -409,7 +409,7 @@ static void *gc_allocator_alloc( int *size, int page_kind ) {
 		}
 	}
 	*size = -1;
-	return NULL;
+	return nullptr;
 }
 
 static bool is_zero( void *ptr, int size ) {
@@ -427,7 +427,7 @@ static void gc_flush_empty_pages() {
 	int i;
 	for(i=0;i<GC_ALL_PAGES;i++) {
 		gc_pheader *ph = gc_pages[i];
-		gc_pheader *prev = NULL;
+		gc_pheader *prev = nullptr;
 		while( ph ) {
 			gc_allocator_page_data *p = &ph->alloc;
 			gc_pheader *next = ph->next_page;

@@ -266,7 +266,7 @@ static const int RCPU_SCRATCH_REGS[] = { Eax, Ecx, Edx };
 
 #define BREAK()		B(0xCC)
 
-static preg _unused = { RUNUSED, 0, 0, NULL };
+static preg _unused = { RUNUSED, 0, 0, nullptr };
 static preg *UNUSED = &_unused;
 
 struct _jit_ctx {
@@ -393,7 +393,7 @@ static preg *pcodeaddr( preg *r, int offset ) {
 
 static preg *pconst( preg *r, int c ) {
 	r->kind = RCONST;
-	r->holds = NULL;
+	r->holds = nullptr;
 	r->id = c;
 	return r;
 }
@@ -431,7 +431,7 @@ static void save_regs( jit_ctx *ctx ) {
 static void restore_regs( jit_ctx *ctx ) {
 	int i;
 	for(i=0;i<ctx->maxRegs;i++)
-		ctx->vregs[i].current = NULL;
+		ctx->vregs[i].current = nullptr;
 	for(i=0;i<REG_COUNT;i++) {
 		vreg *r = ctx->savedRegs[i];
 		preg *p = ctx->pregs + i;
@@ -455,7 +455,7 @@ static void jit_buf( jit_ctx *ctx ) {
 		if( nsize < ctx->bufSize + MAX_OP_SIZE * 4 ) nsize = ctx->bufSize + MAX_OP_SIZE * 4;
 		curpos = BUF_POS();
 		nbuf = (unsigned char*)malloc(nsize);
-		if( nbuf == NULL ) ASSERT(nsize);
+		if( nbuf == nullptr ) ASSERT(nsize);
 		if( ctx->startBuf ) {
 			memcpy(nbuf,ctx->startBuf,curpos);
 			free(ctx->startBuf);
@@ -963,7 +963,7 @@ static preg *alloc_reg( jit_ctx *ctx, preg_kind k ) {
 				if( p->lock >= ctx->currentPos ) continue;
 				if( k == RCPU_CALL && is_call_reg(p) ) continue;
 				if( k == RCPU_8BITS && !is_reg8(p) ) continue;
-				if( p->holds == NULL ) {
+				if( p->holds == nullptr ) {
 					RLOCK(p);
 					return p;
 				}
@@ -975,8 +975,8 @@ static preg *alloc_reg( jit_ctx *ctx, preg_kind k ) {
 				if( k == RCPU_8BITS && !is_reg8(p) ) continue;
 				if( p->holds ) {
 					RLOCK(p);
-					p->holds->current = NULL;
-					p->holds = NULL;
+					p->holds->current = nullptr;
+					p->holds = nullptr;
 					return p;
 				}
 			}
@@ -989,7 +989,7 @@ static preg *alloc_reg( jit_ctx *ctx, preg_kind k ) {
 			for(i=0;i<count;i++) {
 				preg *p = PXMM((i + off)%count);
 				if( p->lock >= ctx->currentPos ) continue;
-				if( p->holds == NULL ) {
+				if( p->holds == nullptr ) {
 					RLOCK(p);
 					return p;
 				}
@@ -999,8 +999,8 @@ static preg *alloc_reg( jit_ctx *ctx, preg_kind k ) {
 				if( p->lock >= ctx->currentPos ) continue;
 				if( p->holds ) {
 					RLOCK(p);
-					p->holds->current = NULL;
-					p->holds = NULL;
+					p->holds->current = nullptr;
+					p->holds = nullptr;
 					return p;
 				}
 			}
@@ -1010,7 +1010,7 @@ static preg *alloc_reg( jit_ctx *ctx, preg_kind k ) {
 		ASSERT(k);
 	}
 	ASSERT(0); // out of registers !
-	return NULL;
+	return nullptr;
 }
 
 static preg *fetch( vreg *r ) {
@@ -1021,8 +1021,8 @@ static preg *fetch( vreg *r ) {
 
 static void scratch( preg *r ) {
 	if( r && r->holds ) {
-		r->holds->current = NULL;
-		r->holds = NULL;
+		r->holds->current = nullptr;
+		r->holds = nullptr;
 		r->lock = 0;
 	}
 }
@@ -1032,9 +1032,9 @@ static preg *copy( jit_ctx *ctx, preg *to, preg *from, int size );
 static void load( jit_ctx *ctx, preg *r, vreg *v ) {
 	preg *from = fetch(v);
 	if( from == r || v->size == 0 ) return;
-	if( r->holds ) r->holds->current = NULL;
+	if( r->holds ) r->holds->current = nullptr;
 	if( v->current ) {
-		v->current->holds = NULL;
+		v->current->holds = nullptr;
 		from = r;
 	}
 	r->holds = v;
@@ -1051,7 +1051,7 @@ static preg *alloc_fpu( jit_ctx *ctx, vreg *r, bool andLoad ) {
 			load(ctx,p,r);
 		else {
 			if( r->current )
-				r->current->holds = NULL;
+				r->current->holds = nullptr;
 			r->current = p;
 			p->holds = r;
 		}
@@ -1062,7 +1062,7 @@ static preg *alloc_fpu( jit_ctx *ctx, vreg *r, bool andLoad ) {
 
 static void reg_bind( vreg *r, preg *p ) {
 	if( r->current )
-		r->current->holds = NULL;
+		r->current->holds = nullptr;
 	r->current = p;
 	p->holds = r;
 }
@@ -1273,13 +1273,13 @@ static preg *copy( jit_ctx *ctx, preg *to, preg *from, int size ) {
 	}
 	printf("copy(%s,%s)\n",KNAMES[to->kind], KNAMES[from->kind]);
 	ASSERT(0);
-	return NULL;
+	return nullptr;
 }
 
 static void store( jit_ctx *ctx, vreg *r, preg *v, bool bind ) {
 	if( r->current && r->current != v ) {
-		r->current->holds = NULL;
-		r->current = NULL;
+		r->current->holds = nullptr;
+		r->current = nullptr;
 	}
 	v = copy(ctx,&r->stack,v,r->size);
 	if( IS_FLOAT(r) != (v->kind == RFPU) )
@@ -1352,15 +1352,15 @@ static void discard_regs( jit_ctx *ctx, bool native_call ) {
 	for(i=0;i<RCPU_SCRATCH_COUNT;i++) {
 		preg *r = ctx->pregs + RCPU_SCRATCH_REGS[i];
 		if( r->holds ) {
-			r->holds->current = NULL;
-			r->holds = NULL;
+			r->holds->current = nullptr;
+			r->holds = nullptr;
 		}
 	}
 	for(i=0;i<RFPU_COUNT;i++) {
 		preg *r = ctx->pregs + XMM(i);
 		if( r->holds ) {
-			r->holds->current = NULL;
-			r->holds = NULL;
+			r->holds->current = nullptr;
+			r->holds = nullptr;
 		}
 	}
 }
@@ -1391,7 +1391,7 @@ static void push_reg( jit_ctx *ctx, vreg *r ) {
 		if( r->size < 4 )
 			alloc_cpu(ctx,r,true); // force fetch (higher bits set to 0)
 		if( !IS_64 ) {
-			if( r->current != NULL && r->current->kind == RFPU ) scratch(r->current);
+			if( r->current != nullptr && r->current->kind == RFPU ) scratch(r->current);
 			op32(ctx,PUSH,fetch(r),UNUSED);
 		} else {
 			// pseudo push32 (not available)
@@ -1675,12 +1675,12 @@ static void on_jit_error( const char *msg, int_val line ) {
 	int iline = (int)line;
 	sprintf(buf,"%s (line %d)",msg,iline);
 #ifdef HL_WIN_DESKTOP
-	MessageBoxA(NULL,buf,"JIT ERROR",MB_OK);
+	MessageBoxA(nullptr,buf,"JIT ERROR",MB_OK);
 #else
 	printf("JIT ERROR : %s\n",buf);
 #endif
 	hl_debug_break();
-	hl_throw(NULL);
+	hl_throw(nullptr);
 }
 
 static void _jit_error( jit_ctx *ctx, const char *msg, int line ) {
@@ -1690,7 +1690,7 @@ static void _jit_error( jit_ctx *ctx, const char *msg, int line ) {
 
 
 static preg *op_binop( jit_ctx *ctx, vreg *dst, vreg *a, vreg *b, hl_op bop ) {
-	preg *pa = fetch(a), *pb = fetch(b), *out = NULL;
+	preg *pa = fetch(a), *pb = fetch(b), *out = nullptr;
 	CpuOp o;
 	if( IS_FLOAT(a) ) {
 		bool isf32 = a->t->kind == HF32;
@@ -1864,7 +1864,7 @@ static preg *op_binop( jit_ctx *ctx, vreg *dst, vreg *a, vreg *b, hl_op bop ) {
 		case ID2(RSTACK,RCPU):
 			if( dst == a && o != IMUL ) {
 				op32(ctx, o, pa, pb);
-				dst = NULL;
+				dst = nullptr;
 				out = pa;
 			} else {
 				alloc_cpu(ctx,a, true);
@@ -1906,7 +1906,7 @@ static preg *op_binop( jit_ctx *ctx, vreg *dst, vreg *a, vreg *b, hl_op bop ) {
 		case ID2(RSTACK,RCPU):
 			if( dst == a && OP_FORMS[o].mem_r ) {
 				op64(ctx, o, pa, pb);
-				dst = NULL;
+				dst = nullptr;
 				out = pa;
 			} else {
 				alloc_cpu(ctx,a, true);
@@ -1978,7 +1978,7 @@ static preg *op_binop( jit_ctx *ctx, vreg *dst, vreg *a, vreg *b, hl_op bop ) {
 	default:
 		ASSERT(RTYPE(a));
 	}
-	return NULL;
+	return nullptr;
 }
 
 static int do_jump( jit_ctx *ctx, hl_op op, bool isFloat ) {
@@ -2158,7 +2158,7 @@ static void op_jump( jit_ctx *ctx, vreg *a, vreg *b, hl_opcode *op, int targetPo
 			int ja,jb,jav,jbv,jvalue;
 			if( b->t->kind == HOBJ ) {
 				if( op->op == OJEq ) {
-					// if( a ? (b && a->value == b) : (b == NULL) ) goto
+					// if( a ? (b && a->value == b) : (b == nullptr) ) goto
 					op64(ctx,TEST,pa,pa);
 					XJump_small(JZero,ja);
 					op64(ctx,TEST,pb,pb);
@@ -2172,7 +2172,7 @@ static void op_jump( jit_ctx *ctx, vreg *a, vreg *b, hl_opcode *op, int targetPo
 					register_jump(ctx,do_jump(ctx,OJEq,false),targetPos);
 					patch_jump(ctx,jb);
 				} else if( op->op == OJNotEq ) {
-					// if( a ? (b == NULL || a->value != b) : (b != NULL) ) goto
+					// if( a ? (b == nullptr || a->value != b) : (b != nullptr) ) goto
 					op64(ctx,TEST,pa,pa);
 					XJump_small(JZero,ja);
 					op64(ctx,TEST,pb,pb);
@@ -2262,7 +2262,7 @@ static void op_jump( jit_ctx *ctx, vreg *a, vreg *b, hl_opcode *op, int targetPo
 				XJump_small(JZero,ja);
 				op64(ctx,TEST,pb,pb);
 				XJump_small(JZero,jb);
-				op_call_fun(ctx,NULL,(int)(int_val)a->t->obj->rt->compareFun,2,args);
+				op_call_fun(ctx,nullptr,(int)(int_val)a->t->obj->rt->compareFun,2,args);
 				op32(ctx,TEST,PEAX,PEAX);
 				XJump_small(JNotZero,jcmp);
 				patch_jump(ctx,jeq);
@@ -2280,7 +2280,7 @@ static void op_jump( jit_ctx *ctx, vreg *a, vreg *b, hl_opcode *op, int targetPo
 				op64(ctx,TEST,pb,pb);
 				register_jump(ctx,do_jump(ctx,OJEq,false),targetPos);
 
-				op_call_fun(ctx,NULL,(int)(int_val)a->t->obj->rt->compareFun,2,args);
+				op_call_fun(ctx,nullptr,(int)(int_val)a->t->obj->rt->compareFun,2,args);
 				op32(ctx,TEST,PEAX,PEAX);
 				XJump_small(JZero,jcmp);
 
@@ -2294,7 +2294,7 @@ static void op_jump( jit_ctx *ctx, vreg *a, vreg *b, hl_opcode *op, int targetPo
 				XJump_small(JZero,ja);
 				op64(ctx,TEST,pb,pb);
 				XJump_small(JZero,jb);
-				op_call_fun(ctx,NULL,(int)(int_val)a->t->obj->rt->compareFun,2,args);
+				op_call_fun(ctx,nullptr,(int)(int_val)a->t->obj->rt->compareFun,2,args);
 				op32(ctx,CMP,PEAX,pconst(&p,0));
 				register_jump(ctx,do_jump(ctx,op->op,false),targetPos);
 				patch_jump(ctx,ja);
@@ -2308,7 +2308,7 @@ static void op_jump( jit_ctx *ctx, vreg *a, vreg *b, hl_opcode *op, int targetPo
 		// make sure we have valid 8 bits registers
 		if( a->size == 1 ) alloc_cpu8(ctx,a,true);
 		if( b->size == 1 ) alloc_cpu8(ctx,b,true);
-		op_binop(ctx,NULL,a,b,op->op);
+		op_binop(ctx,nullptr,a,b,op->op);
 		break;
 	}
 	register_jump(ctx,do_jump(ctx,op->op, IS_FLOAT(a)),targetPos);
@@ -2317,7 +2317,7 @@ static void op_jump( jit_ctx *ctx, vreg *a, vreg *b, hl_opcode *op, int targetPo
 jit_ctx *hl_jit_alloc() {
 	int i;
 	jit_ctx *ctx = (jit_ctx*)malloc(sizeof(jit_ctx));
-	if( ctx == NULL ) return NULL;
+	if( ctx == nullptr ) return nullptr;
 	memset(ctx,0,sizeof(jit_ctx));
 	hl_alloc_init(&ctx->falloc);
 	hl_alloc_init(&ctx->galloc);
@@ -2339,15 +2339,15 @@ void hl_jit_free( jit_ctx *ctx, h_bool can_reset ) {
 	free(ctx->opsPos);
 	free(ctx->startBuf);
 	ctx->maxRegs = 0;
-	ctx->vregs = NULL;
+	ctx->vregs = nullptr;
 	ctx->maxOps = 0;
-	ctx->opsPos = NULL;
-	ctx->startBuf = NULL;
+	ctx->opsPos = nullptr;
+	ctx->startBuf = nullptr;
 	ctx->bufSize = 0;
-	ctx->buf.b = NULL;
-	ctx->calls = NULL;
-	ctx->switchs = NULL;
-	ctx->closure_list = NULL;
+	ctx->buf.b = nullptr;
+	ctx->calls = nullptr;
+	ctx->switchs = nullptr;
+	ctx->closure_list = nullptr;
 	hl_free(&ctx->falloc);
 	hl_free(&ctx->galloc);
 	if( !can_reset ) free(ctx);
@@ -2360,8 +2360,8 @@ static void jit_nops( jit_ctx *ctx ) {
 
 #define MAX_ARGS 16
 
-static void *call_jit_c2hl = NULL;
-static void *call_jit_hl2c = NULL;
+static void *call_jit_c2hl = nullptr;
+static void *call_jit_hl2c = nullptr;
 
 static void *callback_c2hl( void *_f, hl_type *t, void **args, vdynamic *ret ) {
 	/*
@@ -2572,7 +2572,7 @@ static void *jit_wrapper_ptr( vclosure_wrapper *c, char *stack_args, void **regs
 	hl_type *tret = c->cl.t->fun->ret;
 	switch( tret->kind ) {
 	case HVOID:
-		return NULL;
+		return nullptr;
 	case HUI8:
 	case HUI16:
 	case HI32:
@@ -2596,7 +2596,7 @@ static void jit_hl2c( jit_ctx *ctx ) {
 	// and pack and pass the args to callback_hl2c
 	preg p;
 	int jfloat1, jfloat2, jexit;
-	hl_type_fun *ft = NULL;
+	hl_type_fun *ft = nullptr;
 	int size;
 #	ifdef HL_64
 	preg *cl = REG_AT(CALL_REGS[0]);
@@ -2698,7 +2698,7 @@ static void jit_longjump( jit_ctx *ctx ) {
 #endif
 
 static void jit_fail( uchar *msg ) {
-	if( msg == NULL ) {
+	if( msg == nullptr ) {
 		hl_debug_break();
 		msg = USTR("assert");
 	}
@@ -2720,7 +2720,7 @@ static void jit_null_fail( int fhash ) {
 	hl_buffer_str(b, USTR("Null access ."));
 	hl_buffer_str(b, (uchar*)field);
 	vdynamic *d = hl_alloc_dynamic(&hlt_bytes);
-	d->v.ptr = hl_buffer_content(b,NULL);
+	d->v.ptr = hl_buffer_content(b,nullptr);
 	hl_throw(d);
 }
 
@@ -2792,7 +2792,7 @@ void hl_jit_init( jit_ctx *ctx, hl_module *m ) {
 }
 
 void hl_jit_reset( jit_ctx *ctx, hl_module *m ) {
-	ctx->debug = NULL;
+	ctx->debug = nullptr;
 	hl_jit_init_module(ctx,m);
 }
 
@@ -2866,7 +2866,7 @@ static vclosure *alloc_static_closure( jit_ctx *ctx, int fid ) {
 		// native
 		c->t = m->code->natives[fidx - m->code->nfunctions].t;
 		c->fun = m->functions_ptrs[fid];
-		c->value = NULL;
+		c->value = nullptr;
 	} else {
 		c->t = m->code->functions[fidx].type;
 		c->fun = (void*)(int_val)fid;
@@ -2946,17 +2946,17 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 	int i, size = 0, opCount;
 	int codePos = BUF_POS();
 	int nargs = f->type->fun->nargs;
-	unsigned short *debug16 = NULL;
-	int *debug32 = NULL;
+	unsigned short *debug16 = nullptr;
+	int *debug32 = nullptr;
 	call_regs cregs = {0};
-	hl_thread_info *tinf = NULL;
+	hl_thread_info *tinf = nullptr;
 	preg p;
 	ctx->f = f;
 	ctx->allocOffset = 0;
 	if( f->nregs > ctx->maxRegs ) {
 		free(ctx->vregs);
 		ctx->vregs = (vreg*)malloc(sizeof(vreg) * (f->nregs + 1));
-		if( ctx->vregs == NULL ) {
+		if( ctx->vregs == nullptr ) {
 			ctx->maxRegs = 0;
 			return -1;
 		}
@@ -2965,7 +2965,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 	if( f->nops > ctx->maxOps ) {
 		free(ctx->opsPos);
 		ctx->opsPos = (int*)malloc(sizeof(int) * (f->nops + 1));
-		if( ctx->opsPos == NULL ) {
+		if( ctx->opsPos == nullptr ) {
 			ctx->maxOps = 0;
 			return -1;
 		}
@@ -2976,8 +2976,8 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 		vreg *r = R(i);
 		r->t = f->regs[i];
 		r->size = hl_type_size(r->t);
-		r->current = NULL;
-		r->stack.holds = NULL;
+		r->current = nullptr;
+		r->stack.holds = nullptr;
 		r->stack.id = i;
 		r->stack.kind = RSTACK;
 	}
@@ -3103,7 +3103,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 			op_call_fun(ctx, dst, o->p2, o->p3, o->extra);
 			break;
 		case OCall0:
-			op_call_fun(ctx, dst, o->p2, 0, NULL);
+			op_call_fun(ctx, dst, o->p2, 0, nullptr);
 			break;
 		case OCall1:
 			op_call_fun(ctx, dst, o->p2, 1, &o->p3);
@@ -3420,9 +3420,9 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 			{
 				int size, i;
 				preg *r = alloc_cpu_call(ctx, ra);
-				hl_type *t = NULL;
+				hl_type *t = nullptr;
 				hl_type *ot = ra->t;
-				while( t == NULL ) {
+				while( t == nullptr ) {
 					for(i=0;i<ot->obj->nproto;i++) {
 						hl_obj_proto *pp = ot->obj->proto + i;
 						if( pp->pindex == o->p3 ) {
@@ -3832,7 +3832,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 
 					if( !obj_in_args ) {
 						// o = o->value hack
-						if( v->holds ) v->holds->current = NULL;
+						if( v->holds ) v->holds->current = nullptr;
 						obj->current = v;
 						v->holds = obj;
 						op64(ctx,MOV,v,pmem(&p,v->id,HL_WSIZE));
@@ -4171,12 +4171,12 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 				}
 				if( (next->op == OField && next->p2 == o->p1) || (next->op == OSetField && next->p1 == o->p1) ) {
 					int fid = next->op == OField ? next->p3 : next->p2;
-					hl_obj_field *f = NULL;
+					hl_obj_field *f = nullptr;
 					if( dst->t->kind == HOBJ || dst->t->kind == HSTRUCT )
 						f = hl_obj_field_fetch(dst->t, fid);
 					else if( dst->t->kind == HVIRTUAL )
 						f = dst->t->virt->fields + fid;
-					if( f == NULL ) ASSERT(dst->t->kind);
+					if( f == nullptr ) ASSERT(dst->t->kind);
 					null_field_access = true;
 					hashed_name = f->hashed_name;
 				} else if( (next->op >= OCall1 && next->op <= OCallN) && next->p3 == o->p1 ) {
@@ -4306,9 +4306,9 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 				int size, jenter, jtrap;
 				int offset = 0;
 				int trap_size = (sizeof(hl_trap_ctx) + 15) & 0xFFF0;
-				hl_trap_ctx *t = NULL;
+				hl_trap_ctx *t = nullptr;
 #				ifndef HL_THREADS
-				if( tinf == NULL ) tinf = hl_get_thread(); // single thread
+				if( tinf == nullptr ) tinf = hl_get_thread(); // single thread
 #				endif
 
 #				ifdef HL_64
@@ -4408,7 +4408,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 		case OEndTrap:
 			{
 				int trap_size = (sizeof(hl_trap_ctx) + 15) & 0xFFF0;
-				hl_trap_ctx *tmp = NULL;
+				hl_trap_ctx *tmp = nullptr;
 				preg *addr,*r;
 				int offset;
 				if (!tinf) {
@@ -4428,7 +4428,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 #				ifdef HL_WIN
 				// erase eip (prevent false positive)
 				{
-					_JUMP_BUFFER *b = NULL;
+					_JUMP_BUFFER *b = nullptr;
 #					ifdef HL_64
 					op64(ctx,MOV,pmem(&p,Esp,(int)(int_val)&(b->Rip)),PEAX);
 #					else
@@ -4597,7 +4597,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 			for(i=0;i<ctx->currentPos;i++)
 				debug32[i] = debug16[i];
 			free(debug16);
-			debug16 = NULL;
+			debug16 = nullptr;
 		}
 		if( debug16 ) debug16[ctx->currentPos] = (unsigned short)size; else if( debug32 ) debug32[ctx->currentPos] = size;
 
@@ -4609,7 +4609,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 			*(int*)(ctx->startBuf + j->pos) = ctx->opsPos[j->target] - (j->pos + 4);
 			j = j->next;
 		}
-		ctx->jumps = NULL;
+		ctx->jumps = nullptr;
 	}
 	int codeEndPos = BUF_POS();
 	// add nops padding
@@ -4617,7 +4617,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 	// clear regs
 	for(i=0;i<REG_COUNT;i++) {
 		preg *r = REG_AT(i);
-		r->holds = NULL;
+		r->holds = nullptr;
 		r->lock = 0;
 	}
 	// save debug infos
@@ -4625,7 +4625,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 		int fid = (int)(f - m->code->functions);
 		ctx->debug[fid].start = codePos;
 		ctx->debug[fid].offsets = debug32 ? (void*)debug32 : (void*)debug16;
-		ctx->debug[fid].large = debug32 != NULL;
+		ctx->debug[fid].large = debug32 != nullptr;
 	}
 	// unwind info
 #ifdef WIN64_UNWIND_TABLES
@@ -4680,7 +4680,7 @@ void *hl_jit_code( jit_ctx *ctx, hl_module *m, int *codesize, hl_debug_infos **d
 	unsigned char *code;
 	if( size & 4095 ) size += 4096 - (size&4095);
 	code = (unsigned char*)hl_alloc_executable_memory(size);
-	if( code == NULL ) return NULL;
+	if( code == nullptr ) return nullptr;
 	memcpy(code,ctx->startBuf,BUF_POS());
 	*codesize = size;
 	*debug = ctx->debug;
@@ -4712,11 +4712,11 @@ void *hl_jit_code( jit_ctx *ctx, hl_module *m, int *codesize, hl_debug_infos **d
 			fabs = ctx->static_functions[-c->target-1];
 		else {
 			fabs = m->functions_ptrs[c->target];
-			if( fabs == NULL ) {
+			if( fabs == nullptr ) {
 				// read absolute address from previous module
 				int old_idx = m->hash->functions_hashes[m->functions_indexes[c->target]];
 				if( old_idx < 0 )
-					return NULL;
+					return nullptr;
 				fabs = previous->functions_ptrs[(previous->code->functions + old_idx)->findex];
 			} else {
 				// relative
@@ -4730,7 +4730,7 @@ void *hl_jit_code( jit_ctx *ctx, hl_module *m, int *codesize, hl_debug_infos **d
 			int rpos = (int)delta;
 			if( (int_val)rpos != delta ) {
 				printf("Target code too far too rebase\n");
-				return NULL;
+				return nullptr;
 			}
 			*(int*)(code + c->pos + 1) = rpos;
 		}
@@ -4749,7 +4749,7 @@ void *hl_jit_code( jit_ctx *ctx, hl_module *m, int *codesize, hl_debug_infos **d
 			vclosure *next;
 			int fidx = (int)(int_val)c->fun;
 			void *fabs = m->functions_ptrs[fidx];
-			if( fabs == NULL ) {
+			if( fabs == nullptr ) {
 				// read absolute address from previous module
 				int old_idx = m->hash->functions_hashes[m->functions_indexes[fidx]];
 				if( old_idx < 0 )
@@ -4762,7 +4762,7 @@ void *hl_jit_code( jit_ctx *ctx, hl_module *m, int *codesize, hl_debug_infos **d
 			}
 			c->fun = fabs;
 			next = (vclosure*)c->value;
-			c->value = NULL;
+			c->value = nullptr;
 			c = next;
 		}
 	}

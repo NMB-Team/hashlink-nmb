@@ -56,7 +56,7 @@ HL_PRIM vdynamic *hl_make_dyn( void *data, hl_type *t ) {
 	vdynamic *v;
 	switch( t->kind ) {
 	case HVOID:
-		return NULL;
+		return nullptr;
 	case HUI8:
 		v = (vdynamic*)hl_gc_alloc_noptr(sizeof(vdynamic));
 		v->t = t;
@@ -93,7 +93,7 @@ HL_PRIM vdynamic *hl_make_dyn( void *data, hl_type *t ) {
 	case HABSTRACT:
 		{
 			void *p = *(void**)data;
-			if( p == NULL ) return NULL;
+			if( p == nullptr ) return nullptr;
 			v = hl_alloc_dynamic(t);
 			v->v.ptr = p;
 			return v;
@@ -108,7 +108,7 @@ HL_PRIM int hl_dyn_casti( void *data, hl_type *t, hl_type *to ) {
 	hl_track_call(HL_TRACK_CAST, on_cast(t,to));
 	if( t->kind == HDYN ) {
 		vdynamic *v = *((vdynamic**)data);
-		if( v == NULL ) return 0;
+		if( v == nullptr ) return 0;
 		t = v->t;
 		if( !hl_is_dynamic(t) ) data = &v->v;
 	}
@@ -131,7 +131,7 @@ HL_PRIM int hl_dyn_casti( void *data, hl_type *t, hl_type *to ) {
 	case HNULL:
 		{
 			vdynamic *v = *(vdynamic**)data;
-			if( v == NULL ) return 0;
+			if( v == nullptr ) return 0;
 			return hl_dyn_casti(&v->v,t->tparam,to);
 		}
 	default:
@@ -145,7 +145,7 @@ HL_PRIM int64 hl_dyn_casti64( void *data, hl_type *t ) {
 	hl_track_call(HL_TRACK_CAST, on_cast(t,&hlt_i64));
 	if( t->kind == HDYN ) {
 		vdynamic *v = *((vdynamic**)data);
-		if( v == NULL ) return 0;
+		if( v == nullptr ) return 0;
 		t = v->t;
 		if( !hl_is_dynamic(t) ) data = &v->v;
 	}
@@ -168,7 +168,7 @@ HL_PRIM int64 hl_dyn_casti64( void *data, hl_type *t ) {
 	case HNULL:
 		{
 			vdynamic *v = *(vdynamic**)data;
-			if( v == NULL ) return 0;
+			if( v == nullptr ) return 0;
 			return hl_dyn_casti64(&v->v,t->tparam);
 		}
 	default:
@@ -185,8 +185,8 @@ HL_PRIM void *hl_dyn_castp( void *data, hl_type *t, hl_type *to ) {
 	if( t->kind == HDYN || t->kind == HNULL ) {
 		ASAN_JIT_STACK(data, HL_WSIZE);
 		vdynamic *v = *(vdynamic**)data;
-		if( v == NULL )
-			return NULL;
+		if( v == nullptr )
+			return nullptr;
 		if( to->kind == HNULL && v->t == to->tparam && hl_is_gc_ptr(v) )
 			return v; // v might be a vdynamic on the stack
 		t = v->t;
@@ -194,7 +194,7 @@ HL_PRIM void *hl_dyn_castp( void *data, hl_type *t, hl_type *to ) {
 	} else if( hl_is_dynamic(t) ) {
 		ASAN_JIT_STACK(data, HL_WSIZE);
 		vdynamic *v = *(vdynamic**)data;
-		if( v == NULL ) return NULL;
+		if( v == nullptr ) return nullptr;
 		t = v->t;
 	}
 	if( t == to || hl_safe_cast(t,to) )
@@ -208,7 +208,7 @@ HL_PRIM void *hl_dyn_castp( void *data, hl_type *t, hl_type *to ) {
 			while( true ) {
 				if( t1 == t2 || t1->name == t2->name )
 					return *(void**)data;
-				if( t1->super == NULL )
+				if( t1->super == nullptr )
 					break;
 				t1 = t1->super->obj;
 			}
@@ -221,7 +221,7 @@ HL_PRIM void *hl_dyn_castp( void *data, hl_type *t, hl_type *to ) {
 	case TK2(HFUN,HFUN):
 		{
 			vclosure *c = *(vclosure**)data;
-			if( c == NULL ) return NULL;
+			if( c == nullptr ) return nullptr;
 			c = hl_make_fun_wrapper(c,to);
 			if( c ) return c;
 		}
@@ -233,7 +233,7 @@ HL_PRIM void *hl_dyn_castp( void *data, hl_type *t, hl_type *to ) {
 	case TK2(HVIRTUAL,HOBJ):
 		{
 			vvirtual *v = *(vvirtual**)data;
-			if( v->value == NULL ) break;
+			if( v->value == nullptr ) break;
 			return hl_dyn_castp( &v->value, v->value->t, to);
 		}
 	case TK2(HOBJ,HDYN):
@@ -329,7 +329,7 @@ HL_PRIM double hl_dyn_castd( void *data, hl_type *t ) {
 	hl_track_call(HL_TRACK_CAST, on_cast(t,&hlt_f64));
 	if( t->kind == HDYN ) {
 		vdynamic *v = *((vdynamic**)data);
-		if( v == NULL ) return 0;
+		if( v == nullptr ) return 0;
 		t = v->t;
 		if( !hl_is_dynamic(t) ) data = &v->v;
 	}
@@ -351,7 +351,7 @@ HL_PRIM double hl_dyn_castd( void *data, hl_type *t ) {
 	case HNULL:
 		{
 			vdynamic *v = *(vdynamic**)data;
-			if( v == NULL ) return 0;
+			if( v == nullptr ) return 0;
 			return hl_dyn_castd(&v->v,t->tparam);
 		}
 	default:
@@ -365,7 +365,7 @@ HL_PRIM float hl_dyn_castf( void *data, hl_type *t ) {
 	hl_track_call(HL_TRACK_CAST, on_cast(t,&hlt_f32));
 	if( t->kind == HDYN ) {
 		vdynamic *v = *((vdynamic**)data);
-		if( v == NULL ) return 0;
+		if( v == nullptr ) return 0;
 		t = v->t;
 		if( !hl_is_dynamic(t) ) data = &v->v;
 	}
@@ -387,7 +387,7 @@ HL_PRIM float hl_dyn_castf( void *data, hl_type *t ) {
 	case HNULL:
 		{
 			vdynamic *v = *(vdynamic**)data;
-			if( v == NULL ) return 0;
+			if( v == nullptr ) return 0;
 			return hl_dyn_castf(&v->v,t->tparam);
 		}
 	default:
@@ -421,9 +421,9 @@ HL_PRIM int hl_dyn_compare( vdynamic *a, vdynamic *b ) {
 	hl_track_call(HL_TRACK_CAST, on_cast(a?a->t:&hlt_dyn,b?b->t:&hlt_dyn));
 	if( a == b )
 		return 0;
-	if( a == NULL )
+	if( a == nullptr )
 		return -1;
-	if( b == NULL )
+	if( b == nullptr )
 		return 1;
 	switch( TK2(a->t->kind,b->t->kind) ) {
 	case TK2(HUI8,HUI8):
@@ -528,10 +528,10 @@ HL_PRIM void hl_write_dyn( void *data, hl_type *t, vdynamic *v, bool is_tmp ) {
 
 HL_PRIM vdynamic* hl_value_cast( vdynamic *v, hl_type *t ) {
 	hl_track_call(HL_TRACK_CAST, on_cast(v?v->t:&hlt_dyn,t));
-	if( t->kind == HDYN || v == NULL || hl_safe_cast(v->t,t) )
+	if( t->kind == HDYN || v == nullptr || hl_safe_cast(v->t,t) )
 		return v;
 	invalid_cast(v->t,t);
-	return NULL;
+	return nullptr;
 }
 
 HL_PRIM bool hl_type_safe_cast( hl_type *a, hl_type *b ) {
@@ -569,7 +569,7 @@ HL_PRIM vdynamic *hl_dyn_op( int op, vdynamic *a, vdynamic *b ) {
 	static uchar *op_names[] = { USTR("+"), USTR("-"), USTR("*"), USTR("%"), USTR("/"), USTR("<<"), USTR(">>"), USTR(">>>"), USTR("&"), USTR("|"), USTR("^") };
 	if( op < 0 || op >= OpLast ) hl_error("Invalid op %d",op);
 	hl_track_call(HL_TRACK_CAST, on_cast(a?a->t:&hlt_dyn,b?b->t:&hlt_dyn));
-	if( !a && !b ) return op == OP_DIV || op == OP_MOD ? hl_dynf64(hl_nan()) : NULL;
+	if( !a && !b ) return op == OP_DIV || op == OP_MOD ? hl_dynf64(hl_nan()) : nullptr;
 	if( (!a || is_number(a->t)) && (!b || is_number(b->t)) ) {
 		switch( op ) {
 		case OP_ADD: FOP(+);
@@ -594,7 +594,7 @@ HL_PRIM vdynamic *hl_dyn_op( int op, vdynamic *a, vdynamic *b ) {
 		}
 	}
 	hl_error("Can't perform dyn op %s %s %s",hl_type_str(a->t),op_names[op],hl_type_str(b->t));
-	return NULL;
+	return nullptr;
 }
 
 HL_PRIM int64 hl_value_address( vdynamic *v ) {

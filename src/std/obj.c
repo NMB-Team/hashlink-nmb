@@ -47,7 +47,7 @@ HL_PRIM hl_field_lookup *hl_lookup_find( hl_field_lookup *l, int size, int hash 
 		int h = l[mid].hashed_name;
 		if( h < hash ) min = mid + 1; else if( h > hash ) max = mid; else return l + mid;
 	}
-	return NULL;
+	return nullptr;
 }
 
 static int hl_lookup_find_index( hl_field_lookup *l, int size, int hash ) {
@@ -68,13 +68,13 @@ static hl_field_lookup *obj_resolve_field( hl_type_obj *o, int hfield ) {
 		if( f ) return f;
 		rt = rt->parent;
 	} while( rt );
-	return NULL;
+	return nullptr;
 }
 
 static int hl_cache_count = 0;
 static int hl_cache_size = 0;
-static hl_mutex *hl_cache_lock = NULL;
-static hl_field_lookup *hl_cache = NULL;
+static hl_mutex *hl_cache_lock = nullptr;
+static hl_field_lookup *hl_cache = nullptr;
 
 void hl_cache_init() {
 #	ifdef HL_THREADS
@@ -115,7 +115,7 @@ HL_PRIM int hl_hash_gen( const uchar *name, bool cache_name ) {
 			h++;
 			l = hl_lookup_find(hl_cache, hl_cache_count, h);
 		}
-		if( l == NULL ) {
+		if( l == nullptr ) {
 			if( hl_cache_size == hl_cache_count ) {
 				// resize
 				int newsize = hl_cache_size ? (hl_cache_size * 3) >> 1 : 16;
@@ -142,20 +142,20 @@ HL_PRIM void hl_cache_free() {
 	for(i=0;i<hl_cache_count;i++)
 		free(hl_cache[i].t);
 	free(hl_cache);
-	hl_cache = NULL;
+	hl_cache = nullptr;
 	hl_cache_count = hl_cache_size = 0;
 	hl_mutex_free(hl_cache_lock);
-	hl_cache_lock = NULL;
+	hl_cache_lock = nullptr;
 	hl_remove_root(&hl_cache_lock);
 }
 
 HL_PRIM hl_obj_field *hl_obj_field_fetch( hl_type *t, int fid ) {
 	hl_runtime_obj *rt;
 	if( t->kind != HOBJ && t->kind != HSTRUCT )
-		return NULL;
+		return nullptr;
 	rt = hl_get_obj_rt(t);
 	if( fid < 0 || fid >= rt->nfields )
-		return NULL;
+		return nullptr;
 	while( rt->parent && fid < rt->parent->nfields )
 		rt = rt->parent;
 	return rt->t->obj->fields + (fid - (rt->parent?rt->parent->nfields:0));
@@ -174,7 +174,7 @@ HL_PRIM hl_runtime_obj *hl_get_obj_rt( hl_type *ot ) {
 	hl_type_obj *o = ot->obj;
 	hl_module_context *m = o->m;
 	hl_alloc *alloc = &m->alloc;
-	hl_runtime_obj *p = NULL, *t;
+	hl_runtime_obj *p = nullptr, *t;
 	int i, size, start, nlookup, compareHash;
 	if( o->rt ) return o->rt;
 	if( o->super ) p = hl_get_obj_rt(o->super);
@@ -207,14 +207,14 @@ HL_PRIM hl_runtime_obj *hl_get_obj_rt( hl_type *ot ) {
 			int j;
 			int fid = o->bindings[i<<1];
 			bool found = false;
-			hl_type_obj *pp = p ? p->t->obj : NULL;
+			hl_type_obj *pp = p ? p->t->obj : nullptr;
 			while( pp && !found ) {
 				for(j=0;j<pp->nbindings;j++)
 					if( pp->bindings[j<<1] == fid ) {
 						found = true;
 						break;
 					}
-				pp = pp->super ? pp->super->obj : NULL;
+				pp = pp->super ? pp->super->obj : nullptr;
 			}
 			if( !found )
 				t->nbindings++;
@@ -224,10 +224,10 @@ HL_PRIM hl_runtime_obj *hl_get_obj_rt( hl_type *ot ) {
 	t->lookup = (hl_field_lookup*)hl_malloc(alloc,sizeof(hl_field_lookup) * t->nlookup);
 	t->fields_indexes = (int*)hl_malloc(alloc,sizeof(int)*t->nfields);
 	t->bindings = (hl_runtime_binding*)hl_malloc(alloc,sizeof(hl_runtime_binding)*t->nbindings);
-	t->toStringFun = NULL;
-	t->compareFun = NULL;
-	t->castFun = NULL;
-	t->getFieldFun = NULL;
+	t->toStringFun = nullptr;
+	t->compareFun = nullptr;
+	t->castFun = nullptr;
+	t->getFieldFun = nullptr;
 	t->parent = p;
 
 	// fields indexes
@@ -279,9 +279,9 @@ HL_PRIM hl_runtime_obj *hl_get_obj_rt( hl_type *ot ) {
 	}
 	t->largest_field = largest_field;
 	t->nmethods = p ? p->nmethods : o->nproto;
-	t->methods = NULL;
+	t->methods = nullptr;
 	o->rt = t;
-	ot->vobj_proto = NULL;
+	ot->vobj_proto = nullptr;
 
 	// fields lookup
 	compareHash = hl_hash_gen(USTR("__compare"),false);
@@ -335,7 +335,7 @@ HL_API hl_runtime_obj *hl_get_obj_proto( hl_type *ot ) {
 	hl_type_obj *o = ot->obj;
 	hl_module_context *m = o->m;
 	hl_alloc *alloc = &m->alloc;
-	hl_runtime_obj *p = NULL, *t = hl_get_obj_rt(ot);
+	hl_runtime_obj *p = nullptr, *t = hl_get_obj_rt(ot);
 	hl_field_lookup *strField, *cmpField, *castField, *getField;
 	int i;
 	int nmethods, nbindings;
@@ -400,7 +400,7 @@ HL_API hl_runtime_obj *hl_get_obj_proto( hl_type *ot ) {
 	for(i=0;i<o->nbindings;i++) {
 		int fid = o->bindings[i<<1];
 		int mid = o->bindings[(i<<1)|1];
-		hl_runtime_binding *b = NULL;
+		hl_runtime_binding *b = nullptr;
 		hl_type *ft;
 		if( p ) {
 			int j;
@@ -410,7 +410,7 @@ HL_API hl_runtime_obj *hl_get_obj_proto( hl_type *ot ) {
 					break;
 				}
 		}
-		if( b == NULL )
+		if( b == nullptr )
 			b = t->bindings + nbindings++;
 		b->fid = fid;
 		ft = hl_obj_field_fetch(t->t, fid)->t;
@@ -422,8 +422,8 @@ HL_API hl_runtime_obj *hl_get_obj_proto( hl_type *ot ) {
 				c->fun = m->functions_ptrs[mid];
 				c->t = m->functions_types[mid];
 				c->hasValue = false;
-				c->value = NULL;
-				b->closure = NULL;
+				c->value = nullptr;
+				b->closure = nullptr;
 				b->ptr = c;
 				break;
 			}
@@ -442,10 +442,10 @@ HL_API hl_runtime_obj *hl_get_obj_proto( hl_type *ot ) {
 	cmpField = obj_resolve_field(o,hl_hash_gen(USTR("__compare"),false));
 	castField = obj_resolve_field(o,hl_hash_gen(USTR("__cast"),false));
 	getField = obj_resolve_field(o,hl_hash_gen(USTR("__get_field"),false));
-	t->toStringFun = strField ? t->methods[-(strField->field_index+1)] : NULL;
-	t->compareFun = cmpField && t->compareFun ? t->methods[-(cmpField->field_index+1)] : NULL;
-	t->castFun = castField ? t->methods[-(castField->field_index+1)] : NULL;
-	t->getFieldFun = getField ? t->methods[-(getField->field_index+1)] : NULL;
+	t->toStringFun = strField ? t->methods[-(strField->field_index+1)] : nullptr;
+	t->compareFun = cmpField && t->compareFun ? t->methods[-(cmpField->field_index+1)] : nullptr;
+	t->castFun = castField ? t->methods[-(castField->field_index+1)] : nullptr;
+	t->getFieldFun = getField ? t->methods[-(getField->field_index+1)] : nullptr;
 	if( p && !t->getFieldFun ) t->getFieldFun = p->getFieldFun;
 
 	hl_global_lock(false);
@@ -462,7 +462,7 @@ HL_API void hl_flush_proto( hl_type *ot ) {
 	for(i=0;i<o->nbindings;i++) {
 		int fid = o->bindings[i<<1];
 		int mid = o->bindings[(i<<1)|1];
-		hl_runtime_binding *b = NULL;
+		hl_runtime_binding *b = nullptr;
 		int j;
 		for(j=0;j<rt->nbindings;j++)
 			if( rt->bindings[j].fid == fid ) {
@@ -574,16 +574,16 @@ static bool should_recast( hl_type *t, hl_type *vt ) {
 	Allocate a virtual fields mapping to a given value.
 **/
 vvirtual *hl_to_virtual( hl_type *vt, vdynamic *obj ) {
-	vvirtual *v = NULL;
-	if( obj == NULL ) return NULL;
+	vvirtual *v = nullptr;
+	if( obj == nullptr ) return nullptr;
 #ifdef _DEBUG
-	if( vt->virt->nfields && vt->virt->lookup == NULL ) hl_fatal("virtual not initialized");
+	if( vt->virt->nfields && vt->virt->lookup == nullptr ) hl_fatal("virtual not initialized");
 #endif
 	switch( obj->t->kind ) {
 	case HOBJ:
 		{
 			int i;
-			void **interface_address = NULL;
+			void **interface_address = nullptr;
 			{
 				hl_runtime_obj *rt = obj->t->obj->rt;
 				while( rt ) {
@@ -604,7 +604,7 @@ vvirtual *hl_to_virtual( hl_type *vt, vdynamic *obj ) {
 			v = (vvirtual*)hl_gc_alloc(vt, sizeof(vvirtual) + sizeof(void*)*vt->virt->nfields);
 			v->t = vt;
 			v->value = obj;
-			v->next = NULL;
+			v->next = nullptr;
 			for(i=0;i<vt->virt->nfields;i++) {
 				hl_field_lookup *f = obj_resolve_field(obj->t->obj,vt->virt->fields[i].hashed_name);
 				if( f && f->field_index < 0 ) {
@@ -619,9 +619,9 @@ vvirtual *hl_to_virtual( hl_type *vt, vdynamic *obj ) {
 					if( hl_safe_cast(&tmp,ft) )
 						hl_vfields(v)[i] = obj->t->obj->rt->methods[-f->field_index-1];
 					else
-						hl_vfields(v)[i] = NULL;
+						hl_vfields(v)[i] = nullptr;
 				} else
-					hl_vfields(v)[i] = f == NULL || !hl_same_type(f->t,vt->virt->fields[i].t) ? NULL : (char*)obj + f->field_index;
+					hl_vfields(v)[i] = f == nullptr || !hl_same_type(f->t,vt->virt->fields[i].t) ? nullptr : (char*)obj + f->field_index;
 			}
 			if( interface_address )
 				*interface_address = v;
@@ -645,10 +645,10 @@ vvirtual *hl_to_virtual( hl_type *vt, vdynamic *obj ) {
 			for(i=0;i<vt->virt->nfields;i++) {
 				hl_field_lookup *f = hl_lookup_find(o->lookup,o->nfields,vt->virt->fields[i].hashed_name);
 				hl_type *vft = vt->virt->fields[i].t;
-				void *addr = f == NULL || !hl_same_type(f->t,vft) ? NULL : hl_dynobj_field(o,f);
+				void *addr = f == nullptr || !hl_same_type(f->t,vft) ? nullptr : hl_dynobj_field(o,f);
 				// check if we will perform recast of some fields to match the virtual definition
 				// recast will not work for >64 fields, but this should be pretty rare
-				if( addr == NULL && f && !o->virtuals && should_recast(f->t,vft) )
+				if( addr == nullptr && f && !o->virtuals && should_recast(f->t,vft) )
 					need_recast |= ((int64)1) << ((int64)i);
 				hl_vfields(v)[i] = addr;
 			}
@@ -661,7 +661,7 @@ vvirtual *hl_to_virtual( hl_type *vt, vdynamic *obj ) {
 				for(i=0;i<vt->virt->nfields;i++)
 					if( need_recast & (((int64)1) << ((int64)i)) ) {
 						hl_obj_field *f = vt->virt->fields + i;
-						if( extra_check && hl_lookup_find(o->lookup,o->nfields,f->hashed_name) == NULL )
+						if( extra_check && hl_lookup_find(o->lookup,o->nfields,f->hashed_name) == nullptr )
 							continue;
 						if( hl_is_ptr(f->t) )
 							hl_dyn_setp(obj,f->hashed_name,f->t,hl_dyn_getp(obj,f->hashed_name,f->t));
@@ -692,7 +692,7 @@ static void hl_dynobj_remap_virtuals( vdynobj *o, hl_field_lookup *f, int_val ad
 				if( hl_vfields(v)[i] && hl_is_ptr(v->t->virt->fields[i].t) == is_ptr )
 					((char**)hl_vfields(v))[i] += address_offset;
 		if( vf )
-			hl_vfields(v)[vf->field_index] = hl_same_type(vf->t,f->t) ? hl_dynobj_field(o, f) : NULL;
+			hl_vfields(v)[vf->field_index] = hl_same_type(vf->t,f->t) ? hl_dynobj_field(o, f) : nullptr;
 		v = v->next;
 	}
 }
@@ -706,7 +706,7 @@ static void hl_dynobj_delete_field( vdynobj *o, hl_field_lookup *f ) {
 	if( is_ptr ) {
 		memmove(o->values + index, o->values + index + 1, (o->nvalues - (index + 1)) * sizeof(void*));
 		o->nvalues--;
-		o->values[o->nvalues] = NULL;
+		o->values[o->nvalues] = nullptr;
 		for(i=0;i<o->nfields;i++) {
 			hl_field_lookup *f = o->lookup + i;
 			if( hl_is_ptr(f->t) && (f->field_index&HL_DYNOBJ_INDEX_MASK) > index )
@@ -720,7 +720,7 @@ static void hl_dynobj_delete_field( vdynobj *o, hl_field_lookup *f ) {
 	vvirtual *v = o->virtuals;
 	while( v ) {
 		hl_field_lookup *vf = hl_lookup_find(v->t->virt->lookup,v->t->virt->nfields,f->hashed_name);
-		if( vf ) hl_vfields(v)[vf->field_index] = NULL;
+		if( vf ) hl_vfields(v)[vf->field_index] = nullptr;
 		// remap pointers that were moved
 		if( is_ptr ) {
 			for(i=0;i<v->t->virt->nfields;i++) {
@@ -757,7 +757,7 @@ static hl_field_lookup *hl_dynobj_add_field( vdynobj *o, int hfield, hl_type *t 
 		if( index > HL_DYNOBJ_INDEX_MASK ) hl_error("Too many dynobj values");
 		void **nvalues = hl_gc_alloc_raw( (o->nvalues + 1) * sizeof(void*) );
 		memcpy(nvalues,o->values,o->nvalues * sizeof(void*));
-		nvalues[index] = NULL;
+		nvalues[index] = nullptr;
 		address_offset = (char*)nvalues - (char*)o->values;
 		o->values = nvalues;
 		o->nvalues++;
@@ -826,7 +826,7 @@ static void *hl_obj_lookup( vdynamic *d, int hfield, hl_type **t ) {
 		{
 			vdynobj *o = (vdynobj*)d;
 			hl_field_lookup *f = hl_lookup_find(o->lookup,o->nfields,hfield);
-			if( f == NULL ) return NULL;
+			if( f == nullptr ) return nullptr;
 			*t = f->t;
 			return hl_dynobj_field(o,f);
 		}
@@ -834,7 +834,7 @@ static void *hl_obj_lookup( vdynamic *d, int hfield, hl_type **t ) {
 	case HOBJ:
 		{
 			hl_field_lookup *f = obj_resolve_field(d->t->obj,hfield);
-			if( f == NULL || f->field_index < 0 ) return NULL;
+			if( f == nullptr || f->field_index < 0 ) return nullptr;
 			*t = f->t;
 			return (char*)d + f->field_index;
 		}
@@ -842,7 +842,7 @@ static void *hl_obj_lookup( vdynamic *d, int hfield, hl_type **t ) {
 	case HSTRUCT:
 		{
 			hl_field_lookup *f = obj_resolve_field(d->t->obj,hfield);
-			if( f == NULL || f->field_index < 0 ) return NULL;
+			if( f == nullptr || f->field_index < 0 ) return nullptr;
 			*t = f->t;
 			return (char*)d->v.ptr + f->field_index;
 		}
@@ -854,7 +854,7 @@ static void *hl_obj_lookup( vdynamic *d, int hfield, hl_type **t ) {
 			if( v )
 				return hl_obj_lookup(v, hfield, t);
 			f = hl_lookup_find(d->t->virt->lookup,d->t->virt->nfields,hfield);
-			if( f == NULL ) return NULL;
+			if( f == nullptr ) return nullptr;
 			*t = f->t;
 			return (char*)d + d->t->virt->indexes[f->field_index];
 		}
@@ -862,7 +862,7 @@ static void *hl_obj_lookup( vdynamic *d, int hfield, hl_type **t ) {
 		hl_error("Invalid field access");
 		break;
 	}
-	return NULL;
+	return nullptr;
 }
 
 // fetch method or dynamic field (getField)
@@ -874,12 +874,12 @@ static vdynamic *hl_obj_lookup_extra( vdynamic *d, int hfield ) {
 			hl_field_lookup *f = obj_resolve_field(d->t->obj,hfield);
 			if( f && f->field_index < 0 )
 				return (vdynamic*)hl_alloc_closure_ptr(f->t,d->t->obj->rt->methods[-f->field_index-1],d);
-			if( f == NULL ) {
+			if( f == nullptr ) {
 				hl_runtime_obj *rt = d->t->obj->rt;
 				if( rt->getFieldFun )
 					return rt->getFieldFun(d,hfield);
 			}
-			return NULL;
+			return nullptr;
 		}
 		break;
 	case HVIRTUAL:
@@ -891,7 +891,7 @@ static vdynamic *hl_obj_lookup_extra( vdynamic *d, int hfield ) {
 	default:
 		break;
 	}
-	return NULL;
+	return nullptr;
 }
 
 HL_PRIM int hl_dyn_geti( vdynamic *d, int hfield, hl_type *t ) {
@@ -900,7 +900,7 @@ HL_PRIM int hl_dyn_geti( vdynamic *d, int hfield, hl_type *t ) {
 	void *addr = hl_obj_lookup(d,hfield,&ft);
 	if( !addr ) {
 		d = hl_obj_lookup_extra(d,hfield);
-		return d == NULL ? 0 : hl_dyn_casti(&d,&hlt_dyn,t);
+		return d == nullptr ? 0 : hl_dyn_casti(&d,&hlt_dyn,t);
 	}
 	switch( ft->kind ) {
 	case HUI8:
@@ -928,7 +928,7 @@ HL_PRIM int64 hl_dyn_geti64( vdynamic *d, int hfield ) {
 	void *addr = hl_obj_lookup(d,hfield,&ft);
 	if( !addr ) {
 		d = hl_obj_lookup_extra(d,hfield);
-		return d == NULL ? 0 : hl_dyn_casti64(&d,&hlt_dyn);
+		return d == nullptr ? 0 : hl_dyn_casti64(&d,&hlt_dyn);
 	}
 	switch( ft->kind ) {
 	case HUI8:
@@ -957,7 +957,7 @@ HL_PRIM float hl_dyn_getf( vdynamic *d, int hfield ) {
 	void *addr = hl_obj_lookup(d,hfield,&ft);
 	if( !addr ) {
 		d = hl_obj_lookup_extra(d,hfield);
-		return d == NULL ? 0.f : hl_dyn_castf(&d,&hlt_dyn);
+		return d == nullptr ? 0.f : hl_dyn_castf(&d,&hlt_dyn);
 	}
 	return ft->kind == HF32 ? *(float*)addr : hl_dyn_castf(addr,ft);
 }
@@ -968,7 +968,7 @@ HL_PRIM double hl_dyn_getd( vdynamic *d, int hfield ) {
 	void *addr = hl_obj_lookup(d,hfield,&ft);
 	if( !addr ) {
 		d = hl_obj_lookup_extra(d,hfield);
-		return d == NULL ? 0. : hl_dyn_castd(&d,&hlt_dyn);
+		return d == nullptr ? 0. : hl_dyn_castd(&d,&hlt_dyn);
 	}
 	return ft->kind == HF64 ? *(double*)addr : hl_dyn_castd(addr,ft);
 }
@@ -979,7 +979,7 @@ HL_PRIM void *hl_dyn_getp( vdynamic *d, int hfield, hl_type *t ) {
 	void *addr = hl_obj_lookup(d,hfield,&ft);
 	if( !addr ) {
 		d = hl_obj_lookup_extra(d,hfield);
-		return d == NULL ? NULL : hl_dyn_castp(&d,&hlt_dyn,t);
+		return d == nullptr ? nullptr : hl_dyn_castp(&d,&hlt_dyn,t);
 	}
 	return hl_same_type(t,ft) ? *(void**)addr : hl_dyn_castp(addr,ft,t);
 }
@@ -992,7 +992,7 @@ static void *hl_obj_lookup_set( vdynamic *d, int hfield, hl_type *t, hl_type **f
 		{
 			vdynobj *o = (vdynobj*)d;
 			hl_field_lookup *f = hl_lookup_find(o->lookup,o->nfields,hfield);
-			if( f == NULL )
+			if( f == nullptr )
 				f = hl_dynobj_add_field(o,hfield,t);
 			else if( !hl_same_type(t,f->t) ) {
 				if( hl_is_ptr(t) != hl_is_ptr(f->t) || hl_type_size(t) != hl_type_size(f->t) ) {
@@ -1010,7 +1010,7 @@ static void *hl_obj_lookup_set( vdynamic *d, int hfield, hl_type *t, hl_type **f
 	case HOBJ:
 		{
 			hl_field_lookup *f = obj_resolve_field(d->t->obj,hfield);
-			if( f == NULL || f->field_index < 0 ) hl_error("%s does not have field %s",d->t->obj->name,hl_field_name(hfield));
+			if( f == nullptr || f->field_index < 0 ) hl_error("%s does not have field %s",d->t->obj->name,hl_field_name(hfield));
 			*ft = f->t;
 			return (char*)d + f->field_index;
 		}
@@ -1018,7 +1018,7 @@ static void *hl_obj_lookup_set( vdynamic *d, int hfield, hl_type *t, hl_type **f
 	case HSTRUCT:
 		{
 			hl_field_lookup *f = obj_resolve_field(d->t->obj,hfield);
-			if( f == NULL || f->field_index < 0 ) hl_error("%s does not have field %s",d->t->obj->name,hl_field_name(hfield));
+			if( f == nullptr || f->field_index < 0 ) hl_error("%s does not have field %s",d->t->obj->name,hl_field_name(hfield));
 			*ft = f->t;
 			return (char*)d->v.ptr + f->field_index;
 		}
@@ -1029,7 +1029,7 @@ static void *hl_obj_lookup_set( vdynamic *d, int hfield, hl_type *t, hl_type **f
 			hl_field_lookup *f;
 			if( v->value ) return hl_obj_lookup_set(v->value, hfield, t, ft);
 			f = hl_lookup_find(v->t->virt->lookup,v->t->virt->nfields,hfield);
-			if( f == NULL || !hl_safe_cast(t,f->t) )
+			if( f == nullptr || !hl_safe_cast(t,f->t) )
 				return hl_obj_lookup_set(hl_virtual_make_value(v), hfield, t, ft);
 			*ft = f->t;
 			return (char*)v + v->t->virt->indexes[f->field_index];
@@ -1038,11 +1038,11 @@ static void *hl_obj_lookup_set( vdynamic *d, int hfield, hl_type *t, hl_type **f
 		hl_error("Invalid field access");
 		break;
 	}
-	return NULL;
+	return nullptr;
 }
 
 HL_PRIM void hl_dyn_seti( vdynamic *d, int hfield, hl_type *t, int value ) {
-	hl_type *ft = NULL;
+	hl_type *ft = nullptr;
 	hl_track_call(HL_TRACK_DYNFIELD, on_dynfield(d,hfield));
 	void *addr = hl_obj_lookup_set(d,hfield,t,&ft);
 	switch( ft->kind ) {
@@ -1080,7 +1080,7 @@ HL_PRIM void hl_dyn_seti( vdynamic *d, int hfield, hl_type *t, int value ) {
 }
 
 HL_PRIM void hl_dyn_seti64( vdynamic *d, int hfield, int64 value ) {
-	hl_type *ft = NULL;
+	hl_type *ft = nullptr;
 	hl_track_call(HL_TRACK_DYNFIELD, on_dynfield(d,hfield));
 	void *addr = hl_obj_lookup_set(d,hfield,&hlt_i64,&ft);
 	switch( ft->kind ) {
@@ -1118,7 +1118,7 @@ HL_PRIM void hl_dyn_seti64( vdynamic *d, int hfield, int64 value ) {
 }
 
 HL_PRIM void hl_dyn_setf( vdynamic *d, int hfield, float value ) {
-	hl_type *t = NULL;
+	hl_type *t = nullptr;
 	hl_track_call(HL_TRACK_DYNFIELD, on_dynfield(d,hfield));
 	void *addr = hl_obj_lookup_set(d,hfield,&hlt_f32,&t);
 	if( t->kind == HF32 )
@@ -1132,7 +1132,7 @@ HL_PRIM void hl_dyn_setf( vdynamic *d, int hfield, float value ) {
 }
 
 HL_PRIM void hl_dyn_setd( vdynamic *d, int hfield, double value ) {
-	hl_type *t = NULL;
+	hl_type *t = nullptr;
 	hl_track_call(HL_TRACK_DYNFIELD, on_dynfield(d,hfield));
 	void *addr = hl_obj_lookup_set(d,hfield,&hlt_f64,&t);
 	if( t->kind == HF64 )
@@ -1146,10 +1146,10 @@ HL_PRIM void hl_dyn_setd( vdynamic *d, int hfield, double value ) {
 }
 
 HL_PRIM void hl_dyn_setp( vdynamic *d, int hfield, hl_type *t, void *value ) {
-	hl_type *ft = NULL;
+	hl_type *ft = nullptr;
 	hl_track_call(HL_TRACK_DYNFIELD, on_dynfield(d,hfield));
 	void *addr = hl_obj_lookup_set(d,hfield,t,&ft);
-	if( hl_same_type(t,ft) || (hl_is_ptr(ft) && value == NULL) )
+	if( hl_same_type(t,ft) || (hl_is_ptr(ft) && value == nullptr) )
 		*(void**)addr = value;
 	else if( hl_is_dynamic(t) )
 		hl_write_dyn(addr,ft,(vdynamic*)value,false);
@@ -1164,8 +1164,8 @@ HL_PRIM void hl_dyn_setp( vdynamic *d, int hfield, hl_type *t, void *value ) {
 // -------------------- HAXE API ------------------------------------
 
 HL_PRIM vdynamic *hl_obj_get_field( vdynamic *obj, int hfield ) {
-	if( obj == NULL )
-		return NULL;
+	if( obj == nullptr )
+		return nullptr;
 	switch( obj->t->kind ) {
 	case HOBJ:
 	case HVIRTUAL:
@@ -1173,25 +1173,25 @@ HL_PRIM vdynamic *hl_obj_get_field( vdynamic *obj, int hfield ) {
 	case HSTRUCT:
 		return (vdynamic*)hl_dyn_getp(obj,hfield,&hlt_dyn);
 	default:
-		return NULL;
+		return nullptr;
 	}
 }
 
 HL_PRIM void hl_obj_set_field( vdynamic *obj, int hfield, vdynamic *v ) {
-	if( obj == NULL )
+	if( obj == nullptr )
 		hl_error("Null access");
-	if( v == NULL ) {
-		hl_dyn_setp(obj,hfield,&hlt_dyn,NULL);
+	if( v == nullptr ) {
+		hl_dyn_setp(obj,hfield,&hlt_dyn,nullptr);
 		return;
 	}
 	hl_track_call(HL_TRACK_DYNFIELD, on_dynfield(obj,hfield));
-	hl_type *ft = NULL;
+	hl_type *ft = nullptr;
 	void *addr = hl_obj_lookup_set(obj,hfield,v->t,&ft);
 	hl_write_dyn(addr,ft,v,false);
 }
 
 HL_PRIM bool hl_obj_has_field( vdynamic *obj, int hfield ) {
-	if( obj == NULL ) return false;
+	if( obj == nullptr ) return false;
 	switch( obj->t->kind ) {
 	case HOBJ:
 	case HSTRUCT:
@@ -1204,14 +1204,14 @@ HL_PRIM bool hl_obj_has_field( vdynamic *obj, int hfield ) {
 		{
 			vdynobj *d = (vdynobj*)obj;
 			hl_field_lookup *f = hl_lookup_find(d->lookup,d->nfields,hfield);
-			return f != NULL;
+			return f != nullptr;
 		}
 		break;
 	case HVIRTUAL:
 		{
 			vvirtual *v = (vvirtual*)obj;
 			if( v->value ) return hl_obj_has_field(v->value,hfield);
-			return hl_lookup_find(v->t->virt->lookup,v->t->virt->nfields,hfield) != NULL;
+			return hl_lookup_find(v->t->virt->lookup,v->t->virt->nfields,hfield) != nullptr;
 		}
 	default:
 		break;
@@ -1220,13 +1220,13 @@ HL_PRIM bool hl_obj_has_field( vdynamic *obj, int hfield ) {
 }
 
 HL_PRIM bool hl_obj_delete_field( vdynamic *obj, int hfield ) {
-	if( obj == NULL ) return false;
+	if( obj == nullptr ) return false;
 	switch( obj->t->kind ) {
 	case HDYNOBJ:
 		{
 			vdynobj *d = (vdynobj*)obj;
 			hl_field_lookup *f = hl_lookup_find(d->lookup,d->nfields,hfield);
-			if( f == NULL ) return false;
+			if( f == nullptr ) return false;
 			hl_dynobj_delete_field(d, f);
 			return true;
 		}
@@ -1235,7 +1235,7 @@ HL_PRIM bool hl_obj_delete_field( vdynamic *obj, int hfield ) {
 		{
 			vvirtual *v = (vvirtual*)obj;
 			if( v->value ) return hl_obj_delete_field(v->value,hfield);
-			if( hl_lookup_find(v->t->virt->lookup,v->t->virt->nfields,hfield) == NULL ) return false;
+			if( hl_lookup_find(v->t->virt->lookup,v->t->virt->nfields,hfield) == nullptr ) return false;
 			return hl_obj_delete_field(hl_virtual_make_value(v),hfield);
 		}
 	default:
@@ -1245,8 +1245,8 @@ HL_PRIM bool hl_obj_delete_field( vdynamic *obj, int hfield ) {
 }
 
 HL_PRIM varray *hl_obj_fields( vdynamic *obj ) {
-	varray *a = NULL;
-	if( obj == NULL ) return NULL;
+	varray *a = nullptr;
+	if( obj == nullptr ) return nullptr;
 	switch( obj->t->kind ) {
 	case HDYNOBJ:
 		{
@@ -1275,7 +1275,7 @@ HL_PRIM varray *hl_obj_fields( vdynamic *obj ) {
 					}
 					hl_aptr(a,vbyte*)[p++] =  (vbyte*)f->name;
 				}
-				if( tobj->super == NULL ) break;
+				if( tobj->super == nullptr ) break;
 				tobj = tobj->super->obj;
 			}
 		}
@@ -1297,8 +1297,8 @@ HL_PRIM varray *hl_obj_fields( vdynamic *obj ) {
 }
 
 HL_PRIM vdynamic *hl_obj_copy( vdynamic *obj ) {
-	if( obj == NULL )
-		return NULL;
+	if( obj == nullptr )
+		return nullptr;
 	switch( obj->t->kind ) {
 	case HDYNOBJ:
 		{
@@ -1308,7 +1308,7 @@ HL_PRIM vdynamic *hl_obj_copy( vdynamic *obj ) {
 			c->raw_size = o->raw_size;
 			c->nfields = o->nfields;
 			c->nvalues = o->nvalues;
-			c->virtuals = NULL;
+			c->virtuals = nullptr;
 			c->lookup = (hl_field_lookup*)hl_gc_alloc_noptr(lsize);
 			memcpy(c->lookup,o->lookup,lsize);
 			c->raw_data = (char*)hl_gc_alloc_noptr(o->raw_size);
@@ -1331,7 +1331,7 @@ HL_PRIM vdynamic *hl_obj_copy( vdynamic *obj ) {
 	default:
 		break;
 	}
-	return NULL;
+	return nullptr;
 }
 
 HL_PRIM vdynamic *hl_get_virtual_value( vdynamic *v ) {

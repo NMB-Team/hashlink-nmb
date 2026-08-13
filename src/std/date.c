@@ -32,14 +32,14 @@
 
 static struct tm *localtime_r( time_t *t, struct tm *r ) {
 	struct tm *r2 = localtime(t);
-	if( r2 == NULL ) return NULL;
+	if( r2 == nullptr ) return nullptr;
 	*r = *r2;
 	return r;
 }
 
 static struct tm *gmtime_r( time_t *t, struct tm *r ) {
 	struct tm *r2 = gmtime(t);
-	if( r2 == NULL ) return NULL;
+	if( r2 == nullptr ) return nullptr;
 	*r = *r2;
 	return r;
 }
@@ -47,7 +47,7 @@ static struct tm *gmtime_r( time_t *t, struct tm *r ) {
 #endif
 
 HL_PRIM int hl_date_now() {
-	return (int)time(NULL);
+	return (int)time(nullptr);
 }
 
 HL_PRIM vbyte *hl_date_to_string( int date, int *len ) {

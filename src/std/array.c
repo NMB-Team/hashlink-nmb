@@ -62,7 +62,7 @@ typedef struct _vcarray_info {
 	struct _vcarray_info *next;
 } vcarray_info;
 
-static vcarray_info *hl_carray_infos = NULL;
+static vcarray_info *hl_carray_infos = nullptr;
 
 static vcarray_info *hl_get_carray_info( void *arr ) {
 	vcarray_info *i = hl_carray_infos;
@@ -72,7 +72,7 @@ static vcarray_info *hl_get_carray_info( void *arr ) {
 		i = i->next;
 	}
 	hl_error("Invalid CArray");
-	return NULL;
+	return nullptr;
 }
 
 HL_PRIM void *hl_alloc_carray( hl_type *at, int size ) {
@@ -82,7 +82,7 @@ HL_PRIM void *hl_alloc_carray( hl_type *at, int size ) {
 		hl_error("Invalid array size");
 
 	hl_runtime_obj *rt = at->obj->rt;
-	if( rt == NULL || rt->methods == NULL ) rt = hl_get_obj_proto(at);
+	if( rt == nullptr || rt->methods == nullptr ) rt = hl_get_obj_proto(at);
 	char *arr = hl_gc_alloc_gen(at, size * rt->size, (rt->hasPtr ? MEM_KIND_RAW : MEM_KIND_NOPTR) | MEM_ZERO);
 	vcarray_info *info = (vcarray_info*)malloc(sizeof(vcarray_info));
 	info->arr = arr;
@@ -125,7 +125,7 @@ HL_PRIM void hl_carray_blit( void *dst, hl_type *at, int dpos, void *src, int sp
 	if( dpos < 0 || spos < 0 || len < 0 )
 		hl_error("Invalid array pos or length");
 	hl_runtime_obj *rt = at->obj->rt;
-	if( rt == NULL || rt->methods == NULL ) rt = hl_get_obj_proto(at);
+	if( rt == nullptr || rt->methods == nullptr ) rt = hl_get_obj_proto(at);
 	int size = rt->size;
 	memmove( (vbyte*)dst + dpos * size, (vbyte*)src + spos * size, len * size);
 }

@@ -76,7 +76,7 @@ HL_PRIM rnd *hl_rnd_init_system() {
 	time = GetTickCount();
 #else
 	struct timeval t;
-	gettimeofday(&t,NULL);
+	gettimeofday(&t,nullptr);
 	time = t.tv_sec * 1000000 + t.tv_usec;
 #endif
 #ifdef HL_DEBUG_REPRO

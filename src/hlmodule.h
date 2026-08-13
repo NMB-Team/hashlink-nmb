@@ -53,12 +53,12 @@ struct hl_function {
 	hl_type_obj *obj;
 	union {
 		const uchar *name;
-		hl_function *ref; // obj = NULL
+		hl_function *ref; // obj = nullptr
 	} field;
 };
 
-#define fun_obj(f) ((f)->obj ? (f)->obj : (f)->field.ref ? (f)->field.ref->obj : NULL)
-#define fun_field_name(f) ((f)->obj ? (f)->field.name : (f)->field.ref ? (f)->field.ref->field.name : NULL)
+#define fun_obj(f) ((f)->obj ? (f)->obj : (f)->field.ref ? (f)->field.ref->obj : nullptr)
+#define fun_field_name(f) ((f)->obj ? (f)->field.name : (f)->field.ref ? (f)->field.ref->field.name : nullptr)
 
 typedef struct {
 	int global;

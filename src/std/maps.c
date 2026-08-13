@@ -92,7 +92,7 @@ typedef struct {
 #define _MMATCH(c)	m->entries[c].hash == hash && ucmp(m->values[c].key,key) == 0
 #define _MKEY(m,c)	m->values[c].key
 #define	_MSET(c)	m->entries[c].hash = hash; m->values[c].key = key
-#define _MERASE(c)  m->values[c].key = NULL
+#define _MERASE(c)  m->values[c].key = nullptr
 
 #include "maps.h"
 
@@ -132,7 +132,7 @@ static vdynamic *hl_hofilter( vdynamic *key ) {
 #define _MMATCH(c)	m->values[c].key == key
 #define _MKEY(m,c)	m->values[c].key
 #define	_MSET(c)	m->values[c].key = key
-#define _MERASE(c)  m->values[c].key = NULL
+#define _MERASE(c)  m->values[c].key = nullptr
 
 #include "maps.h"
 

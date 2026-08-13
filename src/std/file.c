@@ -89,7 +89,7 @@ HL_PRIM hl_fdesc *hl_file_open( vbyte *name, int mode, bool binary ) {
 	FILE *f = fopen((char*)name,MODES[mode|(binary?4:0)]);
 #	endif
 	hl_fdesc *fd;
-	if( f == NULL ) return NULL;
+	if( f == nullptr ) return nullptr;
 	fd = (hl_fdesc*)hl_gc_alloc_finalizer(sizeof(hl_fdesc));
 	fd->finalize = fdesc_finalize;
 	fd->f = f;
@@ -99,7 +99,7 @@ HL_PRIM hl_fdesc *hl_file_open( vbyte *name, int mode, bool binary ) {
 
 HL_PRIM bool hl_file_is_locked( vbyte *name ) {
 #	ifdef HL_WIN
-	HANDLE h = CreateFile((uchar*)name,GENERIC_READ,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+	HANDLE h = CreateFile((uchar*)name,GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
 	if( h == INVALID_HANDLE_VALUE ) return true;
 	CloseHandle(h);
 	return false;
@@ -111,8 +111,8 @@ HL_PRIM bool hl_file_is_locked( vbyte *name ) {
 HL_PRIM void hl_file_close( hl_fdesc *f ) {
 	if( !f ) return;
 	if( f->f ) fclose(f->f);
-	f->f = NULL;
-	f->finalize = NULL;
+	f->f = nullptr;
+	f->finalize = nullptr;
 }
 
 HL_PRIM int hl_file_write( hl_fdesc *f, vbyte *buf, int pos, int len ) {
@@ -205,7 +205,7 @@ HL_PRIM bool hl_file_flush( hl_fdesc *f ) {
 		hl_fdesc *f; \
 		f = (hl_fdesc*)hl_gc_alloc_noptr(sizeof(hl_fdesc)); \
 		f->f = k; \
-		f->finalize = NULL; \
+		f->finalize = nullptr; \
 		SET_IS_STD(f, true); \
 		return f; \
 	}
@@ -223,8 +223,8 @@ HL_PRIM vbyte *hl_file_contents( vbyte *name, int *size ) {
 #	else
 	FILE *f = fopen((char*)name,"rb");
 #	endif
-	if( f == NULL )
-		return NULL;
+	if( f == nullptr )
+		return nullptr;
 	hl_blocking(true);
 	fseek(f,0,SEEK_END);
 	len = ftell(f);
@@ -239,7 +239,7 @@ HL_PRIM vbyte *hl_file_contents( vbyte *name, int *size ) {
 		if( d <= 0 ) {
 			hl_blocking(false);
 			fclose(f);
-			return NULL;
+			return nullptr;
 		}
 		p += d;
 		len -= d;

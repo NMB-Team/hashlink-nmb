@@ -36,9 +36,9 @@ HL_PRIM hl_type hlt_abstract = { HABSTRACT, {USTR("<abstract>")} };
 
 static const uchar *TSTR[] = {
 	USTR("void"), USTR("i8"), USTR("i16"), USTR("i32"), USTR("i64"), USTR("f32"), USTR("f64"),
-	USTR("bool"), USTR("bytes"), USTR("dynamic"), NULL, NULL,
-	USTR("array"), USTR("type"), NULL, NULL, USTR("dynobj"),
-	NULL, NULL, NULL, NULL, NULL, NULL, USTR("guid")
+	USTR("bool"), USTR("bytes"), USTR("dynamic"), nullptr, nullptr,
+	USTR("array"), USTR("type"), nullptr, nullptr, USTR("dynobj"),
+	nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, USTR("guid")
 };
 
 static int T_SIZES[] = {
@@ -61,7 +61,7 @@ static int T_SIZES[] = {
 	HL_WSIZE, // DYNOBJ
 	HL_WSIZE, // ABSTRACT
 	HL_WSIZE, // ENUM
-	HL_WSIZE, // NULL
+	HL_WSIZE, // nullptr
 	HL_WSIZE, // METHOD
 	HL_WSIZE, // STRUCT
 	0, // PACKED
@@ -245,7 +245,7 @@ HL_PRIM bool hl_safe_cast( hl_type *t, hl_type *to ) {
 			hl_type_obj *oto = to->obj;
 			while( true ) {
 				if( o == oto || o->name == oto->name ) return true;
-				if( o->super == NULL ) return false;
+				if( o->super == nullptr ) return false;
 				o = o->super->obj;
 			}
 		}
@@ -281,7 +281,7 @@ static void hl_type_str_rec( hl_buffer *b, hl_type *t, tlist *parents ) {
 	const uchar *c = TSTR[t->kind];
 	tlist *l, cur;
 	int i;
-	if( c != NULL ) {
+	if( c != nullptr ) {
 		hl_buffer_str(b,c);
 		return;
 	}
@@ -361,11 +361,11 @@ static void hl_type_str_rec( hl_buffer *b, hl_type *t, tlist *parents ) {
 HL_PRIM const uchar *hl_type_str( hl_type *t ) {
 	const uchar *c = TSTR[t->kind];
 	hl_buffer *b;
-	if( c != NULL )
+	if( c != nullptr )
 		return c;
 	b = hl_alloc_buffer();
-	hl_type_str_rec(b,t,NULL);
-	return hl_buffer_content(b,NULL);
+	hl_type_str_rec(b,t,nullptr);
+	return hl_buffer_content(b,nullptr);
 }
 
 HL_PRIM vbyte* hl_type_name( hl_type *t ) {
@@ -380,7 +380,7 @@ HL_PRIM vbyte* hl_type_name( hl_type *t ) {
 	default:
 		break;
 	}
-	return NULL;
+	return nullptr;
 }
 
 HL_PRIM int hl_mark_size( int data_size );
@@ -460,7 +460,7 @@ HL_PRIM varray *hl_type_instance_fields( hl_type *t ) {
 		return a;
 	}
 	if( t->kind != HOBJ && t->kind != HSTRUCT )
-		return NULL;
+		return nullptr;
 	o = t->obj;
 	while( true ) {
 		int i;
@@ -468,7 +468,7 @@ HL_PRIM varray *hl_type_instance_fields( hl_type *t ) {
 			hl_obj_proto *p = o->proto + i;
 			if( p->pindex < 0 ) mcount++;
 		}
-		if( o->super == NULL ) break;
+		if( o->super == nullptr ) break;
 		o = o->super->obj;
 	}
 	rt = hl_get_obj_rt(t);
@@ -487,7 +487,7 @@ HL_PRIM varray *hl_type_instance_fields( hl_type *t ) {
 			hl_obj_field *f = o->fields + i;
 			names[out++] = f->name;
 		}
-		if( o->super == NULL ) break;
+		if( o->super == nullptr ) break;
 		o = o->super->obj;
 		rt = o->rt;
 	}
@@ -504,13 +504,13 @@ HL_PRIM vdynamic *hl_type_get_global( hl_type *t ) {
 	switch( t->kind ) {
 	case HOBJ:
 	case HSTRUCT:
-		return t->obj->global_value ? *(vdynamic**)t->obj->global_value : NULL;
+		return t->obj->global_value ? *(vdynamic**)t->obj->global_value : nullptr;
 	case HENUM:
 		return *(vdynamic**)t->tenum->global_value;
 	default:
 		break;
 	}
-	return NULL;
+	return nullptr;
 }
 
 HL_PRIM bool hl_type_set_global( hl_type *t, vdynamic *v ) {
@@ -586,12 +586,12 @@ HL_PRIM venum *hl_alloc_enum_dyn( hl_type *t, int index, varray *args, int nargs
 	venum *e;
 	int i;
 	if( c->nparams < nargs || args->size < nargs )
-		return NULL;
+		return nullptr;
 	if( nargs < c->nparams ) {
 		// allow missing params if they are null-able
 		for(i=nargs;i<c->nparams;i++)
 			if( !hl_is_ptr(c->params[i]) )
-				return NULL;
+				return nullptr;
 	}
 	e = hl_alloc_enum(t, index);
 	for(i=0;i<nargs;i++)
@@ -609,7 +609,7 @@ HL_PRIM varray *hl_enum_parameters( venum *e ) {
 	return a;
 }
 
-static void *hl_guid_map = NULL;
+static void *hl_guid_map = nullptr;
 extern void *hl_hi64alloc();
 extern void hl_hi64set( void *map, int64 guid, vdynamic *name );
 extern vdynamic *hl_hi64get( void *map, int64 guid );
@@ -619,9 +619,9 @@ HL_PRIM uchar *hl_guid_str( int64 guid, uchar buf[14] ) {
 	static char CHARS[] = "#&0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	int i;
 	int pos = 0;
-	vdynamic *data = hl_guid_map ? hl_hi64get(hl_guid_map,guid) : NULL;
-	uchar *name = data ? (uchar*)(data->v.bytes) : NULL;
-	if( name != NULL )
+	vdynamic *data = hl_guid_map ? hl_hi64get(hl_guid_map,guid) : nullptr;
+	uchar *name = data ? (uchar*)(data->v.bytes) : nullptr;
+	if( name != nullptr )
 		return name;
 	if( guid == 0 )
 		return USTR("0");
@@ -635,7 +635,7 @@ HL_PRIM uchar *hl_guid_str( int64 guid, uchar buf[14] ) {
 }
 
 HL_PRIM void hl_register_guid_name( int64 guid, vbyte *name ) {
-	if( hl_guid_map == NULL ) {
+	if( hl_guid_map == nullptr ) {
 		hl_guid_map = hl_hi64alloc();
 		hl_gc_threads_info()->guid_map = hl_guid_map;
 		hl_add_root(&hl_guid_map);
@@ -745,7 +745,7 @@ static int compact_lookup_ref( mem_context *ctx, void *addr, bool is_bytes ) {
 
 static void compact_write_ref( mem_context *ctx, void *ptr, bool is_bytes ) {
 	if( !ptr ) {
-		compact_write_ptr(ctx, NULL);
+		compact_write_ptr(ctx, nullptr);
 		return;
 	}
 	int ref = compact_lookup_ref(ctx,ptr,is_bytes);
@@ -755,7 +755,7 @@ static void compact_write_ref( mem_context *ctx, void *ptr, bool is_bytes ) {
 static void compact_write_data( mem_context *ctx, hl_type *t, void *addr ) {
 	if( hl_is_dynamic(t) ) {
 		vdynamic *v = *(vdynamic**)addr;
-		if( v == NULL || (v->t->kind == HENUM && v->t->tenum->constructs[((venum*)v)->index].nparams == 0) ) {
+		if( v == nullptr || (v->t->kind == HENUM && v->t->tenum->constructs[((venum*)v)->index].nparams == 0) ) {
 			compact_write_ptr(ctx,v);
 			return;
 		}
@@ -784,7 +784,7 @@ static void compact_write_data( mem_context *ctx, hl_type *t, void *addr ) {
 	case HBYTES:
 		{
 			void *bytes = *(void**)addr;
-			if( bytes == NULL || !hl_is_gc_ptr(bytes) ) {
+			if( bytes == nullptr || !hl_is_gc_ptr(bytes) ) {
 				compact_write_ptr(ctx, bytes);
 				break;
 			}
@@ -842,7 +842,7 @@ static void compact_write_content( mem_context *ctx, vdynamic *d ) {
 		if( ctx->flags & 4 )
 			compact_write_offset(ctx, start); // virtual self value
 		else if( ctx->flags & 2 )
-			compact_write_ptr(ctx, NULL); // optimize virtuals
+			compact_write_ptr(ctx, nullptr); // optimize virtuals
 		else
 			compact_write_data(ctx, &hlt_dyn, &v->value);
 		compact_write_data(ctx, &hlt_dyn, &v->next);
@@ -860,7 +860,7 @@ static void compact_write_content( mem_context *ctx, vdynamic *d ) {
 				compact_pad(ctx,ft);
 				if( !addr ) {
 					if( !hl_is_ptr(ft) ) hl_error("assert");
-					compact_write_ptr(ctx,NULL);
+					compact_write_ptr(ctx,nullptr);
 				} else
 					compact_write_data(ctx,ft,addr);
 			}
@@ -887,15 +887,15 @@ static void compact_write_content( mem_context *ctx, vdynamic *d ) {
 		if( obj->lookup )
 			compact_write_offset(ctx, lookup_data);
 		else
-			compact_write_ptr(ctx, NULL);
+			compact_write_ptr(ctx, nullptr);
 		if( obj->raw_data )
 			compact_write_offset(ctx, raw_data);
 		else
-			compact_write_ptr(ctx, NULL);
+			compact_write_ptr(ctx, nullptr);
 		if( obj->values )
 			compact_write_offset(ctx, values_data);
 		else
-			compact_write_ptr(ctx, NULL);
+			compact_write_ptr(ctx, nullptr);
 		compact_write_int(ctx,obj->nfields);
 		compact_write_int(ctx,obj->raw_size);
 		compact_write_int(ctx,obj->nvalues);
@@ -988,12 +988,12 @@ HL_PRIM vdynamic *hl_mem_compact( vdynamic *d, varray *exclude, int flags, int *
 			compact_write_content(ctx, (vdynamic*)addr);
 		object_count++;
 	}
-	vbyte *data = NULL;
+	vbyte *data = nullptr;
 #	if defined(HL_WIN) && !defined(HL_XBO)
 	if( flags & 1 )
-		data = (vbyte*)VirtualAlloc(NULL,ctx->buf_pos,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);
+		data = (vbyte*)VirtualAlloc(nullptr,ctx->buf_pos,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);
 #	endif
-	if( data == NULL )
+	if( data == nullptr )
 		data = hl_gc_alloc_noptr(ctx->buf_pos);
 	memcpy(data,ctx->buf,ctx->buf_pos);
 	int exclude_count = exclude ? exclude->size : 0;

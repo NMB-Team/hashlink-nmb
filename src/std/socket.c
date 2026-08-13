@@ -121,9 +121,9 @@ HL_PRIM hl_socket *hl_socket_new( bool udp ) {
 	else
 		s = socket(AF_INET,SOCK_STREAM,0);
 	if( s == INVALID_SOCKET )
-		return NULL;
+		return nullptr;
 #	ifdef HL_MAC
-	setsockopt(s,SOL_SOCKET,SO_NOSIGPIPE,NULL,0);
+	setsockopt(s,SOL_SOCKET,SO_NOSIGPIPE,nullptr,0);
 #	endif
 #	ifdef HL_POSIX
 	// we don't want sockets to be inherited in case of exec
@@ -209,13 +209,13 @@ HL_PRIM int hl_host_resolve(vbyte *host) {
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 
-	int status = getaddrinfo((char*)host, NULL, &hints, &res);
+	int status = getaddrinfo((char*)host, nullptr, &hints, &res);
 	if (status != 0) {
 		hl_blocking(false);
 		return -1;
 	}
 
-	if (res != NULL) {
+	if (res != nullptr) {
 		struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
 		ip = ipv4->sin_addr.s_addr;
 	}
@@ -246,15 +246,15 @@ HL_PRIM vbyte *hl_host_reverse( int ip ) {
 	gethostbyaddr_r((char*)&ip,4,AF_INET,&htmp,buf,1024,&h,&errcode);
 #	endif
 	hl_blocking(false);
-	if( h == NULL )
-		return NULL;
+	if( h == nullptr )
+		return nullptr;
 	return (vbyte*)h->h_name;
 }
 
 HL_PRIM vbyte *hl_host_local() {
 	char buf[256];
 	if( gethostname(buf,256) == SOCKET_ERROR )
-		return NULL;
+		return nullptr;
 	return hl_copy_bytes((vbyte*)buf,(int)strlen(buf)+1);
 }
 
@@ -300,12 +300,12 @@ HL_PRIM hl_socket *hl_socket_accept( hl_socket *s ) {
 	_sockaddr addrlen = sizeof(addr);
 	SOCKET nsock;
 	hl_socket *hs;
-	if( !s ) return NULL;
+	if( !s ) return nullptr;
 	hl_blocking(true);
 	nsock = accept(s->sock,(struct sockaddr*)&addr,&addrlen);
 	hl_blocking(false);
 	if( nsock == INVALID_SOCKET )
-		return NULL;
+		return nullptr;
 	hs = (hl_socket*)hl_gc_alloc_noptr(sizeof(hl_socket));
 	hs->sock = nsock;
 	return hs;
@@ -430,17 +430,17 @@ HL_PRIM int hl_socket_fd_size( int size ) {
 static fd_set *make_socket_set( varray *a, char **tmp, int *tmp_size, unsigned int *max ) {
 	fd_set *set = (fd_set*)*tmp;
 	int i, req;
-	if( a == NULL )
+	if( a == nullptr )
 		return set;
 	req = hl_socket_fd_size(a->size);
 	if( *tmp_size < req )
-		return NULL;
+		return nullptr;
 	*tmp_size -= req;
 	*tmp += req;
 	FD_ZERO(set);
 	for(i=0;i<a->size;i++) {
 		hl_socket *s= hl_aptr(a,hl_socket*)[i];
-		if( s== NULL ) break;
+		if( s== nullptr ) break;
 		if( s->sock > *max ) *max = (int)s->sock;
 		FD_SET(s->sock,set);
 	}
@@ -451,17 +451,17 @@ static void make_array_result( fd_set *set, varray *a ) {
 	int i;
 	int pos = 0;
 	hl_socket **aptr = hl_aptr(a,hl_socket*);
-	if( a == NULL )
+	if( a == nullptr )
 		return;
 	for(i=0;i<a->size;i++) {
 		hl_socket *s = aptr[i];
-		if( s == NULL )
+		if( s == nullptr )
 			break;
 		if( FD_ISSET(s->sock,set) )
 			aptr[pos++] = s;
 	}
 	if( pos < a->size )
-		aptr[pos++] = NULL;
+		aptr[pos++] = nullptr;
 }
 
 HL_PRIM bool hl_socket_select( varray *ra, varray *wa, varray *ea, char *tmp, int tmp_size, double timeout ) {
@@ -471,16 +471,16 @@ HL_PRIM bool hl_socket_select( varray *ra, varray *wa, varray *ea, char *tmp, in
 	rs = make_socket_set(ra,&tmp,&tmp_size,&max);
 	ws = make_socket_set(wa,&tmp,&tmp_size,&max);
 	es = make_socket_set(ea,&tmp,&tmp_size,&max);
-	if( rs == NULL || ws == NULL || es == NULL )
+	if( rs == nullptr || ws == nullptr || es == nullptr )
 		return false;
 	if( timeout < 0 )
-		tt = NULL;
+		tt = nullptr;
 	else {
 		tt = &tval;
 		init_timeval(timeout,tt);
 	}
 	hl_blocking(true);
-	if( select((int)(max+1),ra?rs:NULL,wa?ws:NULL,ea?es:NULL,tt) == SOCKET_ERROR ) {
+	if( select((int)(max+1),ra?rs:nullptr,wa?ws:nullptr,ea?es:nullptr,tt) == SOCKET_ERROR ) {
 		hl_blocking(false);
 #		ifndef HL_WIN
 		if( errno == EINTR ) return true;

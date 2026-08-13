@@ -35,7 +35,7 @@
 #endif
 
 #if defined(HL_WIN)
-static HANDLE last_process = NULL, last_thread = NULL;
+static HANDLE last_process = nullptr, last_thread = nullptr;
 static int last_pid = -1;
 static int last_tid = -1;
 static HANDLE OpenPID( int pid ) {
@@ -59,8 +59,8 @@ static void CleanHandles() {
 	last_tid = -1;
 	CloseHandle(last_process);
 	CloseHandle(last_thread);
-	last_process = NULL;
-	last_thread = NULL;
+	last_process = nullptr;
+	last_thread = nullptr;
 }
 #endif
 
@@ -105,7 +105,7 @@ HL_API bool hl_debug_breakpoint( int pid ) {
 
 HL_API bool hl_debug_read( int pid, vbyte *addr, vbyte *buffer, int size ) {
 #	if defined(HL_WIN)
-	return (bool)ReadProcessMemory(OpenPID(pid),addr,buffer,size,NULL);
+	return (bool)ReadProcessMemory(OpenPID(pid),addr,buffer,size,nullptr);
 #	elif defined(MAC_DEBUG)
 	return mdbg_read_memory(pid, addr, buffer, size);
 #	elif defined(USE_PTRACE)
@@ -129,7 +129,7 @@ HL_API bool hl_debug_read( int pid, vbyte *addr, vbyte *buffer, int size ) {
 
 HL_API bool hl_debug_write( int pid, vbyte *addr, vbyte *buffer, int size ) {
 #	if defined(HL_WIN)
-	return (bool)WriteProcessMemory(OpenPID(pid),addr,buffer,size,NULL);
+	return (bool)WriteProcessMemory(OpenPID(pid),addr,buffer,size,nullptr);
 #	elif defined(MAC_DEBUG)
 	return mdbg_write_memory(pid, addr, buffer, size);
 #	elif defined(USE_PTRACE)
@@ -185,9 +185,9 @@ static int get_reg( int r ) {
 
 #ifdef USE_PTRACE
 static void *get_reg( int r ) {
-		struct user_regs_struct *regs = NULL;
-		struct user *user = NULL;
-		struct user_fpregs_struct *fp = NULL;
+		struct user_regs_struct *regs = nullptr;
+		struct user *user = nullptr;
+		struct user_fpregs_struct *fp = nullptr;
 		switch( r ) {
 		case -1: return &user->u_fpstate;
 #		ifdef HL_64
@@ -206,7 +206,7 @@ static void *get_reg( int r ) {
 		case 3: return &regs->eflags;
 		default: return &user->u_debugreg[r-4];
 		}
-		return NULL;
+		return nullptr;
 }
 #endif
 
@@ -319,20 +319,20 @@ HL_API void *hl_debug_read_register( int pid, int thread, int reg, bool is64 ) {
 		WOW64_CONTEXT c;
 		c.ContextFlags = CONTEXT_FULL | CONTEXT_DEBUG_REGISTERS;
 		if( !Wow64GetThreadContext(OpenTID(thread),&c) )
-			return NULL;
+			return nullptr;
 		if( reg == 3 )
 			return (void*)(int_val)c.EFlags;
 		if( reg == 11 )
-			return NULL; // TODO
+			return nullptr; // TODO
 		return (void*)(int_val)*GetContextReg32(&c,reg);
 	}
 #	else
-	if( is64 ) return NULL;
+	if( is64 ) return nullptr;
 #	endif
 	CONTEXT c;
 	c.ContextFlags = CONTEXT_FULL | CONTEXT_DEBUG_REGISTERS;
 	if( !GetThreadContext(OpenTID(thread),&c) )
-		return NULL;
+		return nullptr;
 	if( reg == 3 )
 		return (void*)(int_val)c.EFlags;
 	if( reg == 11 )
@@ -349,13 +349,13 @@ HL_API void *hl_debug_read_register( int pid, int thread, int reg, bool is64 ) {
 	if( ((int_val)r) < 0 ) {
 		// peek FP ptr
 		char *addr = (char*)ptrace(PTRACE_PEEKUSER,thread,get_reg(-1),0);
-		void *out = NULL;
+		void *out = nullptr;
 		hl_debug_read(pid, addr + (-((int_val)r)-1), (vbyte*)&out, sizeof(void*));
 		return out;
 	}
 	return (void*)ptrace(PTRACE_PEEKUSER,thread,r,0);
 #	else
-	return NULL;
+	return nullptr;
 #	endif
 }
 

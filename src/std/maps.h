@@ -35,7 +35,7 @@ _MSTATIC _MVAL_TYPE *_MNAME(find)( t_map *m, t_key key ) {
 	int c, dc = 0;
 	unsigned int hash;
 
-	if (m->nbuckets == 0) return NULL;
+	if (m->nbuckets == 0) return nullptr;
 	hash = _MNAME(hash)(key);
 	c = hash % ((unsigned)m->nbuckets);
 	while( m->psl[c] >= 0 && dc <= m->psl[c] ) {
@@ -44,7 +44,7 @@ _MSTATIC _MVAL_TYPE *_MNAME(find)( t_map *m, t_key key ) {
 		dc++;
 		c = (c + 1) % m->nbuckets;
 	}
-	return NULL;
+	return nullptr;
 }
 
 static void _MNAME(resize)( t_map *m );
@@ -127,12 +127,12 @@ HL_PRIM void _MNAME(set)( t_map *m, t_key key, _MVAL_TYPE value ) {
 }
 
 HL_PRIM bool _MNAME(exists)( t_map *m, t_key key ) {
-	return _MNAME(find)(m,_MNAME(filter)(key)) != NULL;
+	return _MNAME(find)(m,_MNAME(filter)(key)) != nullptr;
 }
 
 HL_PRIM vdynamic* _MNAME(get)( t_map *m, t_key key ) {
 	vdynamic **v = _MNAME(find)(m,_MNAME(filter)(key));
-	if( v == NULL ) return NULL;
+	if( v == nullptr ) return nullptr;
 	return *v;
 }
 
@@ -147,7 +147,7 @@ HL_PRIM bool _MNAME(remove)( t_map *m, t_key key ) {
 		if (_MMATCH(c)) {
 			m->nentries--;
 			_MERASE(c);
-			m->values[c].value = NULL;
+			m->values[c].value = nullptr;
 			m->psl[c] = -1;
 			// Move all following elements
 			int next = (c + 1) % m->nbuckets;
@@ -157,7 +157,7 @@ HL_PRIM bool _MNAME(remove)( t_map *m, t_key key ) {
 				_MSET(c);
 				_MERASE(next);
 				m->values[c].value = m->values[next].value;
-				m->values[next].value = NULL;
+				m->values[next].value = nullptr;
 				m->psl[c] = m->psl[next] - 1;
 				m->psl[next] = -1;
 				c = next;

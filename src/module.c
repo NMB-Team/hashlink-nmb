@@ -36,7 +36,7 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
 HL_API void hl_prim_not_loaded( const uchar *err );
 
-static hl_module **cur_modules = NULL;
+static hl_module **cur_modules = nullptr;
 static int modules_count = 0;
 
 static bool module_resolve_pos( hl_module *m, void *addr, int *fidx, int *fpos ) {
@@ -44,7 +44,7 @@ static bool module_resolve_pos( hl_module *m, void *addr, int *fidx, int *fpos )
 	int min, max;
 	hl_debug_infos *dbg;
 	hl_function *fdebug;
-	if( m->jit_debug == NULL )
+	if( m->jit_debug == nullptr )
 		return false;
 	// lookup function from code pos
 	min = 0;
@@ -90,15 +90,15 @@ uchar *hl_module_resolve_symbol_full( void *addr, uchar *out, int *outSize, int 
 	int fidx, fpos;
 	hl_function *fdebug;
 	int i;
-	hl_module *m = NULL;
+	hl_module *m = nullptr;
 	for(i=0;i<modules_count;i++) {
 		m = cur_modules[i];
 		if( addr >= m->jit_code && addr <= (void*)((char*)m->jit_code + m->codesize) ) break;
 	}
 	if( i == modules_count )
-		return NULL;
+		return nullptr;
 	if( !module_resolve_pos(m,addr,&fidx,&fpos) )
-		return NULL;
+		return nullptr;
 	// extract debug info
 	fdebug = m->code->functions + fidx;
 	debug_addr = fdebug->debug + ((fpos&0xFFFF) * 2);
@@ -106,10 +106,10 @@ uchar *hl_module_resolve_symbol_full( void *addr, uchar *out, int *outSize, int 
 	line = debug_addr[1];
 	if( r_debug_addr ) {
 		*r_debug_addr = debug_addr;
-		if( file < 0 ) return NULL; // already cached
+		if( file < 0 ) return nullptr; // already cached
 	}
 	if( !out )
-		return NULL;
+		return nullptr;
 	int size = *outSize;
 	if( fdebug->obj )
 		pos += usprintf(out,size - pos,USTR("%s.%s("),fdebug->obj->name,fdebug->field.name);
@@ -124,7 +124,7 @@ uchar *hl_module_resolve_symbol_full( void *addr, uchar *out, int *outSize, int 
 }
 
 static uchar *module_resolve_symbol( void *addr, uchar *out, int *outSize ) {
-	return hl_module_resolve_symbol_full(addr,out,outSize,NULL);
+	return hl_module_resolve_symbol_full(addr,out,outSize,nullptr);
 }
 
 int hl_module_capture_stack_range( void *stack_top, void **stack_ptr, void **out, int size ) {
@@ -214,7 +214,7 @@ static int module_capture_stack( void **stack, int size ) {
 	while(true) {
 		DWORD64 base;
 		DWORD64 ip = context.Rip;
-		PRUNTIME_FUNCTION fn_entry = RtlLookupFunctionEntry(ip, &base, NULL);
+		PRUNTIME_FUNCTION fn_entry = RtlLookupFunctionEntry(ip, &base, nullptr);
 		if (!fn_entry) {
 			break;
 		}
@@ -242,7 +242,7 @@ static int module_capture_stack( void **stack, int size ) {
 
 		void* handler_data;
 		ULONG64 establisher_frame;
-		RtlVirtualUnwind(0, base, ip, fn_entry, &context, &handler_data, &establisher_frame, NULL);
+		RtlVirtualUnwind(0, base, ip, fn_entry, &context, &handler_data, &establisher_frame, nullptr);
 		if (context.Rip == 0) {
 			break;
 		}
@@ -284,14 +284,14 @@ hl_module *hl_module_alloc( hl_code *c ) {
 	int i;
 	int gsize = 0;
 	hl_module *m = (hl_module*)malloc(sizeof(hl_module));
-	if( m == NULL )
-		return NULL;
+	if( m == nullptr )
+		return nullptr;
 	memset(m,0,sizeof(hl_module));
 	m->code = c;
 	m->globals_indexes = (int*)malloc(sizeof(int)*c->nglobals);
-	if( m->globals_indexes == NULL ) {
+	if( m->globals_indexes == nullptr ) {
 		hl_module_free(m);
-		return NULL;
+		return nullptr;
 	}
 	for(i=0;i<c->nglobals;i++) {
 		gsize += hl_pad_size(gsize, c->globals[i]);
@@ -300,17 +300,17 @@ hl_module *hl_module_alloc( hl_code *c ) {
 	}
 	m->globals_size = gsize;
 	m->globals_data = (unsigned char*)malloc(gsize);
-	if( m->globals_data == NULL ) {
+	if( m->globals_data == nullptr ) {
 		hl_module_free(m);
-		return NULL;
+		return nullptr;
 	}
 	memset(m->globals_data,0,gsize);
 	m->functions_ptrs = (void**)malloc(sizeof(void*)*(c->nfunctions + c->nnatives));
 	m->functions_indexes = (int*)malloc(sizeof(int)*(c->nfunctions + c->nnatives));
 	m->ctx.functions_types = (hl_type**)malloc(sizeof(void*)*(c->nfunctions + c->nnatives));
-	if( m->functions_ptrs == NULL || m->functions_indexes == NULL || m->ctx.functions_types == NULL ) {
+	if( m->functions_ptrs == nullptr || m->functions_indexes == nullptr || m->ctx.functions_types == nullptr ) {
 		hl_module_free(m);
-		return NULL;
+		return nullptr;
 	}
 	memset(m->functions_ptrs,0,sizeof(void*)*(c->nfunctions + c->nnatives));
 	memset(m->functions_indexes,0xFF,sizeof(int)*(c->nfunctions + c->nnatives));
@@ -372,7 +372,7 @@ static void *resolve_library( const char *lib, bool is_opt ) {
 	void *h;
 
 #	ifndef HL_CONSOLE
-	static char *DISABLED_LIBS = NULL;
+	static char *DISABLED_LIBS = nullptr;
 	if( !DISABLED_LIBS ) {
 		DISABLED_LIBS = getenv("HL_DISABLED_LIBS");
 		if( !DISABLED_LIBS ) DISABLED_LIBS = "";
@@ -386,17 +386,17 @@ static void *resolve_library( const char *lib, bool is_opt ) {
 #	endif
 
 	if( strcmp(lib,"builtin") == 0 )
-		return dlopen(NULL,RTLD_LAZY);
+		return dlopen(nullptr,RTLD_LAZY);
 
 	if( strcmp(lib,"std") == 0 ) {
 #	ifdef HL_WIN
 #		ifdef HL_64
 		h = dlopen("libhl64.dll",RTLD_LAZY);
-		if( h == NULL ) h = dlopen("libhl.dll",RTLD_LAZY);
+		if( h == nullptr ) h = dlopen("libhl.dll",RTLD_LAZY);
 #		else
 		h = dlopen("libhl.dll",RTLD_LAZY);
 #		endif
-		if( h == NULL && !is_opt ) hl_fatal1("Failed to load library %s","libhl.dll");
+		if( h == nullptr && !is_opt ) hl_fatal1("Failed to load library %s","libhl.dll");
 		return h;
 #	else
 		return RTLD_DEFAULT;
@@ -408,7 +408,7 @@ static void *resolve_library( const char *lib, bool is_opt ) {
 		strcpy(tmp,lib+6);
 		strcpy(tmp+strlen(lib)-6,".limen");
 		h = dlopen(tmp,RTLD_LAZY);
-		if( h == NULL && !is_opt )
+		if( h == nullptr && !is_opt )
 			hl_fatal1("Failed to load library %s",tmp);
 		return h;
 	}
@@ -416,12 +416,12 @@ static void *resolve_library( const char *lib, bool is_opt ) {
 #	ifdef HL_64
 	strcpy(tmp+strlen(lib),"64.hdll");
 	h = dlopen(tmp,RTLD_LAZY);
-	if( h != NULL ) return h;
+	if( h != nullptr ) return h;
 #	endif
 
 	strcpy(tmp+strlen(lib),".hdll");
 	h = dlopen(tmp,RTLD_LAZY);
-	if( h == NULL && !is_opt )
+	if( h == nullptr && !is_opt )
 		hl_fatal1("Failed to load library %s",tmp);
 	return h;
 }
@@ -448,7 +448,7 @@ static void hl_module_init_indexes( hl_module *m ) {
 		case HOBJ:
 		case HSTRUCT:
 			t->obj->m = &m->ctx;
-			t->obj->global_value = ((int)(int_val)t->obj->global_value) ? (void**)(int_val)(m->globals_data + m->globals_indexes[(int)(int_val)t->obj->global_value-1]) : NULL;
+			t->obj->global_value = ((int)(int_val)t->obj->global_value) ? (void**)(int_val)(m->globals_data + m->globals_indexes[(int)(int_val)t->obj->global_value-1]) : nullptr;
 			{
 				int j;
 				for(j=0;j<t->obj->nproto;j++) {
@@ -478,7 +478,7 @@ static void hl_module_init_indexes( hl_module *m ) {
 			break;
 		case HENUM:
 			hl_init_enum(t,&m->ctx);
-			t->tenum->global_value = ((int)(int_val)t->tenum->global_value) ? (void**)(int_val)(m->globals_data + m->globals_indexes[(int)(int_val)t->tenum->global_value-1]) : NULL;
+			t->tenum->global_value = ((int)(int_val)t->tenum->global_value) ? (void**)(int_val)(m->globals_data + m->globals_indexes[(int)(int_val)t->tenum->global_value-1]) : nullptr;
 			break;
 		case HVIRTUAL:
 			hl_init_virtual(t,&m->ctx);
@@ -492,7 +492,7 @@ static void hl_module_init_indexes( hl_module *m ) {
 		hl_function *f = m->code->functions + i;
 		hl_function *real_f = f;
 		while( real_f && !real_f->obj ) real_f = real_f->field.ref;
-		if( real_f == NULL ) continue;
+		if( real_f == nullptr ) continue;
 		for(k=0;k<f->nops;k++) {
 			hl_opcode *op = f->ops + k;
 			switch( op->op ) {
@@ -528,7 +528,7 @@ static void hl_module_init_indexes( hl_module *m ) {
 #include <jitprofiling.h>
 h_bool hl_module_init_vtune( hl_module *m ) {
 	int i;
-	if( !iJIT_IsProfilingActive() || m->jit_debug == NULL )
+	if( !iJIT_IsProfilingActive() || m->jit_debug == nullptr )
 		return false;
 	for(i=0;i<m->code->nfunctions;i++) {
 		hl_function *f = m->code->functions + i;
@@ -593,8 +593,8 @@ static void modules_init_vtune() {
 static void hl_module_init_natives( hl_module *m ) {
 	char tmp[256];
 	int i;
-	void *libHandler = NULL;
-	const char *curlib = NULL, *sign;
+	void *libHandler = nullptr;
+	const char *curlib = nullptr, *sign;
 	for(i=0;i<m->code->nnatives;i++) {
 		hl_native *n = m->code->natives + i;
 		const char *lib = n->lib;
@@ -616,7 +616,7 @@ static void hl_module_init_natives( hl_module *m ) {
 		p += strlen(n->name);
 		*p++ = 0;
 		f = dlsym(libHandler,tmp);
-		if( f == NULL ) {
+		if( f == nullptr ) {
 			if( is_opt ) {
 				m->functions_ptrs[n->findex] = hl_prim_not_loaded;
 				continue;
@@ -636,7 +636,7 @@ static void hl_module_init_constant( hl_module *m, hl_constant *c ) {
 	hl_type *t = m->code->globals[c->global];
 	hl_runtime_obj *rt;
 	vdynamic **global = (vdynamic**)(m->globals_data + m->globals_indexes[c->global]);
-	vdynamic *v = NULL;
+	vdynamic *v = nullptr;
 	switch (t->kind) {
 	case HOBJ:
 	case HSTRUCT:
@@ -715,7 +715,7 @@ int hl_module_init( hl_module *m, h_bool hot_reload ) {
 	hl_module_init_indexes(m);
 	// JIT
 	ctx = hl_jit_alloc();
-	if( ctx == NULL )
+	if( ctx == nullptr )
 		return 0;
 	hl_jit_init(ctx, m);
 	for(i=0;i<m->code->nfunctions;i++) {
@@ -727,7 +727,7 @@ int hl_module_init( hl_module *m, h_bool hot_reload ) {
 		}
 		m->functions_ptrs[f->findex] = (void*)(int_val)fpos;
 	}
-	m->jit_code = hl_jit_code(ctx, m, &m->codesize, &m->jit_debug, NULL);
+	m->jit_code = hl_jit_code(ctx, m, &m->codesize, &m->jit_debug, nullptr);
 	for(i=0;i<m->code->nfunctions;i++) {
 		hl_function *f = m->code->functions + i;
 		m->functions_ptrs[f->findex] = ((unsigned char*)m->jit_code) + ((int_val)m->functions_ptrs[f->findex]);
@@ -818,7 +818,7 @@ static int check_same_obj( hl_type_obj *o1, hl_type_obj *o2 ) {
 hl_type *hl_module_resolve_type( hl_module *m, hl_type *t, bool err ) {
 	int i;
 	if( t->kind != HOBJ && t->kind != HSTRUCT )
-		return NULL;
+		return nullptr;
 	for(i=0;i<m->code->ntypes;i++) {
 		hl_type *t2 = m->code->types + i;
 		if( t2->kind == t->kind && ucmp(t->obj->name,t2->obj->name) == 0 ) {
@@ -831,10 +831,10 @@ hl_type *hl_module_resolve_type( hl_module *m, hl_type *t, bool err ) {
 				else
 					hl_error("Class '%s' has different definition than loader",t->obj->name);
 			}
-			return NULL;
+			return nullptr;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
@@ -878,7 +878,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 	for(i2=0;i2<m2->code->nfunctions;i2++) {
 		hl_function *f2 = m2->code->functions + i2;
 		int sign2 = m2->hash->functions_signs[i2];
-		if( f2->field.name == NULL ) {
+		if( f2->field.name == nullptr ) {
 			m2->hash->functions_hashes[i2] = -1;
 			continue;
 		}
@@ -886,7 +886,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 			int sign1 = m1->hash->functions_signs[i1];
 			if( sign1 == sign2 ) {
 				hl_function *f1 = m1->code->functions + i1;
-				if( (f1->obj != NULL) != (f2->obj != NULL) || !f1->field.name || !f2->field.name ) {
+				if( (f1->obj != nullptr) != (f2->obj != nullptr) || !f1->field.name || !f2->field.name ) {
 					printf("[HotReload] Signature conflict\n");
 					continue;
 				}
@@ -994,7 +994,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 		for(i=0;i<c->nfunctions;i++) {
 			if( m2->jit_debug[i].start < 0 ) {
 				m2->jit_debug[i].start = start;
-				m2->jit_debug[i].offsets = NULL;
+				m2->jit_debug[i].offsets = nullptr;
 			} else {
 				start = m2->jit_debug[i].start;
 			}
@@ -1003,7 +1003,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 
 	hl_jit_free(ctx,true);
 
-	if( m2->jit_code == NULL ) {
+	if( m2->jit_code == nullptr ) {
 		printf("[HotReload] Couldn't JIT result\n");
 		fflush(stdout);
 		return false;
@@ -1012,7 +1012,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 	for(i=0;i<m2->code->nfunctions;i++) {
 		hl_function *f2 = m2->code->functions + i;
 		if( m2->hash->functions_hashes[i] < -1 ) continue;
-		if( m2->functions_ptrs[f2->findex] == NULL ) continue;
+		if( m2->functions_ptrs[f2->findex] == nullptr ) continue;
 		void *ptr = ((unsigned char*)m2->jit_code) + ((int_val)m2->functions_ptrs[f2->findex]);
 		m2->functions_ptrs[f2->findex] = ptr;
 		// update real function ptr
@@ -1040,7 +1040,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 			cl.t = m->code->functions[m->functions_indexes[m->code->entrypoint]].type;
 			cl.fun = m->functions_ptrs[m->code->entrypoint];
 			cl.hasValue = 0;
-			hl_dyn_call(&cl,NULL,0);
+			hl_dyn_call(&cl,nullptr,0);
 			break;
 		}
 	}

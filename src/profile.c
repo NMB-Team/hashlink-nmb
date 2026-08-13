@@ -137,7 +137,7 @@ static void *get_thread_stackptr( thread_handle *t, void **eip ) {
 #ifdef HL_WIN_DESKTOP
 	CONTEXT c;
 	c.ContextFlags = CONTEXT_CONTROL;
-	if( !GetThreadContext(t->h,&c) ) return NULL;
+	if( !GetThreadContext(t->h,&c) ) return nullptr;
 #	ifdef HL_64
 	*eip = (void*)c.Rip;
 	return (void*)c.Rsp;
@@ -159,13 +159,13 @@ static void *get_thread_stackptr( thread_handle *t, void **eip ) {
 	return (void*)shared_context.context.uc_mcontext.sp;
 #elif defined(HL_MAC) && defined(__x86_64__)
 	struct __darwin_mcontext64 *mcontext = shared_context.context.uc_mcontext;
-	if (mcontext != NULL) {
+	if (mcontext != nullptr) {
 		*eip = (void*)mcontext->__ss.__rip;
 		return (void*)mcontext->__ss.__rsp;
 	}
-	return NULL;
+	return nullptr;
 #else
-	return NULL;
+	return nullptr;
 #endif
 }
 
@@ -218,7 +218,7 @@ static void record_data( void *ptr, int size ) {
 		r->currentPos = 0;
 		r->dataSize = 1 << 20;
 		r->data = malloc(r->dataSize);
-		r->next = NULL;
+		r->next = nullptr;
 		if( data.record )
 			data.record->next = r;
 		else
@@ -309,7 +309,7 @@ static void hl_profile_loop( void *_ ) {
 		hl_condition_release(data.waitCond);
 		hl_threads_info *threads = hl_gc_threads_info();
 		int i;
-		thread_handle *prev = NULL;
+		thread_handle *prev = nullptr;
 		thread_handle *cur = data.handles;
 		for(i=0;i<threads->count;i++) {
 			hl_thread_info *t = threads->threads[i];
@@ -348,7 +348,7 @@ static void hl_profile_loop( void *_ ) {
 					thread_data_init(h);
 					h->next = cur;
 					cur = h;
-					if( prev == NULL ) data.handles = h; else prev->next = h;
+					if( prev == nullptr ) data.handles = h; else prev->next = h;
 				}
 			}
 			if( (t->flags & HL_THREAD_PROFILER_PAUSED) == 0 )
@@ -356,8 +356,8 @@ static void hl_profile_loop( void *_ ) {
 			prev = cur;
 			cur = cur->next;
 		}
-		if( prev ) prev->next = NULL; else data.handles = NULL;
-		while( cur != NULL ) {
+		if( prev ) prev->next = nullptr; else data.handles = nullptr;
+		while( cur != nullptr ) {
 			thread_handle *n;
 			thread_data_free(cur);
 			n = cur->next;
@@ -371,7 +371,7 @@ static void hl_profile_loop( void *_ ) {
 		next += wait_time;
 	}
 	free(data.tmpMemory);
-	data.tmpMemory = NULL;
+	data.tmpMemory = nullptr;
 	data.sample_count = 0;
 	data.stopLoop = false;
 }
@@ -380,7 +380,7 @@ static void profile_event( int code, vbyte *data, int dataLen );
 
 void hl_profile_setup( int sample_count ) {
 #	if defined(HL_THREADS) && (defined(HL_WIN_DESKTOP) || defined(HL_LINUX) || defined (HL_MAC))
-	if( data.waitCond == NULL ) {
+	if( data.waitCond == nullptr ) {
 		data.waitCond = hl_condition_alloc();
 		hl_add_root(&data.waitCond);
 	}
@@ -400,24 +400,24 @@ void hl_profile_setup( int sample_count ) {
 	struct sigaction action = {0};
 	action.sa_sigaction = sigprof_handler;
 	action.sa_flags = SA_SIGINFO | SA_RESTART;
-	sigaction(SIGPROF, &action, NULL);
+	sigaction(SIGPROF, &action, nullptr);
 #	elif defined(HL_MAC)
-	shared_context.context.uc_mcontext = NULL;
+	shared_context.context.uc_mcontext = nullptr;
 	shared_context.msg2 = dispatch_semaphore_create(0);
 	shared_context.msg3 = dispatch_semaphore_create(0);
 	shared_context.msg4 = dispatch_semaphore_create(0);
 	struct sigaction action = {0};
 	action.sa_sigaction = sigprof_handler;
 	action.sa_flags = SA_SIGINFO | SA_RESTART;
-	sigaction(SIGPROF, &action, NULL);
+	sigaction(SIGPROF, &action, nullptr);
 #	endif
-	hl_thread_start(hl_profile_loop,NULL,false);
+	hl_thread_start(hl_profile_loop,nullptr,false);
 #	endif
 }
 
 static bool read_profile_data( profile_reader *r, void *ptr, int size ) {
 	while( size ) {
-		if( r->r == NULL ) return false;
+		if( r->r == nullptr ) return false;
 		int bytes = r->r->currentPos - r->pos;
 		if( bytes > size ) bytes = size;
 		if( ptr ) memcpy(ptr, r->r->data + r->pos, bytes);
@@ -455,9 +455,9 @@ static void profile_dump( vbyte* ptr ) {
 	printf("Writing profiling data...\n");
 	fflush(stdout);
 
-	char* filename = ptr == NULL ? "hlprofile.dump" : hl_to_utf8((uchar*)ptr);
+	char* filename = ptr == nullptr ? "hlprofile.dump" : hl_to_utf8((uchar*)ptr);
 	FILE *f = fopen(filename,"wb");
-	if( f == NULL ) {
+	if( f == nullptr ) {
 		profile_resume();
 		printf("Failed to open file %s, 0 profile samples saved\n", filename);
 		hl_error("Failed to open file");
@@ -486,9 +486,9 @@ static void profile_dump( vbyte* ptr ) {
 			for(i=0;i<count;i++) {
 				uchar outStr[256];
 				int outSize = 256;
-				int *debug_addr = NULL;
+				int *debug_addr = nullptr;
 				hl_module_resolve_symbol_full(data.stackOut[i],outStr,&outSize,&debug_addr);
-				if( debug_addr == NULL ) {
+				if( debug_addr == nullptr ) {
 					int bad = -1;
 					fwrite(&bad,1,4,f);
 				} else {
@@ -521,25 +521,25 @@ static void profile_dump( vbyte* ptr ) {
 	r.pos = 0;
 	while( true ) {
 		int i, eventId;
-		if( !read_profile_data(&r,NULL, sizeof(double) + sizeof(int)) ) break;
+		if( !read_profile_data(&r,nullptr, sizeof(double) + sizeof(int)) ) break;
 		read_profile_data(&r,&eventId,sizeof(int));
 		if( eventId < 0 ) {
 			int count = eventId & 0x3FFFFFFF;
 			read_profile_data(&r,data.stackOut,sizeof(void*)*count);
 			for(i=0;i<count;i++) {
-				int *debug_addr = NULL;
-				hl_module_resolve_symbol_full(data.stackOut[i],NULL,NULL,&debug_addr);
+				int *debug_addr = nullptr;
+				hl_module_resolve_symbol_full(data.stackOut[i],nullptr,nullptr,&debug_addr);
 				if( debug_addr )
 					debug_addr[0] &= 0x7FFFFFFF;
 			}
 		} else {
 			int size;
 			read_profile_data(&r,&size,sizeof(int));
-			read_profile_data(&r,NULL,size);
+			read_profile_data(&r,nullptr,size);
 		}
 	}
 	// dump threads names
-	int names_count = write_names(data.handles,NULL) + write_names(data.olds,NULL);
+	int names_count = write_names(data.handles,nullptr) + write_names(data.olds,nullptr);
 	fwrite(&names_count,1,4,f);
 	write_names(data.handles,f);
 	write_names(data.olds,f);
@@ -550,7 +550,7 @@ static void profile_dump( vbyte* ptr ) {
 }
 
 void hl_profile_end() {
-	profile_dump(NULL);
+	profile_dump(nullptr);
 	if( !data.sample_count ) return;
 	data.stopLoop = true;
 	hl_condition_acquire(data.waitCond);
@@ -578,8 +578,8 @@ static void profile_event( int code, vbyte *ptr, int dataLen ) {
 			free(d);
 			d = n;
 		}
-		data.first_record = NULL;
-		data.record = NULL;
+		data.first_record = nullptr;
+		data.record = nullptr;
 		profile_resume();
 		break;
 	case -4:
@@ -593,7 +593,7 @@ static void profile_event( int code, vbyte *ptr, int dataLen ) {
 		break;
 	case -7:
 		{
-			uchar *end = NULL;
+			uchar *end = nullptr;
 			hl_profile_setup( ptr ? utoi((uchar*)ptr,&end) : 1000);
 		}
 		break;

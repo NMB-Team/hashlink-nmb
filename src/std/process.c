@@ -62,7 +62,7 @@ static void process_finalize( vprocess *p ) {
 #	ifdef HL_WIN
 	CloseHandle(p->eread);
 	CloseHandle(p->oread);
-	if (p->iwrite != NULL) {
+	if (p->iwrite != nullptr) {
 		CloseHandle(p->iwrite);
 	}
 	CloseHandle(p->pinf.hProcess);
@@ -82,13 +82,13 @@ HL_PRIM vprocess *hl_process_run( vbyte *cmd, varray *vargs, bool detached ) {
 	HANDLE proc = GetCurrentProcess();
 	HANDLE oread,eread,iwrite;
 	if( vargs )
-		return NULL; // should have been pre-processed by toplevel
+		return nullptr; // should have been pre-processed by toplevel
 	p = (vprocess*)hl_gc_alloc_finalizer(sizeof(vprocess));
 	p->finalize = process_finalize;
 	// startup process
 	sattr.nLength = sizeof(sattr);
 	sattr.bInheritHandle = detached ? FALSE : TRUE;
-	sattr.lpSecurityDescriptor = NULL;
+	sattr.lpSecurityDescriptor = nullptr;
 	memset(&sinf,0,sizeof(sinf));
 	sinf.cb = sizeof(sinf);
 	sinf.dwFlags = detached ? 0 : STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
@@ -104,13 +104,13 @@ HL_PRIM vprocess *hl_process_run( vbyte *cmd, varray *vargs, bool detached ) {
 		CloseHandle(eread);
 		CloseHandle(iwrite);
 	} else {
-		p->oread = NULL;
-		p->eread = NULL;
-		p->iwrite = NULL;
+		p->oread = nullptr;
+		p->eread = nullptr;
+		p->iwrite = nullptr;
 	}
-	if( !CreateProcess(NULL,(uchar*)cmd,NULL,NULL,detached?FALSE:TRUE,detached?CREATE_NEW_CONSOLE:0,NULL,NULL,&sinf,&p->pinf) ) {
+	if( !CreateProcess(nullptr,(uchar*)cmd,nullptr,nullptr,detached?FALSE:TRUE,detached?CREATE_NEW_CONSOLE:0,nullptr,nullptr,&sinf,&p->pinf) ) {
 		// handles will be finalized
-		return NULL;
+		return nullptr;
 	}
 	// close unused pipes
 	if( !detached ) {
@@ -125,20 +125,20 @@ HL_PRIM vprocess *hl_process_run( vbyte *cmd, varray *vargs, bool detached ) {
 		argv[0] = "/bin/sh";
 		argv[1] = "-c";
 		argv[2] = (char*)cmd;
-		argv[3] = NULL;
+		argv[3] = nullptr;
 	} else {
 		int i;
 		if( vargs->at->kind != HBYTES )
-			return NULL;
+			return nullptr;
 		argv = (char**)malloc(sizeof(char*)*(vargs->size+2));
 		argv[0] = (char*)cmd;
 		for(i=0;i<vargs->size;i++)
 			argv[i+1] = hl_aptr(vargs,char*)[i];
-		argv[i+1] = NULL;
+		argv[i+1] = nullptr;
 	}
 	int input[2], output[2], error[2];
 	if( pipe(input) || pipe(output) || pipe(error) )
-		return NULL;
+		return nullptr;
 	p = (vprocess*)hl_gc_alloc_finalizer(sizeof(vprocess));
 #ifdef HL_TVOS
 	hl_error("hl_process_run() not available for this platform");
@@ -153,7 +153,7 @@ HL_PRIM vprocess *hl_process_run( vbyte *cmd, varray *vargs, bool detached ) {
 		close(output[1]);
 		close(error[0]);
 		close(error[1]);
-		return NULL;
+		return nullptr;
 	}
 	// child
 	if( p->pid == 0 ) {
@@ -186,7 +186,7 @@ HL_PRIM vprocess *hl_process_run( vbyte *cmd, varray *vargs, bool detached ) {
 HL_PRIM int hl_process_stdout_read( vprocess *p, vbyte *str, int pos, int len ) {
 #	ifdef HL_WIN
 	DWORD nbytes;
-	if( !ReadFile(p->oread,str+pos,len,&nbytes,NULL) )
+	if( !ReadFile(p->oread,str+pos,len,&nbytes,nullptr) )
 		return -1;
 	return nbytes;
 #	else
@@ -203,7 +203,7 @@ HL_PRIM int hl_process_stdout_read( vprocess *p, vbyte *str, int pos, int len ) 
 HL_PRIM int hl_process_stderr_read( vprocess *p, vbyte *str, int pos, int len ) {
 #	ifdef HL_WIN
 	DWORD nbytes;
-	if( !ReadFile(p->eread,str+pos,len,&nbytes,NULL) )
+	if( !ReadFile(p->eread,str+pos,len,&nbytes,nullptr) )
 		return -1;
 	return nbytes;
 #	else
@@ -220,7 +220,7 @@ HL_PRIM int hl_process_stderr_read( vprocess *p, vbyte *str, int pos, int len ) 
 HL_PRIM int hl_process_stdin_write( vprocess *p, vbyte *str, int pos, int len ) {
 #	ifdef HL_WIN
 	DWORD nbytes;
-	if( !WriteFile(p->iwrite,str+pos,len,&nbytes,NULL) )
+	if( !WriteFile(p->iwrite,str+pos,len,&nbytes,nullptr) )
 		return -1;
 	return nbytes;
 #	else
@@ -238,7 +238,7 @@ HL_PRIM bool hl_process_stdin_close( vprocess *p ) {
 #	ifdef HL_WIN
 	if( !CloseHandle(p->iwrite) )
 		return false;
-	p->iwrite = NULL;
+	p->iwrite = nullptr;
 #	else
 	if( close(p->iwrite) )
 		return false;
@@ -290,7 +290,7 @@ HL_PRIM int hl_process_pid( vprocess *p ) {
 
 HL_PRIM void hl_process_close( vprocess *p ) {
 	if( !p->finalize ) return;
-	p->finalize = NULL;
+	p->finalize = nullptr;
 	process_finalize(p);
 }
 

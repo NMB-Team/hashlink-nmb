@@ -78,7 +78,7 @@ extern void sys_global_exit();
 
 static uchar *hlc_resolve_symbol( void *addr, uchar *out, int *outSize ) {
 #ifdef HL_WIN_DESKTOP
-	static HANDLE stack_process_handle = NULL;
+	static HANDLE stack_process_handle = nullptr;
 	DWORD64 index;
 	IMAGEHLP_LINEW64 line;
 	struct {
@@ -90,7 +90,7 @@ static uchar *hlc_resolve_symbol( void *addr, uchar *out, int *outSize ) {
 	if( !stack_process_handle ) {
 		stack_process_handle = GetCurrentProcess();
 		SymSetOptions(SYMOPT_LOAD_LINES);
-		SymInitialize(stack_process_handle,NULL,(BOOL)1);
+		SymInitialize(stack_process_handle,nullptr,(BOOL)1);
 	}
 	if( SymFromAddrW(stack_process_handle,(DWORD64)(int_val)addr,&index,&data.sym) ) {
 		DWORD offset = 0;
@@ -106,7 +106,7 @@ static uchar *hlc_resolve_symbol( void *addr, uchar *out, int *outSize ) {
 	char **strings;
 	array[0] = addr;
 	strings = backtrace_symbols(array, 1);
-	if (strings != NULL) {
+	if (strings != nullptr) {
 		*outSize = (int)strlen(strings[0]) << 1;
 		out = (uchar*)hl_gc_alloc_noptr(*outSize);
 		hl_from_utf8(out,*outSize,strings[0]);
@@ -114,7 +114,7 @@ static uchar *hlc_resolve_symbol( void *addr, uchar *out, int *outSize ) {
 		return out;
 	}
 #endif
-	return NULL;
+	return nullptr;
 }
 
 static int hlc_capture_stack( void **stack, int size ) {
@@ -122,13 +122,13 @@ static int hlc_capture_stack( void **stack, int size ) {
 #	if defined(HL_WIN_DESKTOP) || defined(HL_LINUX_BACKTRACE) || defined(HL_MAC)
 	// force return total count when output stack is null
 	static void* tmpstack[HL_EXC_MAX_STACK];
-	if( stack == NULL ) {
+	if( stack == nullptr ) {
 		stack = tmpstack;
 		size = HL_EXC_MAX_STACK;
 	}
 #	endif
 #	ifdef HL_WIN_DESKTOP
-	count = CaptureStackBackTrace(2, size, stack, NULL);
+	count = CaptureStackBackTrace(2, size, stack, nullptr);
 	if( size == HL_EXC_MAX_STACK ) count -= 8; // 8 startup
 #	elif defined(HL_LINUX_BACKTRACE)
 	count = backtrace(stack, size);
@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
 	clt.fun = &tf;
 	cl.t = &clt;
 	cl.fun = hl_entry_point;
-	ret = hl_dyn_call_safe(&cl, NULL, 0, &isExc);
+	ret = hl_dyn_call_safe(&cl, nullptr, 0, &isExc);
 	if( isExc ) {
 		hl_print_uncaught_exception(ret);
 	}

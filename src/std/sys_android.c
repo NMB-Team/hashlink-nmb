@@ -63,15 +63,15 @@ static jclass hl_java_activity_class;
 static jmethodID hl_java_method_id_get_context;
 
 /* Paths */
-static char *hl_android_external_files_path = NULL;
-static char *hl_android_internal_files_path = NULL;
+static char *hl_android_external_files_path = nullptr;
+static char *hl_android_internal_files_path = nullptr;
 
 /* Function to retrieve JNI environment, and dealing with threading */
 static JNIEnv* hl_android_jni_get_env(void)
 {
 	/* Always try to attach if calling from a non-attached thread */
 	JNIEnv *env;
-	if((*hl_java_vm)->AttachCurrentThread(hl_java_vm, &env, NULL) < 0) {
+	if((*hl_java_vm)->AttachCurrentThread(hl_java_vm, &env, nullptr) < 0) {
 		LOGE("failed to attach current thread");
 		return 0;
 	}
@@ -120,11 +120,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
 
 static void hl_android_jni_thread_destructor(void* value)
 {
-	/* The thread is being destroyed, detach it from the Java VM and set the hl_java_thread_key value to NULL as required */
+	/* The thread is being destroyed, detach it from the Java VM and set the hl_java_thread_key value to nullptr as required */
 	JNIEnv *env = (JNIEnv*) value;
-	if (env != NULL) {
+	if (env != nullptr) {
 		(*hl_java_vm)->DetachCurrentThread(hl_java_vm);
-		pthread_setspecific(hl_java_thread_key, NULL);
+		pthread_setspecific(hl_java_thread_key, nullptr);
 	}
 }
 
@@ -150,7 +150,7 @@ static int hl_sys_android_get_external_storage_state(void)
 		return status;
 	}
 
-	state = (*env)->GetStringUTFChars(env, stateString, NULL);
+	state = (*env)->GetStringUTFChars(env, stateString, nullptr);
 	if (strcmp(state, "mounted") == 0) {
 		status = HL_ANDROID_EXTERNAL_STORAGE_MOUNTED_RW;
 	} else if (strcmp(state, "mounted_ro") == 0) {
@@ -168,42 +168,42 @@ static char* hl_sys_android_get_absolute_path_from(const char* method, const cha
 		jobject fileObject;
 		jstring pathString;
 		const char *path;
-		char* retrievedPath = NULL;
+		char* retrievedPath = nullptr;
 
 		JNIEnv *env = hl_android_jni_get_env();
 		if (!env) {
 			LOGE("Couldn't get Android JNIEnv !");
-			return NULL;
+			return nullptr;
 		}
 
 		context = (*env)->CallStaticObjectMethod(env, hl_java_activity_class, hl_java_method_id_get_context);
 		if (!context) {
 			LOGE("Couldn't get Android context!");
-			return NULL;
+			return nullptr;
 		}
 
 		mid = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, context), method, signature);
 		if (!mid) {
 			(*env)->ExceptionClear(env);
 			LOGE("Couldn't find %s%s on the specified context", method, signature);
-			return NULL;
+			return nullptr;
 		}
 
-		fileObject = (*env)->CallObjectMethod(env, context, mid, NULL);
+		fileObject = (*env)->CallObjectMethod(env, context, mid, nullptr);
 		if (!fileObject) {
 			LOGE("Couldn't call %s%s on the specified context", method, signature);
-			return NULL;
+			return nullptr;
 		}
 
 		mid = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, fileObject), "getAbsolutePath", "()Ljava/lang/String;");
 		pathString = (jstring)(*env)->CallObjectMethod(env, fileObject, mid);
 		if (!pathString) {
 			LOGE("Couldn't retrieve absolute path");
-			return NULL;
+			return nullptr;
 		}
 
 		/* Retrieve as C string */
-		path = (*env)->GetStringUTFChars(env, pathString, NULL);
+		path = (*env)->GetStringUTFChars(env, pathString, nullptr);
 		retrievedPath = strdup(path);
 		(*env)->ReleaseStringUTFChars(env, pathString, path);
 
@@ -214,7 +214,7 @@ static const char* hl_sys_android_get_external_storage_path(void)
 {
 	/* Make sure external storage is mounted (at least read-only) */
 	if (hl_sys_android_get_external_storage_state()==HL_ANDROID_EXTERNAL_STORAGE_NOT_MOUNTED)
-		return NULL;
+		return nullptr;
 
 	if (!hl_android_external_files_path) {
 		hl_android_external_files_path = hl_sys_android_get_absolute_path_from("getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
@@ -240,7 +240,7 @@ const char *hl_sys_special( const char *key ) {
 		return hl_sys_android_get_internal_storage_path();
 	else
 		hl_error("Unknown sys_special key");
-	return NULL;
+	return nullptr;
 }
 
 DEFINE_PRIM(_BYTES, sys_special, _BYTES);

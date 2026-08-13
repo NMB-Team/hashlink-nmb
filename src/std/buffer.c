@@ -44,7 +44,7 @@ HL_PRIM hl_buffer *hl_alloc_buffer() {
 	hl_buffer *b = (hl_buffer*)hl_gc_alloc_raw(sizeof(hl_buffer));
 	b->totlen = 0;
 	b->blen = 16;
-	b->data = NULL;
+	b->data = nullptr;
 	return b;
 }
 
@@ -66,7 +66,7 @@ static void buffer_append_new( hl_buffer *b, const uchar *s, int len ) {
 HL_PRIM void hl_buffer_str_sub( hl_buffer *b, const uchar *s, int len ) {
 	stringitem it;
 	int offset = 0;
-	if( s == NULL || len <= 0 )
+	if( s == nullptr || len <= 0 )
 		return;
 	b->totlen += len;
 	it = b->data;
@@ -116,7 +116,7 @@ HL_PRIM uchar *hl_buffer_content( hl_buffer *b, int *len ) {
 	stringitem it = b->data;
 	uchar *s = ((uchar*)buf) + b->totlen;
 	*s = 0;
-	while( it != NULL ) {
+	while( it != nullptr ) {
 		stringitem tmp;
 		s -= it->len;
 		memcpy(s,it->str,it->len<<1);
@@ -172,7 +172,7 @@ static void hl_buffer_addr( hl_buffer *b, void *data, hl_type *t, vlist *stack )
 			vdynamic tmp;
 			tmp.t = t;
 			tmp.v.ptr = *(void**)data;
-			hl_buffer_rec(b, tmp.v.ptr ? &tmp : NULL, stack);
+			hl_buffer_rec(b, tmp.v.ptr ? &tmp : nullptr, stack);
 		}
 		break;
 	case HBOOL:
@@ -184,7 +184,7 @@ static void hl_buffer_addr( hl_buffer *b, void *data, hl_type *t, vlist *stack )
 	case HSTRUCT:
 		{
 			hl_type_obj *o = t->obj;
-			if( o->rt == NULL || hl_get_obj_proto(t)->toStringFun == NULL ) {
+			if( o->rt == nullptr || hl_get_obj_proto(t)->toStringFun == nullptr ) {
 				hl_buffer_char(b,'@');
 				hl_buffer_str(b,o->name);
 			} else
@@ -199,7 +199,7 @@ static void hl_buffer_addr( hl_buffer *b, void *data, hl_type *t, vlist *stack )
 
 static void hl_buffer_rec( hl_buffer *b, vdynamic *v, vlist *stack ) {
 	uchar buf[32];
-	if( v == NULL ) {
+	if( v == nullptr ) {
 		hl_buffer_str_sub(b,USTR("null"),4);
 		return;
 	}
@@ -246,7 +246,7 @@ static void hl_buffer_rec( hl_buffer *b, vdynamic *v, vlist *stack ) {
 	case HSTRUCT:
 		{
 			hl_type_obj *o = v->t->obj;
-			if( o->rt == NULL || hl_get_obj_proto(v->t)->toStringFun == NULL ) {
+			if( o->rt == nullptr || hl_get_obj_proto(v->t)->toStringFun == nullptr ) {
 				if( v->t->kind == HSTRUCT ) hl_buffer_char(b,'@');
 				hl_buffer_str(b,o->name);
 			} else
@@ -261,7 +261,7 @@ static void hl_buffer_rec( hl_buffer *b, vdynamic *v, vlist *stack ) {
 			int stride = hl_type_size(at);
 			vlist l;
 			vlist *vtmp = stack;
-			while( vtmp != NULL ) {
+			while( vtmp != nullptr ) {
 				if( vtmp->v == v ) {
 					hl_buffer_str_sub(b,USTR("..."),3);
 					return;
@@ -295,7 +295,7 @@ static void hl_buffer_rec( hl_buffer *b, vdynamic *v, vlist *stack ) {
 				hl_buffer_rec(b, vv->value, stack);
 				return;
 			}
-			while( vtmp != NULL ) {
+			while( vtmp != nullptr ) {
 				if( vtmp->v == v ) {
 					hl_buffer_str_sub(b,USTR("..."),3);
 					return;
@@ -322,7 +322,7 @@ static void hl_buffer_rec( hl_buffer *b, vdynamic *v, vlist *stack ) {
 			vlist l;
 			vlist *vtmp = stack;
 			hl_field_lookup *f;
-			while( vtmp != NULL ) {
+			while( vtmp != nullptr ) {
 				if( vtmp->v == v ) {
 					hl_buffer_str_sub(b,USTR("..."),3);
 					return;
@@ -372,7 +372,7 @@ static void hl_buffer_rec( hl_buffer *b, vdynamic *v, vlist *stack ) {
 				hl_buffer_str(b, c->name);
 				break;
 			}
-			while( vtmp != NULL ) {
+			while( vtmp != nullptr ) {
 				if( vtmp->v == v ) {
 					hl_buffer_str_sub(b,USTR("..."),3);
 					return;
@@ -403,16 +403,16 @@ static void hl_buffer_rec( hl_buffer *b, vdynamic *v, vlist *stack ) {
 }
 
 HL_PRIM void hl_buffer_val( hl_buffer *b, vdynamic *v ) {
-	hl_buffer_rec(b,v,NULL);
+	hl_buffer_rec(b,v,nullptr);
 }
 
 HL_PRIM uchar *hl_to_string( vdynamic *v ) {
-	if( v == NULL )
+	if( v == nullptr )
 		return USTR("null");
 	if( v->t->kind == HBOOL )
 		return v->v.b ? USTR("true") : USTR("false");
 	hl_buffer *b = hl_alloc_buffer();
 	hl_buffer_val(b,v);
 	hl_buffer_char(b,0);
-	return hl_buffer_content(b,NULL);
+	return hl_buffer_content(b,nullptr);
 }

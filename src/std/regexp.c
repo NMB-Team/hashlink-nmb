@@ -66,11 +66,11 @@ HL_PRIM ereg *hl_regexp_new_options( vbyte *str, vbyte *opts ) {
 			options |= PCRE2_UNGREEDY;
 			break;
 		default:
-			return NULL;
+			return nullptr;
 		}
 	}
-	p = pcre2_compile_16((PCRE2_SPTR16)str,PCRE2_ZERO_TERMINATED,options,&error_code,&error_offset,NULL);
-	if( p == NULL ) {
+	p = pcre2_compile_16((PCRE2_SPTR16)str,PCRE2_ZERO_TERMINATED,options,&error_code,&error_offset,nullptr);
+	if( p == nullptr ) {
 		hl_buffer *b = hl_alloc_buffer();
 		vdynamic *d = hl_alloc_dynamic(&hlt_bytes);
 		PCRE2_UCHAR16 error_buffer[256];
@@ -79,7 +79,7 @@ HL_PRIM ereg *hl_regexp_new_options( vbyte *str, vbyte *opts ) {
 		hl_buffer_str(b,error_buffer);
 		hl_buffer_str(b,USTR(" in "));
 		hl_buffer_str(b,(uchar*)str);
-		d->v.bytes = (vbyte*)hl_buffer_content(b,NULL);
+		d->v.bytes = (vbyte*)hl_buffer_content(b,nullptr);
 		hl_throw(d);
 	}
 	r = (ereg*)hl_gc_alloc_finalizer(sizeof(ereg));
@@ -89,7 +89,7 @@ HL_PRIM ereg *hl_regexp_new_options( vbyte *str, vbyte *opts ) {
 	r->n_groups = 0;
 	pcre2_pattern_info_16(p,PCRE2_INFO_CAPTURECOUNT,&r->n_groups);
 	r->n_groups++;
-	r->match_data = pcre2_match_data_create_from_pattern_16(r->regex,NULL);
+	r->match_data = pcre2_match_data_create_from_pattern_16(r->regex,nullptr);
 
 	return r;
 }
@@ -114,7 +114,7 @@ HL_PRIM int hl_regexp_matched_num( ereg *e ) {
 }
 
 HL_PRIM bool hl_regexp_match( ereg *e, vbyte *s, int pos, int len ) {
-	int res = pcre2_match_16(e->regex,(PCRE2_SPTR16)s,pos+len,pos,PCRE2_NO_UTF_CHECK,e->match_data,NULL);
+	int res = pcre2_match_16(e->regex,(PCRE2_SPTR16)s,pos+len,pos,PCRE2_NO_UTF_CHECK,e->match_data,nullptr);
 	e->matched = res >= 0;
 	if( res >= 0 )
 		return true;

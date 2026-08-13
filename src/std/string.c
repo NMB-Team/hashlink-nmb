@@ -60,7 +60,7 @@ HL_PRIM vbyte *hl_ftos( double d, int *len ) {
 }
 
 HL_PRIM vbyte *hl_value_to_string( vdynamic *d, int *len ) {
-	if( d == NULL ) {
+	if( d == nullptr ) {
 		*len = 4;
 		return (vbyte*)USTR("null");
 	}
@@ -199,12 +199,12 @@ HL_PRIM vbyte* hl_ucs2_lower( vbyte *str, int pos, int len ) {
 HL_PRIM vbyte *hl_utf16_to_utf8( vbyte *str, int len, int *size ) {
 	vbyte *out;
 	uchar *c = (uchar*)str;
-	uchar *end = len == 0 ? NULL : c + len;
+	uchar *end = len == 0 ? nullptr : c + len;
 	int utf8bytes = 0;
 	int p = 0;
 	while( c != end ) {
 		unsigned int v = (unsigned int)*c;
-		if( v == 0 && end == NULL ) break;
+		if( v == 0 && end == nullptr ) break;
 		if( v < 0x80 )
 			utf8bytes++;
 		else if( v < 0x800 )
@@ -222,7 +222,7 @@ HL_PRIM vbyte *hl_utf16_to_utf8( vbyte *str, int len, int *size ) {
 		unsigned int v = (unsigned int)*c;
 		if( v < 0x80 ) {
 			out[p++] = (vbyte)v;
-			if( v == 0 && end == NULL ) break;
+			if( v == 0 && end == nullptr ) break;
 		} else if( v < 0x800 ) {
 			out[p++] = (vbyte)(0xC0|(v>>6));
 			out[p++] = (vbyte)(0x80|(v&63));
@@ -369,7 +369,7 @@ HL_PRIM vbyte *hl_url_decode( vbyte *str, int *len ) {
 		hl_buffer_char(b,c);
 	}
 	hl_error("Malformed URL encoded");
-	return NULL;
+	return nullptr;
 }
 
 DEFINE_PRIM(_BYTES,itos,_I32 _REF(_I32));

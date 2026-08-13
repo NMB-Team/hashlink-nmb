@@ -29,7 +29,7 @@ typedef uchar pchar;
 #define pprintf(str,file)	uprintf(USTR(str),file)
 #define pfopen(file,ext) _wfopen(file,USTR(ext))
 #define pcompare wcscmp
-#define ptoi(s)	wcstol(s,NULL,10)
+#define ptoi(s)	wcstol(s,nullptr,10)
 #define PSTR(x) USTR(x)
 #else
 #	include <sys/stat.h>
@@ -71,9 +71,9 @@ static hl_code *load_code( const pchar *file, char **error_msg, bool print_error
 	FILE *f = pfopen(file,"rb");
 	int pos, size;
 	char *fdata;
-	if( f == NULL ) {
+	if( f == nullptr ) {
 		if( print_errors ) pprintf("File not found '%s'\n",file);
-		return NULL;
+		return nullptr;
 	}
 	fseek(f, 0, SEEK_END);
 	size = (int)ftell(f);
@@ -84,7 +84,7 @@ static hl_code *load_code( const pchar *file, char **error_msg, bool print_error
 		int r = (int)fread(fdata + pos, 1, size-pos, f);
 		if( r <= 0 ) {
 			if( print_errors ) pprintf("Failed to read '%s'\n",file);
-			return NULL;
+			return nullptr;
 		}
 		pos += r;
 	}
@@ -94,7 +94,7 @@ static hl_code *load_code( const pchar *file, char **error_msg, bool print_error
 	return code;
 }
 
-static main_context* main_ctx = NULL;
+static main_context* main_ctx = nullptr;
 
 static bool check_reload( vbyte *alt_file ) {
 	main_context* m = main_ctx;
@@ -103,9 +103,9 @@ static bool check_reload( vbyte *alt_file ) {
 	bool changed;
 	if( time == m->file_time )
 		return false;
-	char *error_msg = NULL;
+	char *error_msg = nullptr;
 	hl_code *code = load_code(file, &error_msg, false);
-	if( code == NULL )
+	if( code == nullptr )
 		return false;
 	changed = hl_module_patch(m->m, code);
 	m->file_time = time;
@@ -114,9 +114,9 @@ static bool check_reload( vbyte *alt_file ) {
 }
 
 static bool load_plugin( pchar *file ) {
-	char *error_msg = NULL;
+	char *error_msg = nullptr;
 	hl_code *code = load_code(file, &error_msg, false);
-	if( code == NULL )
+	if( code == nullptr )
 		return false;
 	int i;
 	for(i=0;i<code->ntypes;i++) {
@@ -127,7 +127,7 @@ static bool load_plugin( pchar *file ) {
 		if( t2 ) t1->obj->name = t2->obj->name;
 	}
 	hl_module *m = hl_module_alloc(code);
-	if( m == NULL )
+	if( m == nullptr )
 		return false;
 	if( !hl_module_init(m,false) )
 		return false;
@@ -136,14 +136,14 @@ static bool load_plugin( pchar *file ) {
 	cl.t = m->code->functions[m->functions_indexes[m->code->entrypoint]].type;
 	cl.fun = m->functions_ptrs[m->code->entrypoint];
 	cl.hasValue = 0;
- 	hl_dyn_call(&cl,NULL,0);
+	hl_dyn_call(&cl,nullptr,0);
 	return true;
 }
 
 static vdynamic *resolve_type( hl_type *t, hl_type *gt ) {
 	hl_type *t2 = hl_module_resolve_type(main_ctx->m, t, true);
-	if( t2 == NULL || (t2->kind != HOBJ && t2->kind != HSTRUCT))
-		return NULL;
+	if( t2 == nullptr || (t2->kind != HOBJ && t2->kind != HSTRUCT))
+		return nullptr;
 	hl_module_context *m = t->obj->m;
 	hl_module_context *m2 = t2->obj->m;
 	hl_type *gt2 = hl_module_resolve_type(main_ctx->m, gt, true);
@@ -178,7 +178,7 @@ __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 static void handle_signal( int signum ) {
 	signal(signum, SIG_DFL);
 	printf("SIGNAL %d[%s]\n",signum,strsignal(signum));
-	if( hl_get_thread() != NULL ) {
+	if( hl_get_thread() != nullptr ) {
 		hl_dump_stack();
 	}
 	fflush(stdout);
@@ -186,13 +186,13 @@ static void handle_signal( int signum ) {
 }
 static void setup_handler() {
 	struct sigaction act;
-	act.sa_sigaction = NULL;
+	act.sa_sigaction = nullptr;
 	act.sa_handler = handle_signal;
 	act.sa_flags = 0;
 	sigemptyset(&act.sa_mask);
 	signal(SIGPIPE, SIG_IGN);
-	sigaction(SIGSEGV,&act,NULL);
-	sigaction(SIGTERM,&act,NULL);
+	sigaction(SIGSEGV,&act,nullptr);
+	sigaction(SIGTERM,&act,nullptr);
 }
 #else
 static void setup_handler() {
@@ -205,8 +205,8 @@ int wmain(int argc, pchar *argv[]) {
 int main(int argc, pchar *argv[]) {
 #endif
 	static vclosure cl;
-	pchar *file = NULL;
-	char *error_msg = NULL;
+	pchar *file = nullptr;
+	char *error_msg = nullptr;
 	int debug_port = -1;
 	bool debug_wait = false;
 	bool hot_reload = false;
@@ -254,11 +254,11 @@ int main(int argc, pchar *argv[]) {
 		file = arg;
 		break;
 	}
-	if( file == NULL ) {
+	if( file == nullptr ) {
 		FILE *fchk;
 		file = PSTR("hlboot.dat");
 		fchk = pfopen(file,"rb");
-		if( fchk == NULL ) {
+		if( fchk == nullptr ) {
 			printf("HL/JIT %d.%d.%d (c)2015-2026 Haxe Foundation\n  Usage : hl [--debug <port>] [--debug-wait] <file>\n",HL_VERSION>>16,(HL_VERSION>>8)&0xFF,HL_VERSION&0xFF);
 			return 1;
 		}
@@ -277,12 +277,12 @@ int main(int argc, pchar *argv[]) {
 	main_ctx = &ctx;
 	ctx.file = file;
 	ctx.code = load_code(file, &error_msg, true);
-	if( ctx.code == NULL ) {
+	if( ctx.code == nullptr ) {
 		if( error_msg ) printf("%s\n", error_msg);
 		return 1;
 	}
 	ctx.m = hl_module_alloc(ctx.code);
-	if( ctx.m == NULL )
+	if( ctx.m == nullptr )
 		return 2;
 	if( !hl_module_init(ctx.m,hot_reload) )
 		return 3;
@@ -302,7 +302,7 @@ int main(int argc, pchar *argv[]) {
 	cl.hasValue = 0;
 	setup_handler();
 	hl_profile_setup(profile_count);
-	ctx.ret = hl_dyn_call_safe(&cl,NULL,0,&isExc);
+	ctx.ret = hl_dyn_call_safe(&cl,nullptr,0,&isExc);
 	hl_profile_end();
 	if( isExc ) {
 		hl_print_uncaught_exception(ctx.ret);

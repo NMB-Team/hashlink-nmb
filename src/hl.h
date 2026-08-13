@@ -231,6 +231,10 @@ typedef unsigned long long uint64;
 #include <stdio.h>
 #include <memory.h>
 
+#if !defined(__cplusplus) && (defined(_MSC_VER) || !defined(__STDC_VERSION__) || __STDC_VERSION__ < 202311L)
+#define nullptr NULL
+#endif
+
 #if defined(LIBHL_EXPORTS)
 #define HL_API extern HL_EXPORT
 #elif defined(LIBHL_STATIC)
@@ -949,7 +953,7 @@ struct _hl_trap_ctx {
 	hl_trap_ctx *prev;
 	vdynamic *tcheck;
 };
-#define hl_trap(ctx,r,label) { hl_thread_info *__tinf = hl_get_thread(); ctx.tcheck = NULL; ctx.prev = __tinf->trap_current; __tinf->trap_current = &ctx; if( setjmp(ctx.buf) ) { r = __tinf->exc_value; goto label; } }
+#define hl_trap(ctx,r,label) { hl_thread_info *__tinf = hl_get_thread(); ctx.tcheck = nullptr; ctx.prev = __tinf->trap_current; __tinf->trap_current = &ctx; if( setjmp(ctx.buf) ) { r = __tinf->exc_value; goto label; } }
 #define hl_endtrap(ctx)	hl_get_thread()->trap_current = ctx.prev
 
 #define HL_EXC_MAX_STACK	0x100
