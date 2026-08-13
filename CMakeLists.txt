@@ -15,6 +15,40 @@ if(WIN32)
 endif()
 project(hashlink)
 
+execute_process(
+    COMMAND git rev-parse HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE HL_COMMIT_SHA
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+execute_process(
+    COMMAND git log -1 --format=%s
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE HL_COMMIT_NAME
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    ENCODING UTF-8
+)
+execute_process(
+    COMMAND git log -1 --format=%cI
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE HL_COMMIT_DATE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(NOT HL_COMMIT_SHA)
+    set(HL_COMMIT_SHA unknown)
+endif()
+if(NOT HL_COMMIT_NAME)
+    set(HL_COMMIT_NAME unknown)
+endif()
+if(NOT HL_COMMIT_DATE)
+    set(HL_COMMIT_DATE unknown)
+endif()
+string(HEX "${HL_COMMIT_NAME}" HL_COMMIT_NAME_HEX)
+string(REGEX REPLACE "(..)" "\\\\x\\1" HL_COMMIT_NAME_ESCAPED "${HL_COMMIT_NAME_HEX}")
+
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
@@ -264,6 +298,11 @@ if (WITH_VM)
     endif()
 
     target_link_libraries(hl libhl)
+    target_compile_definitions(hl PRIVATE
+        HL_COMMIT_SHA="${HL_COMMIT_SHA}"
+        HL_COMMIT_NAME="${HL_COMMIT_NAME_ESCAPED}"
+        HL_COMMIT_DATE="${HL_COMMIT_DATE}"
+    )
 
     if (WIN32)
         target_link_libraries(hl user32)

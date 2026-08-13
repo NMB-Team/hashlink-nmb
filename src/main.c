@@ -23,6 +23,16 @@
 #include <hlmodule.h>
 #include "hlsystem.h"
 
+#ifndef HL_COMMIT_SHA
+#define HL_COMMIT_SHA "unknown"
+#endif
+#ifndef HL_COMMIT_NAME
+#define HL_COMMIT_NAME "unknown"
+#endif
+#ifndef HL_COMMIT_DATE
+#define HL_COMMIT_DATE "unknown"
+#endif
+
 #ifdef HL_WIN
 #	include <locale.h>
 typedef uchar pchar;
@@ -199,6 +209,43 @@ static void setup_handler() {
 }
 #endif
 
+static void print_version() {
+	printf("%d.%d.%d+%s\n",HL_VERSION>>16,(HL_VERSION>>8)&0xFF,HL_VERSION&0xFF,HL_COMMIT_SHA);
+}
+
+static void print_commit() {
+	printf("Commit: %s\nName:   %s\nDate:   %s\n",HL_COMMIT_SHA,HL_COMMIT_NAME,HL_COMMIT_DATE);
+}
+
+static void print_help() {
+	printf(
+		"HashLink virtual machine\n"
+		"\n"
+		"Usage:\n"
+		"  hl [options] <file.hl> [arguments...]\n"
+		"  hl [boot arguments]                 Run hlboot.dat from the current directory\n"
+		"\n"
+		"Options:\n"
+		"  -h,  --help          Show this help and exit\n"
+		"  -v,  --version       Show the HashLink version and commit SHA\n"
+		"  -c,  --commit        Show the commit SHA, name, and date\n"
+		"  -d,  --debug <port>  Listen for a debugger on 127.0.0.1:<port>\n"
+		"  -dw, --debug-wait    Wait for the debugger before running (requires --debug)\n"
+		"  -hr, --hot-reload    Enable bytecode hot reloading\n"
+		"  -p,  --profile <hz>  Start the sampling profiler at <hz> samples per second\n"
+		"\n"
+		"Arguments after <file.hl> are passed to the HashLink program. Arguments beginning\n"
+		"with '-' or '+' are passed to hlboot.dat when no bytecode file is specified.\n"
+		"\n"
+		"Version: %d.%d.%d+%s\n",
+		HL_VERSION>>16,(HL_VERSION>>8)&0xFF,HL_VERSION&0xFF,HL_COMMIT_SHA
+	);
+}
+
+static void print_info() {
+	printf("HL/JIT %d.%d.%d (C) 2015-2026 Haxe Foundation.\n Use -h or --help to get help info.",HL_VERSION>>16,(HL_VERSION>>8)&0xFF,HL_VERSION&0xFF);
+}
+
 #ifdef HL_WIN
 int wmain(int argc, pchar *argv[]) {
 #else
@@ -220,24 +267,32 @@ int main(int argc, pchar *argv[]) {
 	while( argc ) {
 		pchar *arg = *argv++;
 		argc--;
-		if( pcompare(arg,PSTR("--debug")) == 0 ) {
+		if( pcompare(arg,PSTR("--help")) == 0 || pcompare(arg,PSTR("-h")) == 0 ) {
+			print_help();
+			return 0;
+		}
+		if( pcompare(arg,PSTR("--debug")) == 0 || pcompare(arg,PSTR("-d")) == 0 ) {
 			if( argc-- == 0 ) break;
 			debug_port = ptoi(*argv++);
 			continue;
 		}
-		if( pcompare(arg,PSTR("--debug-wait")) == 0 ) {
+		if( pcompare(arg,PSTR("--debug-wait")) == 0 || pcompare(arg,PSTR("-dw")) == 0 ) {
 			debug_wait = true;
 			continue;
 		}
-		if( pcompare(arg,PSTR("--version")) == 0 ) {
-			printf("%d.%d.%d",HL_VERSION>>16,(HL_VERSION>>8)&0xFF,HL_VERSION&0xFF);
+		if( pcompare(arg,PSTR("--version")) == 0 || pcompare(arg,PSTR("-v")) == 0 ) {
+			print_version();
 			return 0;
 		}
-		if( pcompare(arg,PSTR("--hot-reload")) == 0 ) {
+		if( pcompare(arg,PSTR("--commit")) == 0 || pcompare(arg,PSTR("-c")) == 0 ) {
+			print_commit();
+			return 0;
+		}
+		if( pcompare(arg,PSTR("--hot-reload")) == 0 || pcompare(arg,PSTR("-hr")) == 0 ) {
 			hot_reload = true;
 			continue;
 		}
-		if( pcompare(arg,PSTR("--profile")) == 0 ) {
+		if( pcompare(arg,PSTR("--profile")) == 0 || pcompare(arg,PSTR("-p")) == 0 ) {
 			if( argc-- == 0 ) break;
 			profile_count = ptoi(*argv++);
 			continue;
@@ -259,7 +314,7 @@ int main(int argc, pchar *argv[]) {
 		file = PSTR("hlboot.dat");
 		fchk = pfopen(file,"rb");
 		if( fchk == nullptr ) {
-			printf("HL/JIT %d.%d.%d (c)2015-2026 Haxe Foundation\n  Usage : hl [--debug <port>] [--debug-wait] <file>\n",HL_VERSION>>16,(HL_VERSION>>8)&0xFF,HL_VERSION&0xFF);
+			print_info();
 			return 1;
 		}
 		fclose(fchk);

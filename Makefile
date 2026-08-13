@@ -9,6 +9,9 @@ INSTALL_INCLUDE_DIR ?= $(PREFIX)/include
 LIBS = $(addsuffix .hdll,fmt ssl openal ui uv mysql sqlite heaps)
 LIMEN_MODULES = $(wildcard *.limen)
 ARCH ?= $(shell uname -m)
+HL_COMMIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+HL_COMMIT_NAME ?= $(shell (git log -1 --format=format:%s 2>/dev/null || printf unknown) | od -An -v -tx1 | tr -d ' \n' | sed 's/../\\x&/g')
+HL_COMMIT_DATE ?= $(shell git log -1 --format=%cI 2>/dev/null || echo unknown)
 
 CFLAGS = -Wall -O3 -std=c11 -fvisibility=hidden
 CPPFLAGS = -I src
@@ -270,6 +273,9 @@ $(LIBHL): $(LIB)
 
 $(HL): $(HL_OBJ) $(LIBHL)
 $(HLC): $(BOOT) $(LIBHL)
+src/main.o: CPPFLAGS += -DHL_COMMIT_SHA='"$(HL_COMMIT_SHA)"'
+src/main.o: CPPFLAGS += -DHL_COMMIT_NAME='"$(HL_COMMIT_NAME)"'
+src/main.o: CPPFLAGS += -DHL_COMMIT_DATE='"$(HL_COMMIT_DATE)"'
 $(HL) $(HLC):
 	$(CC) $(LDFLAGS) $(USE_LIBHL_LDFLAGS) $^ $($@_LDLIBS) -o $@
 
