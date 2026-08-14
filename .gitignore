@@ -24,6 +24,7 @@ x64
 .vs
 /hl
 /include/openal
+/include/zlib-ng
 /include/aftermath
 /include/streamline
 ReleaseStatic
