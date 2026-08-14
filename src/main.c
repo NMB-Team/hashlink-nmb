@@ -291,7 +291,7 @@ int main(int argc, pchar *argv[]) {
 			print_commit();
 			return 0;
 		}
-		if( pcompare(arg,PSTR("--debug-opt")) == 0 || pcompare(arg,PSTR("-do") == 0) ) {
+		if( pcompare(arg,PSTR("--debug-opt")) == 0 || pcompare(arg,PSTR("-do")) == 0 ) {
 			debug_opt = true;
 			continue;
 		}

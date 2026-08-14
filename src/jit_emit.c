@@ -504,7 +504,7 @@ static void register_jump( emit_ctx *ctx, int jpos, int offs ) {
 	int target = offs + ctx->op_pos + 1;
 	int_arr_add(ctx->jump_regs, jpos);
 	int_arr_add(ctx->jump_regs, target);
-	if( offs > 0 ) add_jump_target(ctx, offs);
+	if( offs >= 0 ) add_jump_target(ctx, offs);
 }
 
 static ereg emit_load_const( emit_ctx *ctx, uint64 value, hl_type *size_t ) {
@@ -1322,7 +1322,7 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 				emit_test(ctx,a,OJNull);
 				int ja = emit_jump(ctx,true);
 				emit_test(ctx,b,OJNull);
-				int jb = emit_jump(ctx,true);				
+				int jb = emit_jump(ctx,true);
 				hl_type *vt = at->tparam;
 				emit_cmp(ctx, LOAD_MEM(a,HDYN_VALUE,vt), LOAD_MEM(b,HDYN_VALUE,vt), OJEq);
 				register_block_jump(ctx,offset,true);
@@ -1433,7 +1433,7 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 					emit_cmp(ctx,a,b,OJEq);
 					int jeq = emit_jump(ctx, true);
 					emit_test(ctx,a,OJNull);
-					int ja = emit_jump(ctx, true);				
+					int ja = emit_jump(ctx, true);
 					emit_test(ctx,b,OJNull);
 					int jb = emit_jump(ctx, true);
 					emit_test(ctx, emit_call_fid(ctx,(int)(int_val)at->obj->rt->compareFun,args,2,M_I32),OJNotNull);
