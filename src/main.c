@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <hl.h>
-#include <hlmodule.h>
+#include <jit.h>
 #include "hlsystem.h"
 
 #ifndef HL_COMMIT_SHA
@@ -139,7 +139,7 @@ static bool load_plugin( pchar *file ) {
 	hl_module *m = hl_module_alloc(code);
 	if( m == nullptr )
 		return false;
-	if( !hl_module_init(m,false) )
+	if( !hl_module_init(m,0) )
 		return false;
 	hl_code_free(code);
 	vclosure cl;
@@ -256,7 +256,9 @@ int main(int argc, pchar *argv[]) {
 	char *error_msg = nullptr;
 	int debug_port = -1;
 	bool debug_wait = false;
+	bool debug_opt = false;
 	bool hot_reload = false;
+	bool dump = false;
 	int profile_count = -1;
 	main_context ctx;
 	bool isExc = false;
@@ -280,6 +282,7 @@ int main(int argc, pchar *argv[]) {
 			debug_wait = true;
 			continue;
 		}
+
 		if( pcompare(arg,PSTR("--version")) == 0 || pcompare(arg,PSTR("-v")) == 0 ) {
 			print_version();
 			return 0;
@@ -288,6 +291,16 @@ int main(int argc, pchar *argv[]) {
 			print_commit();
 			return 0;
 		}
+		if( pcompare(arg,PSTR("--debug-opt")) == 0 || pcompare(arg,PSTR("-do") == 0) ) {
+			debug_opt = true;
+			continue;
+		}
+#		ifdef HL_DEBUG
+		if( pcompare(arg,PSTR("--dump")) == 0 ) {
+			dump = true;
+			continue;
+		}
+#		endif
 		if( pcompare(arg,PSTR("--hot-reload")) == 0 || pcompare(arg,PSTR("-hr")) == 0 ) {
 			hot_reload = true;
 			continue;
@@ -339,7 +352,7 @@ int main(int argc, pchar *argv[]) {
 	ctx.m = hl_module_alloc(ctx.code);
 	if( ctx.m == nullptr )
 		return 2;
-	if( !hl_module_init(ctx.m,hot_reload) )
+	if( !hl_module_init(ctx.m,(hot_reload?HL_MODULE_HOT_RELOAD:0) | (dump?HL_MODULE_DUMP:0) | (debug_port > 0 && !debug_opt?HL_MODULE_DEBUG:0)) )
 		return 3;
 	if( hot_reload ) {
 		ctx.file_time = pfiletime(ctx.file);
@@ -348,6 +361,13 @@ int main(int argc, pchar *argv[]) {
 	hl_setup.load_plugin = load_plugin;
 	hl_setup.resolve_type = resolve_type;
 	hl_code_free(ctx.code);
+	if( dump ) {
+		// the code has been dumped while jitting, don't run it
+		hl_module_free(ctx.m);
+		hl_free(&ctx.code->alloc);
+		hl_global_free();
+		return 0;
+	}
 	if( debug_port > 0 && !hl_module_debug(ctx.m,debug_port,debug_wait) ) {
 		fprintf(stderr,"Could not start debugger on port %d\n",debug_port);
 		return 4;
