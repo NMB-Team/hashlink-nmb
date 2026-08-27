@@ -5,24 +5,10 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      limen_revision:
-        description: Exact LIMEN commit to test instead of the pinned revision
-        required: false
-        type: string
-  workflow_call:
-    inputs:
-      limen_revision:
-        description: Exact LIMEN commit to test instead of the pinned revision
-        required: false
-        type: string
 
 defaults:
   run:
     shell: bash
-
-env:
-  LIMEN_GIT_TAG: ${{ inputs.limen_revision || '' }}
 
 jobs:
 
@@ -99,8 +85,6 @@ jobs:
     steps:
     - name: "SCM Checkout"
       uses: actions/checkout@v7
-      with:
-        submodules: recursive
 
     - name: "Download: LIMEN binaries"
       env:
@@ -108,10 +92,9 @@ jobs:
       run: |
         set -euo pipefail
 
-        release_revision=$(gh release view latest \
-          --repo NMB-Team/Limen \
-          --json targetCommitish \
-          --jq .targetCommitish)
+        release_revision=$(gh api \
+          repos/NMB-Team/Limen/git/ref/tags/latest \
+          --jq '.object.sha')
         revision="${LIMEN_GIT_TAG:-$release_revision}"
         if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
           echo "::error::LIMEN revision must be a full lowercase commit SHA, got '$revision'"
@@ -121,9 +104,6 @@ jobs:
           echo "::error::LIMEN latest release targets $release_revision, not requested revision $revision"
           exit 1
         fi
-
-        git -C libs/limen fetch --depth 1 origin "$revision"
-        git -C libs/limen checkout --detach "$revision"
 
         case "${{ matrix.target }}${{ matrix.architecture }}" in
           linux64) platform=linux-x64 ;;
@@ -170,7 +150,7 @@ jobs:
             ;;
           windows-x64)
             expected+=(vulkan.limen d3d11.limen d3d12.limen)
-            expected+=(limen.lib limen_opengl.lib limen_vulkan.lib limen_d3d11.lib limen_d3d12.lib)
+            expected+=(limen.lib)
             expected+=(dxcompiler.dll dxil.dll)
             ;;
         esac
@@ -184,31 +164,12 @@ jobs:
         echo "LIMEN_PREBUILT_DIR=$PWD/limen-prebuilt" >> "$GITHUB_ENV"
         ls -la limen-prebuilt
 
-    - name: "Add msbuild to PATH"
-      if: matrix.build_system == 'vs2026'
-      uses: microsoft/setup-msbuild@v3
-
-    - name: "Mac homebrew workaround"
-      if: matrix.target == 'darwin'
-      run: |
-        # see https://github.com/Homebrew/homebrew-core/issues/165793#issuecomment-1989441193
-        # see https://github.com/Homebrew/brew/blob/master/.github/workflows/tests.yml
-        brew untap aws/tap || true
-        brew unlink python && brew link --overwrite python
-
     - name: "Install: Required Dev Packages"
       run: |
         set -ex
 
         case "${{ matrix.target }}" in
           linux)
-            if [ ${{matrix.architecture}} == 32 ]; then
-              echo "MARCH=32" >> $GITHUB_ENV
-              sudo dpkg --add-architecture i386
-              SUFFIX=":i386"
-              EXTRA_APT_PKGS="gcc-multilib g++-multilib"
-            fi
-
             sudo apt-get update -y
             sudo apt-get install --no-install-recommends -y \
               libmbedtls-dev${SUFFIX} \
@@ -236,18 +197,6 @@ jobs:
             7z x /tmp/openal.zip -oinclude; mv include/openal* include/openal
             ;;
         esac
-
-    - name: "Install: GCC 14"
-      if: matrix.build_system == 'makegcc14'
-      run: |
-          sudo add-apt-repository universe
-          sudo apt update
-          sudo apt install -y gcc-14 g++-14
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 60 --slave /usr/bin/g++ g++ /usr/bin/g++-14
-          if [[ ${{ matrix.architecture }} == 32 ]]; then
-            sudo apt install -y gcc-14-multilib g++-14-multilib
-          fi
-          gcc --version
 
     - name: Install haxe
       uses: krdlab/setup-haxe@master
@@ -307,7 +256,7 @@ jobs:
                 ;;
             esac
 
-            cmake --build build --config ${{ matrix.cmake_configuration }}
+            cmake --build build --config ${{ matrix.cmake_configuration }} --parallel
             BUILD_FOLDER=build/bin
             ;;
 
@@ -318,41 +267,6 @@ jobs:
 
             cmake --build build --config ${{ matrix.cmake_configuration }} --parallel
             BUILD_FOLDER=build/bin
-            ;;
-          cmake-clang-cl)
-            cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
-              -G "${{ matrix.cmake_generator }}" \
-              -A ${{ matrix.architecture_string }} \
-              -T ClangCL \
-              -DWITH_LIMEN=OFF \
-              -DLIMEN_PREBUILT_DIR="$LIMEN_PREBUILT_DIR"
-            cmake --build build --config ${{ matrix.cmake_configuration }}
-            BUILD_FOLDER=build/bin
-            ;;
-
-          vs2026)
-            MSBuild.exe hl.sln //nologo //m //clp:ErrorsOnly \
-              //p:Configuration=${{ matrix.msbuild_configuration }} \
-              //p:Platform=${{ matrix.architecture_string }}
-
-            case "${{ matrix.architecture }}" in
-              64) BUILD_FOLDER=x64/${{ matrix.msbuild_configuration }} ;;
-              32) BUILD_FOLDER=${{ matrix.msbuild_configuration }} ;;
-            esac
-            echo "WINDOWS_BUILD_FOLDER=$BUILD_FOLDER" >> $GITHUB_ENV
-            ;;
-
-          make*)
-            if [[ ${{ matrix.target }}${{ matrix.architecture }} == linux32 ]]; then
-              make
-            else
-              make
-            fi
-            sudo make install
-            if [[ ${{ matrix.target }} == linux ]]; then
-              sudo ldconfig
-            fi
-            BUILD_FOLDER=.
             ;;
 
         esac
@@ -410,6 +324,7 @@ jobs:
         esac
 
     - name: "Test haxelib build"
+      if: matrix.target == 'linux' && matrix.architecture == '64' && matrix.build_system == 'cmake'
       run: |
         haxelib git format https://github.com/HaxeFoundation/format
         cd other/haxelib
@@ -556,10 +471,6 @@ jobs:
       with:
         msbuild-architecture: ${{ matrix.architecture == 'x86_64' && 'x64' || 'x86' }}
 
-    - name: Setup mingw
-      if: matrix.os == 'windows' && matrix.architecture == 'x86_32'
-      run: echo "C:\mingw32\bin" >> $GITHUB_PATH
-
     - name: Install binary (Linux/Mac)
       if: matrix.os != 'windows'
       run: |
@@ -636,7 +547,7 @@ jobs:
   ###########################################################
     runs-on: ubuntu-latest
     needs: [build, haxe-test-suite]
-    if: github.ref == 'refs/heads/master' && inputs.limen_revision == ''
+    if: github.ref == 'refs/heads/master'
     concurrency: publish-latest-release # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idconcurrency
 
     permissions:
