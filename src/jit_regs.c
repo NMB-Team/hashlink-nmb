@@ -114,7 +114,7 @@ static void regs_write_instr( regs_ctx *ctx, einstr *e, ereg out ) {
 		int next_size = ctx->max_instrs ? (ctx->max_instrs << 1) : 256;
 		einstr *instrs = (einstr*)malloc(sizeof(einstr) * next_size);
 		ereg *out = (ereg*)malloc(sizeof(ereg) * next_size);
-		if( instrs == NULL || out == NULL ) jit_error("Out of memory");
+		if( instrs == nullptr || out == nullptr ) jit_error("Out of memory");
 		memcpy(instrs, ctx->instrs, pos * sizeof(einstr));
 		memcpy(out, ctx->out_write, pos * sizeof(ereg));
 		memset(instrs + pos, 0, (next_size - pos) * sizeof(einstr));
@@ -228,12 +228,12 @@ static bool reg_is_persist( reg_config *cfg, ereg r ) {
 
 static ereg steal_persist( regs_ctx *ctx, int mode, int weight ) {
 	reg_config *cfg = REG_CFG(mode);
-	value_info *best = NULL;
+	value_info *best = nullptr;
 	for_iter(values,v,ctx->persists) {
 		if( REG_MODE(v->mode) != mode || !reg_is_persist(cfg,v->reg) ) continue;
-		if( best == NULL || v->tot_reads < best->tot_reads ) best = v;
+		if( best == nullptr || v->tot_reads < best->tot_reads ) best = v;
 	}
-	if( best == NULL || best->tot_reads * 2 > weight ) return UNUSED;
+	if( best == nullptr || best->tot_reads * 2 > weight ) return UNUSED;
 	ereg r = best->reg;
 	spill(ctx, best);
 	return r;
@@ -263,14 +263,14 @@ static void regs_alloc_reg( regs_ctx *ctx, value_info *v, bool across_call ) {
 		values_add(ctx->scratch, v);
 		return;
 	}
-	value_info *first = NULL;
+	value_info *first = nullptr;
 	int first_cost = -1;
 	for(int i=0;i<cfg->nscratchs;i++) {
 		ereg r = cfg->scratch[i];
 		for_iter(values,v2,ctx->scratch) {
 			if( v2->reg == r ) {
 				int cost = spill_cost(ctx, v2, ctx->cur_op);
-				if( first == NULL || cost > first_cost || (cost == first_cost && v2->tot_reads < first->tot_reads) ) {
+				if( first == nullptr || cost > first_cost || (cost == first_cost && v2->tot_reads < first->tot_reads) ) {
 					first = v2;
 					first_cost = cost;
 				}
@@ -346,7 +346,7 @@ static value_info *regs_current( regs_ctx *ctx, ereg r ) {
 		if( v2->reg == r )
 			return v2;
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -358,7 +358,7 @@ static void regs_compute_liveness( regs_ctx *ctx ) {
 	ereg ret = REG_CFG(REG_MODE(mret))->ret;
 	for(int cur_op=0;cur_op<jit->instr_count;cur_op++) {
 		einstr *e = jit->instrs + cur_op;
-		value_info *write = NULL;
+		value_info *write = nullptr;
 
 		if( write_index < jit->value_count && jit->values_writes[write_index] == cur_op )
 			write = VAL(write_index++);
@@ -372,7 +372,7 @@ static void regs_compute_liveness( regs_ctx *ctx ) {
 			bool needs_push = false;
 			for(int k=0;k<e->nargs;k++) {
 				ereg arg = r[k];
-				value_info *v = REG_IS_VAL(arg) ? VAL_REG(r[k]) : NULL;
+				value_info *v = REG_IS_VAL(arg) ? VAL_REG(r[k]) : nullptr;
 				ereg r = get_call_reg(ctx, regs, v ? v->mode : M_I32);
 				if( IS_NULL(r) ) {
 					needs_push = true;
@@ -492,7 +492,7 @@ static void regs_assign_regs( regs_ctx *ctx ) {
 	int write_index = 1;
 	for(int cur_op=0;cur_op<jit->instr_count;cur_op++) {
 		einstr e = jit->instrs[cur_op];
-		value_info *write = NULL;
+		value_info *write = nullptr;
 #		ifdef HL_DEBUG
 		int eid = (jit->fun->findex << 16) | cur_op;
 		__ignore(&eid);
@@ -522,7 +522,7 @@ static void regs_assign_regs( regs_ctx *ctx ) {
 			ereg *args = hl_emit_get_args(ctx->jit->emit,&e);
 			call_regs regs = {0};
 			bool will_scratch = e.mode != M_NORET;
-			value_info *vcall = e.op == CALL_REG ? VAL_REG(e.a) : NULL;
+			value_info *vcall = e.op == CALL_REG ? VAL_REG(e.a) : nullptr;
 			if( will_scratch ) {
 				for_iter_back(values,v2,ctx->scratch) {
 					if( v2->last_read > cur_op )
@@ -706,7 +706,7 @@ static void flush_phis( regs_ctx *ctx, eblock *b, phi_edges edges ) {
 
 static void regs_emit_instrs( regs_ctx *ctx ) {
 	jit_ctx *jit = ctx->jit;
-	eblock *cur_block = NULL;
+	eblock *cur_block = nullptr;
 	call_regs regs = {0};
 	int write_index = 1;
 	ctx->pos_map[0] = 0;
@@ -723,12 +723,12 @@ static void regs_emit_instrs( regs_ctx *ctx ) {
 
 	for(int cur_op=0;cur_op<jit->instr_count;cur_op++) {
 		einstr e = jit->instrs[cur_op];
-		ereg *ret_val = NULL;
+		ereg *ret_val = nullptr;
 		int nread;
 		int instr_stack_offset = 0;
 		ctx->cur_op = cur_op;
 
-		value_info *vout = NULL;
+		value_info *vout = nullptr;
 		ereg out = UNUSED;
 		if( write_index < jit->value_count && jit->values_writes[write_index] == cur_op ) {
 			vout = VAL(write_index++);
@@ -741,7 +741,7 @@ static void regs_emit_instrs( regs_ctx *ctx ) {
 			int stack_args = 0;
 			int stack_bits = 0;
 			for(int k=0;k<e.nargs;k++) {
-				value_info *v = REG_IS_VAL(args[k]) ? VAL_REG(args[k]) : NULL;
+				value_info *v = REG_IS_VAL(args[k]) ? VAL_REG(args[k]) : nullptr;
 				emit_mode mode = v ? v->mode : M_I32;
 				ereg r = get_call_reg(ctx,regs,mode);
 				if( IS_NULL(r) ) {
@@ -763,7 +763,7 @@ static void regs_emit_instrs( regs_ctx *ctx ) {
 					regs_emit(ctx,UNUSED,STACK_OFFS,UNUSED,UNUSED,0,-offset);
 				for(int k=e.nargs-1;k>=0;k--) {
 					if( stack_bits & (1 << k) ) {
-						value_info *v = REG_IS_VAL(args[k]) ? VAL_REG(args[k]) : NULL;
+						value_info *v = REG_IS_VAL(args[k]) ? VAL_REG(args[k]) : nullptr;
 						EMIT(PUSH,VAL_REG(args[k])->reg,UNUSED,v && IS_FLOAT(v->mode) ? v->mode : M_PTR);
 					}
 				}
@@ -961,12 +961,12 @@ void hl_regs_function( jit_ctx *jit ) {
 	ctx->cur_op = 0;
 	ctx->stack_size = 0;
 	ctx->epilog_pos = -1;
-	jit->reg_instrs = NULL;
+	jit->reg_instrs = nullptr;
 	values_free(&ctx->scratch);
 	values_free(&ctx->persists);
 	int_arr_free(&ctx->jump_regs);
 	int_arr_free(&ctx->pack_movs);
-	ctx->cur_block = NULL;
+	ctx->cur_block = nullptr;
 	ctx->ncalls = (int*)hl_zalloc(&jit->falloc,sizeof(int) * (jit->instr_count + 1));
 	for(int i=0;i<jit->instr_count;i++) {
 		einstr *e = jit->instrs + i;
@@ -1029,4 +1029,3 @@ void hl_regs_free( jit_ctx *jit ) {
 	free(ctx->out_write);
 	free(ctx);
 }
-

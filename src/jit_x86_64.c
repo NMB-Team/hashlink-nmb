@@ -1877,7 +1877,7 @@ void hl_codegen_init( jit_ctx *jit ) {
 	//		case HF32: case HF64: return jit_wrapper_d(arg0,&args);
 	//		default: return jit_wrapper_ptr(arg0,&args);
 	//		}
-	hl_type_fun *ft = NULL;
+	hl_type_fun *ft = nullptr;
 	ereg fun_ptr = scratch_not_param[0];
 
 	EMIT(_MOV,tmp,MK_ADDR(cl,0),M_PTR); // ->t

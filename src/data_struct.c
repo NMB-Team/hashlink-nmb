@@ -259,9 +259,9 @@ INLINE static S_VALUE *S_NAME(free)( S_TYPE *st ) {
 	st->max = 0;
 	S_VALUE *vals = st->values;
 #	ifdef S_MAP
-	st->keys = NULL;
+	st->keys = nullptr;
 #	endif
-	st->values = NULL;
+	st->values = nullptr;
 	return vals;
 }
 

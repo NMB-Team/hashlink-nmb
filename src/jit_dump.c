@@ -270,7 +270,7 @@ static void hl_dump_ptr_name( jit_ctx *ctx, void *ptr ) {
 #	define N(v)	ptr_names[i].name = #v; ptr_names[i].ptr = v; i++
 #	define N2(n,v)	ptr_names[i].name = n; ptr_names[i].ptr = v; i++
 #	define DYN(p) N2("dyn_get" #p, hl_dyn_get##p); N2("dyn_set" #p, hl_dyn_set##p); N2("dyn_cast" #p, hl_dyn_cast##p)
-	static named_ptr ptr_names[256] = { NULL };
+	static named_ptr ptr_names[256] = { nullptr };
 	int i = 0;
 	if( !ptr_names[0].ptr ) {
 		N(hl_alloc_dynbool);
@@ -479,7 +479,7 @@ void hl_emit_dump( jit_ctx *ctx ) {
 	int cpos = 0;
 	int cur_op = 0;
 	bool new_op = false;
-	eblock *cur_block = NULL;
+	eblock *cur_block = nullptr;
 	for(int icount=0;icount<ctx->instr_count;icount++) {
 		while( ctx->emit_pos_map[cur_op] == icount ) {
 			printf("@%X ", cur_op);

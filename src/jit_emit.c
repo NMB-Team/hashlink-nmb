@@ -190,7 +190,7 @@ static linked_inf *link_add( emit_ctx *ctx, int id, void *ptr, linked_inf *head 
 }
 
 static linked_inf *link_add_sort_unique( emit_ctx *ctx, int id, void *ptr, linked_inf *head ) {
-	linked_inf *prev = NULL;
+	linked_inf *prev = nullptr;
 	linked_inf *cur = head;
 	while( cur && cur->id < id ) {
 		prev = cur;
@@ -217,7 +217,7 @@ static linked_inf *link_add_sort_unique( emit_ctx *ctx, int id, void *ptr, linke
 }
 
 static linked_inf *link_add_sort_replace( emit_ctx *ctx, int id, void *ptr, linked_inf *head ) {
-	linked_inf *prev = NULL;
+	linked_inf *prev = nullptr;
 	linked_inf *cur = head;
 	while( cur && cur->id < id ) {
 		prev = cur;
@@ -247,11 +247,11 @@ static void *link_sort_lookup( linked_inf *head, int id ) {
 		head = head->next;
 	if( head && head->id == id )
 		return head->ptr;
-	return NULL;
+	return nullptr;
 }
 
 static linked_inf *link_sort_remove( linked_inf *head, int id ) {
-	linked_inf *prev = NULL;
+	linked_inf *prev = nullptr;
 	linked_inf *cur = head;
 	while( cur && cur->id < id ) {
 		prev = cur;
@@ -331,7 +331,7 @@ static einstr *emit_instr( emit_ctx *ctx, emit_op op ) {
 		int pos = ctx->emit_pos;
 		int next_size = ctx->max_instrs ? (ctx->max_instrs << 1) : 256;
 		einstr *instrs = (einstr*)malloc(sizeof(einstr) * next_size);
-		if( instrs == NULL ) jit_error("Out of memory");
+		if( instrs == nullptr ) jit_error("Out of memory");
 		memcpy(instrs, ctx->instrs, pos * sizeof(einstr));
 		memset(instrs + pos, 0, (next_size - pos) * sizeof(einstr));
 		free(ctx->instrs);
@@ -369,7 +369,7 @@ void hl_emit_store_args( emit_ctx *ctx, einstr *e, ereg *args, int count ) {
 
 ereg *hl_emit_get_args( emit_ctx *ctx, einstr *e ) {
 	if( e->nargs == 0 )
-		return NULL;
+		return nullptr;
 	if( e->nargs == 1 )
 		return (ereg*)&e->size_offs;
 	return (ereg*)(ctx->args_data.values + e->size_offs);
@@ -401,7 +401,7 @@ static tmp_phi *alloc_phi( emit_ctx *ctx, emit_block *b, vreg *r ) {
 	if( ctx->phi_count == ctx->max_phis ) {
 		int new_size = ctx->max_phis ? ctx->max_phis << 1 : 64;
 		tmp_phi **phis = (tmp_phi**)malloc(sizeof(tmp_phi*) * new_size);
-		if( phis == NULL ) jit_error("Out of memory");
+		if( phis == nullptr ) jit_error("Out of memory");
 		memcpy(phis, ctx->phis, sizeof(tmp_phi*) * ctx->phi_count);
 		free(ctx->phis);
 		ctx->phis = phis;
@@ -483,7 +483,7 @@ static emit_block *find_block_at( emit_ctx *ctx, int pos ) {
 		int mid = (min + max) >> 1;
 		if( blocks_get(ctx->blocks,mid)->start_pos <= pos ) min = mid + 1; else max = mid;
 	}
-	return min == 0 ? NULL : blocks_get(ctx->blocks,min-1);
+	return min == 0 ? nullptr : blocks_get(ctx->blocks,min-1);
 }
 
 static void patch_jump( emit_ctx *ctx, int jpos ) {
@@ -504,7 +504,7 @@ static void register_jump( emit_ctx *ctx, int jpos, int offs ) {
 	int target = offs + ctx->op_pos + 1;
 	int_arr_add(ctx->jump_regs, jpos);
 	int_arr_add(ctx->jump_regs, target);
-	if( offs > 0 ) add_jump_target(ctx, offs);
+	if( offs >= 0 ) add_jump_target(ctx, offs);
 }
 
 static ereg emit_load_const( emit_ctx *ctx, uint64 value, hl_type *size_t ) {
@@ -557,7 +557,7 @@ static ereg emit_native_call( emit_ctx *ctx, void *native_ptr, ereg args[], int 
 	e->mode = (unsigned char)(ret ? hl_type_mode(ret) : M_NORET);
 	e->value = (int_val)native_ptr;
 	store_args(ctx, e, args, nargs);
-	return ret == NULL || e->mode == M_VOID ? UNUSED : new_value(ctx);
+	return ret == nullptr || e->mode == M_VOID ? UNUSED : new_value(ctx);
 }
 
 static ereg emit_dyn_call( emit_ctx *ctx, ereg f, ereg args[], int nargs, hl_type *ret ) {
@@ -631,7 +631,7 @@ static ereg optimize_phi_rec( emit_ctx *ctx, tmp_phi *p ) {
 		phi_remove_val(ctx,p2,p->value);
 		phi_add_val(ctx,p2,same,bsame);
 	}
-	p->ref_blocks = NULL;
+	p->ref_blocks = nullptr;
 	int count = phi_count(p->ref_phis);
 	tmp_phi **phis = phi_free(&p->ref_phis);
 	for(int i=0;i<count;i++)
@@ -733,7 +733,7 @@ static vclosure *alloc_static_closure( emit_ctx *ctx, int fid ) {
 		// native
 		c->t = m->code->natives[fidx - m->code->nfunctions].t;
 		c->fun = m->functions_ptrs[fid];
-		c->value = NULL;
+		c->value = nullptr;
 	} else {
 		c->t = m->code->functions[fidx].type;
 		c->fun = (void*)(int_val)fid;
@@ -950,10 +950,10 @@ void hl_emit_flush( jit_ctx *jit ) {
 	for_iter(blocks,b,ctx->blocks)
 		emit_write_block(ctx,b);
 	{
-		eblock *cur_loop = NULL;
+		eblock *cur_loop = nullptr;
 		for(int b=0;b<jit->block_count;b++) {
 			eblock *bl = jit->blocks + b;
-			while( cur_loop != NULL && bl->start_pos > cur_loop->loop_end )
+			while( cur_loop != nullptr && bl->start_pos > cur_loop->loop_end )
 				cur_loop = cur_loop->loop_parent;
 			int new_loop_end = -1;
 			for(int k=0;k<bl->pred_count;k++) {
@@ -1072,7 +1072,7 @@ static void emit_null_checks( emit_ctx *ctx ) {
 		einstr *e = emit_instr(ctx, PUSH_ADDR);
 		e->mode = M_PTR;
 		e->size_offs = jthrow - (ctx->emit_pos - 1);
-		emit_native_call(ctx, hashed_name ? (void*)hl_jit_null_field_access : (void*)hl_null_access, NULL, 0, NULL);
+		emit_native_call(ctx, hashed_name ? (void*)hl_jit_null_field_access : (void*)hl_null_access, nullptr, 0, nullptr);
 	}
 }
 
@@ -1099,12 +1099,12 @@ void hl_emit_function( jit_ctx *jit ) {
 	int_arr_add(ctx->values,-1);
 	ctx->current_block = alloc_block(ctx);
 	ctx->current_block->sealed = true;
-	ctx->arrival_points = NULL;
+	ctx->arrival_points = nullptr;
 	emit_debug("---- begin [%X] ----\n",f->findex);
 	if( f->nregs > ctx->max_regs ) {
 		free(ctx->vregs);
 		ctx->vregs = (vreg*)malloc(sizeof(vreg) * (f->nregs + 1));
-		if( ctx->vregs == NULL ) jit_assert();
+		if( ctx->vregs == nullptr ) jit_assert();
 		for(i=0;i<f->nregs;i++)
 			R(i)->id = i;
 		ctx->max_regs = f->nregs;
@@ -1113,7 +1113,7 @@ void hl_emit_function( jit_ctx *jit ) {
 	if( f->nops >= ctx->pos_map_size ) {
 		free(ctx->pos_map);
 		ctx->pos_map = (int*)malloc(sizeof(int) * (f->nops+1));
-		if( ctx->pos_map == NULL ) jit_assert();
+		if( ctx->pos_map == nullptr ) jit_assert();
 		ctx->pos_map_size = f->nops + 1;
 	}
 
@@ -1160,7 +1160,7 @@ void hl_emit_function( jit_ctx *jit ) {
 			while( ctx->arrival_points && ctx->arrival_points->id == op_pos && !split_block(ctx) ) {
 				emit_block *b = ctx->arrival_points->ptr;
 				for_iter(blocks,bp,ctx->current_block->preds) {
-					if( b == bp ) { b = NULL; break; }
+					if( b == bp ) { b = nullptr; break; }
 				}
 				if( b ) block_add_pred(ctx, ctx->current_block, b);
 				ctx->arrival_points = ctx->arrival_points->next;
@@ -1186,7 +1186,7 @@ void hl_emit_function( jit_ctx *jit ) {
 
 void hl_emit_alloc( jit_ctx *jit ) {
 	emit_ctx *ctx = (emit_ctx*)malloc(sizeof(emit_ctx));
-	if( ctx == NULL ) jit_assert();
+	if( ctx == nullptr ) jit_assert();
 	memset(ctx,0,sizeof(emit_ctx));
 	ctx->jit = jit;
 	jit->emit = ctx;
@@ -1203,7 +1203,7 @@ void hl_emit_free( jit_ctx *jit ) {
 	free(ctx->instrs);
 	free(ctx->pos_map);
 	free(ctx);
-	jit->emit = NULL;
+	jit->emit = nullptr;
 }
 
 void hl_emit_final( jit_ctx *jit ) {
@@ -1211,11 +1211,11 @@ void hl_emit_final( jit_ctx *jit ) {
 	vclosure *l = ctx->closure_list;
 	while( l ) {
 		vclosure *n = (vclosure*)l->value;
-		l->value = NULL;
+		l->value = nullptr;
 		l->fun = jit->final_code + (int_val)jit->mod->functions_ptrs[(int_val)l->fun];
 		l = n;
 	}
-	ctx->closure_list = NULL;
+	ctx->closure_list = nullptr;
 }
 
 static bool seal_block_rec( emit_ctx *ctx, emit_block *b, int target ) {
@@ -1547,7 +1547,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 		}
 		break;
 	case OCall0:
-		emit_call_fun(ctx, dst, o->p2, 0, NULL);
+		emit_call_fun(ctx, dst, o->p2, 0, nullptr);
 		break;
 	case OCall1:
 		emit_call_fun(ctx, dst, o->p2, 1, &o->p3);
@@ -1666,7 +1666,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 	case ONew:
 		{
 			ereg arg = UNUSED;
-			void *allocFun = NULL;
+			void *allocFun = nullptr;
 			int nargs = 1;
 			switch( dst->t->kind ) {
 			case HOBJ:
@@ -1701,9 +1701,9 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 		break;
 	case OVirtualClosure:
 		{
-			hl_type *t = NULL;
+			hl_type *t = nullptr;
 			hl_type *ot = ra->t;
-			while( t == NULL ) {
+			while( t == nullptr ) {
 				int i;
 				for(i=0;i<ot->obj->nproto;i++) {
 					hl_obj_proto *pp = ot->obj->proto + i;
@@ -1944,7 +1944,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 					patch_jump(ctx, jidx);
 
 					nargs = o->p3 - 1;
-					ereg eargs = nargs == 0 ? LOAD_CONST_PTR(NULL) : emit_gen_size(ctx, ALLOC_STACK, nargs * HL_WSIZE);
+					ereg eargs = nargs == 0 ? LOAD_CONST_PTR(nullptr) : emit_gen_size(ctx, ALLOC_STACK, nargs * HL_WSIZE);
 					for(i=0;i<nargs;i++) {
 						vreg *r = R(o->extra[i+1]);
 						if( hl_is_ptr(r->t) )
@@ -1953,7 +1953,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 							STORE_MEM(eargs,i*HL_WSIZE,emit_gen(ctx, ADDRESS, LOAD(r), UNUSED, M_PTR));
 					}
 					bool need_dyn = !hl_is_ptr(dst->t) && dst->t->kind != HVOID;
-					ereg edyn = need_dyn ? emit_gen_size(ctx, ALLOC_STACK, sizeof(vdynamic)) : LOAD_CONST_PTR(NULL);
+					ereg edyn = need_dyn ? emit_gen_size(ctx, ALLOC_STACK, sizeof(vdynamic)) : LOAD_CONST_PTR(nullptr);
 
 					args = get_tmp_args(ctx, 5);
 					args[0] = LOAD_MEM_PTR(obj,HL_WSIZE);
@@ -1980,7 +1980,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 	case ORethrow:
 		{
 			ereg arg = LOAD(dst);
-			emit_native_call(ctx, o->op == OThrow ? hl_throw : hl_rethrow, &arg, 1, NULL);
+			emit_native_call(ctx, o->op == OThrow ? hl_throw : hl_rethrow, &arg, 1, nullptr);
 		}
 		break;
 	case OLabel:
@@ -2149,12 +2149,12 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 			}
 			if( (next->op == OField && next->p2 == o->p1) || (next->op == OSetField && next->p1 == o->p1) ) {
 				int fid = next->op == OField ? next->p3 : next->p2;
-				hl_obj_field *f = NULL;
+				hl_obj_field *f = nullptr;
 				if( dst->t->kind == HOBJ || dst->t->kind == HSTRUCT )
 					f = hl_obj_field_fetch(dst->t, fid);
 				else if( dst->t->kind == HVIRTUAL )
 					f = dst->t->virt->fields + fid;
-				if( f == NULL ) jit_assert();
+				if( f == nullptr ) jit_assert();
 				hashed_name = f->hashed_name;
 			} else if( (next->op >= OCall1 && next->op <= OCallN) && next->p3 == o->p1 ) {
 				int fid = next->p2 < 0 ? -1 : m->functions_indexes[next->p2];
@@ -2201,13 +2201,13 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 			ereg st = emit_gen_size(ctx, ALLOC_STACK, sizeof(hl_trap_ctx));
 
 			ereg thread, current_addr;
-			static hl_thread_info *tinf = NULL;
-			static hl_trap_ctx *trap = NULL;
+			static hl_thread_info *tinf = nullptr;
+			static hl_trap_ctx *trap = nullptr;
 #			ifndef HL_THREADS
-			if( tinf == NULL ) tinf = hl_get_thread();
+			if( tinf == nullptr ) tinf = hl_get_thread();
 			current_addr = LOAD_CONST_PTR(&tinf->trap_current);
 #			else
-			thread = emit_native_call(ctx, hl_get_thread, NULL, 0, &hlt_bytes);
+			thread = emit_native_call(ctx, hl_get_thread, nullptr, 0, &hlt_bytes);
 			current_addr = OFFSET(thread, UNUSED, 0, (int)(int_val)&tinf->trap_current);
 #			endif
 			STORE_MEM(st, (int)(int_val)&trap->prev, LOAD_MEM_PTR(current_addr,0));
@@ -2237,7 +2237,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 			hl_opcode *cat = f->ops + ctx->op_pos + 1;
 			hl_opcode *next = f->ops + ctx->op_pos + 1 + o->p2;
 			hl_opcode *next2 = f->ops + ctx->op_pos + 2 + o->p2;
-			void *addr = NULL;
+			void *addr = nullptr;
 			int offs = 0;
 			if( cat->op == OCatch || (next->op == OGetGlobal && next2->op == OCall2 && next2->p3 == next->p1 && dst->id == (int)(int_val)next2->extra) ) {
 				int gindex = cat->op == OCatch ? cat->p1 : next->p2;
@@ -2248,7 +2248,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 					offs = m->globals_indexes[gindex];
 				}
 			}
-			STORE_MEM(st, (int)(int_val)&trap->tcheck, addr ? LOAD_MEM_PTR(LOAD_CONST_PTR(addr),offs) : LOAD_CONST_PTR(NULL));
+			STORE_MEM(st, (int)(int_val)&trap->tcheck, addr ? LOAD_MEM_PTR(LOAD_CONST_PTR(addr),offs) : LOAD_CONST_PTR(nullptr));
 
 			void *fun = SETJMP_FUN;
 			ereg args[2];
@@ -2283,13 +2283,13 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 			ereg st = ctx->traps[ctx->trap_count - 1].stack;
 
 			ereg thread, current_addr;
-			static hl_thread_info *tinf = NULL;
-			static hl_trap_ctx *trap = NULL;
+			static hl_thread_info *tinf = nullptr;
+			static hl_trap_ctx *trap = nullptr;
 #			ifndef HL_THREADS
-			if( tinf == NULL ) tinf = hl_get_thread();
+			if( tinf == nullptr ) tinf = hl_get_thread();
 			current_addr = LOAD_CONST_PTR(&tinf->trap_current);
 #			else
-			thread = emit_native_call(ctx, hl_get_thread, NULL, 0, &hlt_bytes);
+			thread = emit_native_call(ctx, hl_get_thread, nullptr, 0, &hlt_bytes);
 			current_addr = OFFSET(thread, UNUSED, 0, (int)(int_val)&tinf->trap_current);
 #			endif
 
@@ -2345,7 +2345,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 		STORE(dst, LOAD_MEM(LOAD(ra),0,&hlt_i32));
 		break;
 	case OAssert:
-		emit_native_call(ctx, hl_jit_assert, NULL, 0, NULL);
+		emit_native_call(ctx, hl_jit_assert, nullptr, 0, nullptr);
 		break;
 	case ONop:
 		break;
