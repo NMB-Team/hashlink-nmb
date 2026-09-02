@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <hl.h>
-#include <hlmodule.h>
+#include <jit.h>
 #include "hlsystem.h"
 
 #ifndef HL_COMMIT_SHA
@@ -139,7 +139,7 @@ static bool load_plugin( pchar *file ) {
 	hl_module *m = hl_module_alloc(code);
 	if( m == nullptr )
 		return false;
-	if( !hl_module_init(m,false) )
+	if( !hl_module_init(m,0) )
 		return false;
 	hl_code_free(code);
 	vclosure cl;
@@ -233,6 +233,10 @@ static void print_help() {
 		"  -dw, --debug-wait    Wait for the debugger before running (requires --debug)\n"
 		"  -hr, --hot-reload    Enable bytecode hot reloading\n"
 		"  -p,  --profile <hz>  Start the sampling profiler at <hz> samples per second\n"
+#		ifdef HL_DEBUG
+		"  -do, --debug-opt     Enable optimized JIT code while debugging\n"
+		"  -sD, --dump          Dump generated JIT code without running the program\n"
+#		endif
 		"\n"
 		"Arguments after <file.hl> are passed to the HashLink program. Arguments beginning\n"
 		"with '-' or '+' are passed to hlboot.dat when no bytecode file is specified.\n"
@@ -244,6 +248,9 @@ static void print_help() {
 
 static void print_info() {
 	printf("HL/JIT %d.%d.%d (C) 2015-2026 Haxe Foundation.\n Use -h or --help to get help info.",HL_VERSION>>16,(HL_VERSION>>8)&0xFF,HL_VERSION&0xFF);
+#	ifdef HL_DEBUG
+	printf("  Debug : hl --dump <file> to dump the jit code without running it\n");
+#	endif
 }
 
 #ifdef HL_WIN
@@ -256,7 +263,9 @@ int main(int argc, pchar *argv[]) {
 	char *error_msg = nullptr;
 	int debug_port = -1;
 	bool debug_wait = false;
+	bool debug_opt = false;
 	bool hot_reload = false;
+	bool dump = false;
 	int profile_count = -1;
 	main_context ctx;
 	bool isExc = false;
@@ -288,6 +297,16 @@ int main(int argc, pchar *argv[]) {
 			print_commit();
 			return 0;
 		}
+		if( pcompare(arg,PSTR("--debug-opt")) == 0 || pcompare(arg,PSTR("-do")) == 0 ) {
+			debug_opt = true;
+			continue;
+		}
+#		ifdef HL_DEBUG
+		if( pcompare(arg,PSTR("--dump")) == 0  || pcompare(arg,PSTR("-ds")) == 0 ) {
+			dump = true;
+			continue;
+		}
+#		endif
 		if( pcompare(arg,PSTR("--hot-reload")) == 0 || pcompare(arg,PSTR("-hr")) == 0 ) {
 			hot_reload = true;
 			continue;
@@ -339,7 +358,7 @@ int main(int argc, pchar *argv[]) {
 	ctx.m = hl_module_alloc(ctx.code);
 	if( ctx.m == nullptr )
 		return 2;
-	if( !hl_module_init(ctx.m,hot_reload) )
+	if( !hl_module_init(ctx.m,(hot_reload?HL_MODULE_HOT_RELOAD:0) | (dump?HL_MODULE_DUMP:0) | (debug_port > 0 && !debug_opt?HL_MODULE_DEBUG:0)) )
 		return 3;
 	if( hot_reload ) {
 		ctx.file_time = pfiletime(ctx.file);
@@ -348,6 +367,13 @@ int main(int argc, pchar *argv[]) {
 	hl_setup.load_plugin = load_plugin;
 	hl_setup.resolve_type = resolve_type;
 	hl_code_free(ctx.code);
+	if( dump ) {
+		// the code has been dumped while jitting, don't run it
+		hl_module_free(ctx.m);
+		hl_free(&ctx.code->alloc);
+		hl_global_free();
+		return 0;
+	}
 	if( debug_port > 0 && !hl_module_debug(ctx.m,debug_port,debug_wait) ) {
 		fprintf(stderr,"Could not start debugger on port %d\n",debug_port);
 		return 4;
