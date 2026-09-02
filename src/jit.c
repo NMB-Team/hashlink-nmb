@@ -105,7 +105,7 @@ static bool jit_code_reserve( jit_ctx *ctx, int size ) {
 	int pos = ctx->out_pos;
 	if( pos + size > ctx->out_max ) {
 		int nsize = ctx->out_max ? ctx->out_max * 3 : 4096;
-		while( pos + ctx->code_size > nsize ) nsize *= 3;
+		while( pos + size > nsize ) nsize *= 3;
 		unsigned char *nout = malloc(nsize);
 		if( !nout ) return false;
 		memcpy(nout,ctx->output,pos);
@@ -224,7 +224,7 @@ static int get_next_reg( hl_type *t, int *rp, int *fp ) {
 		}
 		return -1;
 	}
-	if( *rp < arg_fp_count ) {
+	if( *rp < arg_reg_count ) {
 		int r = (*rp)++;
 		if( IS_WINCALL64 ) (*fp)++;
 		return r;

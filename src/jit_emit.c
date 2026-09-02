@@ -165,6 +165,7 @@ struct _emit_ctx {
 #define STORE(r, v) emit_store_reg(ctx, r, v)
 #define LOAD_CONST(v, t) emit_load_const(ctx, (uint64)(v), t)
 #define LOAD_CONST_PTR(v) LOAD_CONST(v,&hlt_bytes)
+#define LOAD_NULL_PTR() LOAD_CONST(0,&hlt_bytes)
 #define LOAD_MEM(v, offs, t) emit_load_mem(ctx, v, offs, t, t)
 #define LOAD_MEM_PTR(v, offs) LOAD_MEM(v, offs, &hlt_bytes)
 #define STORE_MEM(to, offs, v) emit_store_mem(ctx, to, offs, v)
@@ -1944,7 +1945,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 					patch_jump(ctx, jidx);
 
 					nargs = o->p3 - 1;
-					ereg eargs = nargs == 0 ? LOAD_CONST_PTR(nullptr) : emit_gen_size(ctx, ALLOC_STACK, nargs * HL_WSIZE);
+					ereg eargs = nargs == 0 ? LOAD_NULL_PTR() : emit_gen_size(ctx, ALLOC_STACK, nargs * HL_WSIZE);
 					for(i=0;i<nargs;i++) {
 						vreg *r = R(o->extra[i+1]);
 						if( hl_is_ptr(r->t) )
@@ -1953,7 +1954,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 							STORE_MEM(eargs,i*HL_WSIZE,emit_gen(ctx, ADDRESS, LOAD(r), UNUSED, M_PTR));
 					}
 					bool need_dyn = !hl_is_ptr(dst->t) && dst->t->kind != HVOID;
-					ereg edyn = need_dyn ? emit_gen_size(ctx, ALLOC_STACK, sizeof(vdynamic)) : LOAD_CONST_PTR(nullptr);
+					ereg edyn = need_dyn ? emit_gen_size(ctx, ALLOC_STACK, sizeof(vdynamic)) : LOAD_NULL_PTR();
 
 					args = get_tmp_args(ctx, 5);
 					args[0] = LOAD_MEM_PTR(obj,HL_WSIZE);
@@ -2248,7 +2249,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 					offs = m->globals_indexes[gindex];
 				}
 			}
-			STORE_MEM(st, (int)(int_val)&trap->tcheck, addr ? LOAD_MEM_PTR(LOAD_CONST_PTR(addr),offs) : LOAD_CONST_PTR(nullptr));
+			STORE_MEM(st, (int)(int_val)&trap->tcheck, addr ? LOAD_MEM_PTR(LOAD_CONST_PTR(addr),offs) : LOAD_NULL_PTR());
 
 			void *fun = SETJMP_FUN;
 			ereg args[2];
