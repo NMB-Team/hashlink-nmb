@@ -1,7 +1,7 @@
 # Auto-generated from hashlink's Makefile template; do not edit
 
 UNAME := $(shell uname)
-CFLAGS = -std=c11 $(EXTRA_CFLAGS)
+CFLAGS = -std=c23 $(EXTRA_CFLAGS)
 CPPFLAGS = ::if (jumboBuild != "true")::-DHL_MAKE ::end::-I$$makePath(::relDir::)
 LDFLAGS = $(EXTRA_LDFLAGS)
 
@@ -19,10 +19,10 @@ HASHLINK = /usr/local
 endif
 
 ifeq ($(UNAME),Darwin)
-LDLIBS = -lhl -lm::foreach libraries::::if (name == "uv"):: -luv::end:: $(HASHLINK)/lib/::name::.hdll::end::
+LDLIBS = -lhl -lm::foreach libraries::::if (name == "uv"):: -luv::end:: $(HASHLINK)/lib/::name::.hdll::end:: -l:opengl.limen
 LDFLAGS += -rpath $(HASHLINK)/lib
 else
-LDLIBS = -lhl -lm::foreach libraries::::if (name == "uv"):: -luv::end:: -l:::name::.hdll::end::
+LDLIBS = -lhl -lm::foreach libraries::::if (name == "uv"):: -luv::end:: -l:::name::.hdll::end:: -l:opengl.limen
 LDFLAGS += -Wl,-rpath $(HASHLINK)/lib
 endif
 
