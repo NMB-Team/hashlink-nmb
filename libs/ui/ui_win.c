@@ -302,12 +302,15 @@ HL_PRIM void HL_NAME(ui_close_console)() {
 	FreeConsole();
 }
 
+// declared in utils.cpp, because COM objects don't play nicely with pure C code
+bool chooseFolder(const wchar_t* title, const wchar_t* defaultFolder, wchar_t* outBuffer);
 
 HL_PRIM vbyte *HL_NAME(ui_choose_file)( bool forSave, vdynamic *options ) {
 	wref *win = (wref*)hl_dyn_getp(options,hl_hash_utf8("window"), &hlt_abstract);
 	varray *filters = (varray*)hl_dyn_getp(options,hl_hash_utf8("filters"),&hlt_array);
 	wchar_t *fileName = (wchar_t*)hl_dyn_getp(options,hl_hash_utf8("fileName"),&hlt_bytes);
 	bool multiple = hl_dyn_geti(options,hl_hash_utf8("multiple"),&hlt_bool);
+	bool isFolder = (bool)hl_dyn_geti(options,hl_hash_utf8("isFolder"),&hlt_bool);
 	OPENFILENAME op;
 	wchar_t filterStr[1024];
 	// Add two extra wchar for multi-file terminator.
@@ -342,9 +345,14 @@ HL_PRIM vbyte *HL_NAME(ui_choose_file)( bool forSave, vdynamic *options ) {
 		if( !GetSaveFileName(&op) )
 			return NULL;
 	} else {
-		op.Flags |= OFN_CREATEPROMPT;
-		if( !GetOpenFileName(&op) )
-			return NULL;
+		if (!isFolder) {
+			op.Flags |= OFN_CREATEPROMPT;
+			if( !GetOpenFileName(&op) )
+				return NULL;
+		} else {
+			if (!chooseFolder(op.lpstrTitle, op.lpstrInitialDir, outputFile))
+				return NULL;
+		}
 	}
 	return hl_copy_bytes((vbyte*)outputFile, sizeof(outputFile));
 }

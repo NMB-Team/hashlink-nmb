@@ -797,10 +797,9 @@ typedef struct {
 #ifdef HL_THREADS
 static void gc_thread_entry( thread_start *_s ) {
 	thread_start s = *_s;
-	hl_register_thread(&s);
-	hl_lock_release(_s->wait);
-	s.wait = _s->wait = nullptr;
-	_s = nullptr;
+	hl_register_thread((thread_start*)&s + 1);
+	hl_lock_release(s.wait);
+	s.wait = nullptr;
 	s.callb(s.param);
 	hl_unregister_thread();
 }
@@ -808,13 +807,13 @@ static void gc_thread_entry( thread_start *_s ) {
 
 HL_PRIM hl_thread *hl_thread_start( void *callback, void *param, bool withGC ) {
 #ifdef HL_THREADS
+	thread_start s = {0};
 	if( withGC ) {
-		thread_start *s = (thread_start*)hl_gc_alloc_raw(sizeof(thread_start));
-		s->callb = callback;
-		s->param = param;
-		s->wait = hl_lock_create();
+		s.callb = callback;
+		s.param = param;
+		s.wait = hl_lock_create();
 		callback = gc_thread_entry;
-		param = s;
+		param = &s;
 	}
 #endif
 #if !defined(HL_THREADS)
@@ -826,10 +825,8 @@ HL_PRIM hl_thread *hl_thread_start( void *callback, void *param, bool withGC ) {
 	if( h == nullptr )
 		return nullptr;
 	CloseHandle(h);
-	if( withGC ) {
-		hl_lock *l = ((thread_start*)param)->wait;
-		if( l ) hl_lock_wait(l, nullptr);
-	}
+	if( withGC )
+		hl_lock_wait(s.wait, nullptr);
 	return (hl_thread*)(int_val)tid;
 #else
 	pthread_t t;
@@ -841,10 +838,8 @@ HL_PRIM hl_thread *hl_thread_start( void *callback, void *param, bool withGC ) {
 		return nullptr;
 	}
 	pthread_attr_destroy(&attr);
-	if( withGC ) {
-		hl_lock *l = ((thread_start*)param)->wait;
-		if( l ) hl_lock_wait(l, nullptr);
-	}
+	if( withGC )
+		hl_lock_wait(s.wait, nullptr);
 	return (hl_thread*)t;
 #endif
 }
