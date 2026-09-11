@@ -474,30 +474,23 @@ HL_PRIM hl_tls *hl_tls_alloc( bool gc_value ) {
 }
 
 HL_PRIM void hl_tls_set( hl_tls *l, void *v ) {
-#	if !defined(HL_THREADS)
-	l->value = v;
-#	else
-	if( l->gc ) {
-		void **store = _tls_get(l);
-		if( !store) {
-			if( !v )
-				return;
-			store = (void**)malloc(sizeof(void*));
-			*store = nullptr;
-			hl_add_root(store);
-			_tls_set(l, store);
-		} else {
-			if( !v ) {
-				hl_remove_root(store);
-				free(store);
-				_tls_set(l, nullptr);
-				return;
-			}
-		}
-		*store = v;
-	} else
-		_tls_set(l, v);
-#	endif
+  hl_thread_info *info = hl_get_thread();
+
+	if (l->key >= info->tls_arr_size) {
+		int new_max = info->tls_arr_size > 0 ? info->tls_arr_size * 2 : 16;
+
+		if (l->key >= new_max)
+			new_max = l->key + 1;
+
+		void **new_arr = hl_gc_alloc_raw(sizeof(void *) * new_max);
+
+		memcpy(new_arr, info->tls_arr, info->tls_arr_size * sizeof(void *));
+
+		info->tls_arr = new_arr;
+		info->tls_arr_size = new_max;
+	}
+
+	info->tls_arr[l->key] = v;
 }
 
 HL_PRIM void *hl_tls_get( hl_tls *l ) {
