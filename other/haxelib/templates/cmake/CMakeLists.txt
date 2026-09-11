@@ -1,4 +1,4 @@
-$$setDefaultJumboBuild(true)cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.20)
 
 project(hlc_generated LANGUAGES C)
 
@@ -198,12 +198,7 @@ target_include_directories(hlc_app PRIVATE
 
 ::if (jumboBuild != "true")::
 target_compile_definitions(hlc_app PRIVATE
-	HLC_BOOT
 	HL_MAKE
-)
-
-target_precompile_headers(hlc_app PRIVATE
-	<hlc.h>
 )
 ::end::
 
@@ -256,8 +251,30 @@ endif()
 list(APPEND HLC_NATIVE_LINK_LIBRARIES "${_native_lib}")
 ::end::
 
+if(UNIX AND NOT APPLE)
+	set(_hlc_limen_module_names)
+	foreach(_dir IN LISTS HLC_NATIVE_SEARCH_DIRS)
+		if(NOT IS_DIRECTORY "${_dir}")
+			continue()
+		endif()
+
+		file(GLOB _hlc_limen_modules CONFIGURE_DEPENDS "${_dir}/*.limen")
+		foreach(_module IN LISTS _hlc_limen_modules)
+			get_filename_component(_module_name "${_module}" NAME)
+			if(NOT _module_name IN_LIST _hlc_limen_module_names)
+				list(APPEND _hlc_limen_module_names "${_module_name}")
+				list(APPEND HLC_NATIVE_LINK_LIBRARIES "${_module}")
+			endif()
+		endforeach()
+	endforeach()
+endif()
+
 list(REMOVE_DUPLICATES HLC_NATIVE_LINK_LIBRARIES)
 target_link_libraries(hlc_app PRIVATE ${HLC_NATIVE_LINK_LIBRARIES})
+
+if(UNIX AND NOT APPLE)
+	target_link_libraries(hlc_app PRIVATE m)
+endif()
 
 if(MSVC)
 	target_link_libraries(hlc_app PRIVATE delayimp)
