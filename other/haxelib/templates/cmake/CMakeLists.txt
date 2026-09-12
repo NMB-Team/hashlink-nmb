@@ -142,17 +142,11 @@ elseif(NOT IS_ABSOLUTE "${HLC_GENERATED_DIR}")
 	)
 endif()
 
-::if (jumboBuild == "true")::
-set(HLC_SOURCES
-	"${HLC_GENERATED_DIR}/::name::.c"
-)
-::else::
 set(HLC_SOURCES
 ::foreach cfiles::
 	"${HLC_GENERATED_DIR}/::path::"
 ::end::
 )
-::end::
 
 add_executable(hlc_app ${HLC_SOURCES})
 
@@ -196,11 +190,9 @@ target_include_directories(hlc_app PRIVATE
 	"${HLC_HASHLINK_INCLUDE_DIR}"
 )
 
-::if (jumboBuild != "true")::
 target_compile_definitions(hlc_app PRIVATE
 	HL_MAKE
 )
-::end::
 
 if(MSVC)
 	target_compile_definitions(hlc_app PRIVATE UNICODE _UNICODE _WINDOWS)
@@ -273,6 +265,34 @@ list(REMOVE_DUPLICATES HLC_NATIVE_LINK_LIBRARIES)
 target_link_libraries(hlc_app PRIVATE ${HLC_NATIVE_LINK_LIBRARIES})
 
 if(UNIX AND NOT APPLE)
+	set(_hlc_needs_libuv FALSE)
+
+	foreach(_native_lib IN LISTS HLC_NATIVE_LINK_LIBRARIES)
+		get_filename_component(_native_name "${_native_lib}" NAME)
+
+		if(_native_name MATCHES "^uv\\.(hdll|limen)$")
+			set(_hlc_needs_libuv TRUE)
+			break()
+		endif()
+	endforeach()
+
+	if(_hlc_needs_libuv)
+		find_library(HLC_LIBUV_LIBRARY
+			NAMES uv libuv
+			HINTS ${HLC_NATIVE_SEARCH_DIRS}
+		)
+
+		if(NOT HLC_LIBUV_LIBRARY)
+			message(FATAL_ERROR
+				"uv native module is used, but libuv could not be found. "
+				"Install libuv or provide its directory via HLC_NATIVE_PATH."
+			)
+		endif()
+
+		message(STATUS "HLC: linking libuv: ${HLC_LIBUV_LIBRARY}")
+		target_link_libraries(hlc_app PRIVATE "${HLC_LIBUV_LIBRARY}")
+	endif()
+
 	target_link_libraries(hlc_app PRIVATE m)
 endif()
 
