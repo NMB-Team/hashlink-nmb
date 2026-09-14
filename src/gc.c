@@ -26,6 +26,9 @@
 #else
 #	include <sys/types.h>
 #	include <sys/mman.h>
+#	ifndef HL_CONSOLE
+#		include <unistd.h>
+#	endif
 #endif
 
 #if defined(HL_EMSCRIPTEN)
@@ -33,11 +36,21 @@
 #endif
 
 #if defined(HL_VCC)
-#define DRAM_PREFETCH(addr) _mm_prefetch(p, 1)
+#define DRAM_PREFETCH(addr) _mm_prefetch((const char*)(addr), _MM_HINT_T0)
 #elif defined(HL_CLANG) || defined (HL_GCC)
 #define DRAM_PREFETCH(addr) __builtin_prefetch(addr)
 #elif
 #define DRAM_PREFETCH(addr)
+#endif
+
+#if defined(HL_VCC)
+#	define GC_CPU_PAUSE()	_mm_pause()
+#elif (defined(HL_CLANG) || defined(HL_GCC)) && (defined(__i386__) || defined(__x86_64__))
+#	define GC_CPU_PAUSE()	__builtin_ia32_pause()
+#elif (defined(HL_CLANG) || defined(HL_GCC)) && (defined(__aarch64__) || defined(__arm__))
+#	define GC_CPU_PAUSE()	__asm__ __volatile__("yield")
+#else
+#	define GC_CPU_PAUSE()
 #endif
 
 #define MZERO(ptr,size)		memset(ptr,0,size)
@@ -93,7 +106,7 @@ static int_val gc_hash( void *ptr ) {
 #	define GC_MAX_MARK_THREADS 1
 #else
 #	ifndef GC_MAX_MARK_THREADS
-#	define GC_MAX_MARK_THREADS 4
+#	define GC_MAX_MARK_THREADS 16
 #	endif
 #endif
 
@@ -184,6 +197,29 @@ static void gc_free_page( gc_pheader *page, int block_count );
 static hl_threads_info gc_threads;
 
 HL_THREAD_STATIC_VAR hl_thread_info *current_thread;
+
+#if !defined(GC_EXTERN_API) && defined(HL_THREADS) && !defined(GC_DEBUG)
+#	define GC_SLICES
+#	define GC_SLICE_BYTES		2048
+#	define GC_SLICE_SLOTS		(GC_FIXED_PARTS << PAGE_KIND_BITS)
+
+typedef struct {
+	unsigned char *cur;
+	unsigned char *end;
+	int block_size;
+	int gen;
+} gc_slice;
+
+static volatile int gc_slice_gen = 1;
+HL_THREAD_STATIC_VAR gc_slice gc_slices[GC_SLICE_SLOTS];
+
+static int gc_slice_part( int size, int kind ) {
+	int sz = size + ((-size) & (GC_ALIGN - 1));
+	if( sz > GC_SIZES[GC_FIXED_PARTS-1] || kind == MEM_KIND_FINALIZER )
+		return -1;
+	return (sz >> GC_ALIGN_BITS) - 1;
+}
+#endif
 
 static struct {
 	int64 total_requested;
@@ -418,6 +454,9 @@ HL_API void hl_unregister_thread() {
 	hl_remove_root(&t->exc_value);
 	hl_remove_root(&t->exc_handler);
 	hl_remove_root(&t->tls_arr);
+#	ifdef GC_SLICES
+	memset(gc_slices,0,sizeof(gc_slices));
+#	endif
 	gc_global_lock(true);
 	for(i=0;i<gc_threads.count;i++)
 		if( gc_threads.threads[i] == t ) {
@@ -585,6 +624,25 @@ void *hl_gc_alloc_gen( hl_type *t, int size, int flags ) {
 		return nullptr;
 	if( size < 0 )
 		hl_error("Invalid allocation size");
+#	ifdef GC_SLICES
+	if( !hl_is_tracking(HL_TRACK_ALLOC) ) {
+		int kind = flags & PAGE_KIND_MASK;
+		int part = gc_slice_part(size, kind);
+		if( part >= 0 ) {
+			gc_slice *s = &gc_slices[(part << PAGE_KIND_BITS) | kind];
+			if( s->gen == gc_slice_gen && s->cur < s->end ) {
+				ptr = s->cur;
+				allocated = s->block_size;
+				s->cur += allocated;
+				if( flags & MEM_ZERO )
+					MZERO(ptr,allocated);
+				else if( MEM_HAS_PTR(flags) && allocated != size )
+					MZERO((char*)ptr+size,allocated-size);
+				return ptr;
+			}
+		}
+	}
+#	endif
 	gc_global_lock(true);
 	gc_check_mark();
 #	ifdef GC_MEMCHK
@@ -620,15 +678,41 @@ void *hl_gc_alloc_gen( hl_type *t, int size, int flags ) {
 			printf("%d\n",gc_stats.allocation_count);
 		}
 #		endif
-		ptr = gc_allocator_alloc(&allocated,flags & PAGE_KIND_MASK);
-		if( ptr == nullptr ) {
-			if( allocated < 0 ) {
-				gc_global_lock(false);
-				hl_error("Required memory allocation too big");
+#		ifdef GC_SLICES
+		int tpart = hl_is_tracking(HL_TRACK_ALLOC) ? -1 : gc_slice_part(size, flags & PAGE_KIND_MASK);
+		if( tpart >= 0 ) {
+			int kind = flags & PAGE_KIND_MASK;
+			int bsize = GC_SIZES[tpart];
+			int max = GC_SLICE_BYTES / bsize;
+			int n = 0;
+			unsigned char *slice;
+			if( max < 4 ) max = 4;
+			slice = (unsigned char*)gc_alloc_fixed(tpart, kind, max, &n);
+			gc_slice *s = &gc_slices[(tpart << PAGE_KIND_BITS) | kind];
+			s->block_size = bsize;
+			s->cur = slice + bsize;
+			s->end = slice + n * bsize;
+			s->gen = gc_slice_gen;
+			allocated = bsize;
+			ptr = slice;
+			// account the whole slice, so that gc_check_mark keeps triggering at the
+			// same heap growth rate
+			gc_stats.allocation_count += n - 1;
+			gc_stats.total_requested += (int64)(n - 1) * bsize;
+			gc_stats.total_allocated += (int64)n * bsize;
+		} else
+#		endif
+		{
+			ptr = gc_allocator_alloc(&allocated,flags & PAGE_KIND_MASK);
+			if( ptr == nullptr ) {
+				if( allocated < 0 ) {
+					gc_global_lock(false);
+					hl_error("Required memory allocation too big");
+				}
+				hl_fatal("TODO");
 			}
-			hl_fatal("TODO");
+			gc_stats.total_allocated += allocated;
 		}
-		gc_stats.total_allocated += allocated;
 	}
 	if( gc_flags & GC_PROFILE ) gc_stats.alloc_time += TIMESTAMP() - time;
 #	ifdef GC_DEBUG
@@ -658,6 +742,7 @@ typedef struct {
 	gc_mstack stack;
 	hl_semaphore *ready;
 	int mark_count;
+	volatile int has_work;
 	hl_thread *tid;
 } gc_mthread;
 
@@ -667,8 +752,10 @@ static unsigned char *mark_data = nullptr;
 static gc_mstack global_mark_stack = {0};
 static int gc_mark_threads = GC_MAX_MARK_THREADS;
 static gc_mthread mark_threads[GC_MAX_MARK_THREADS] = {0};
-static unsigned char mark_threads_active = 0;
+static volatile unsigned int mark_threads_active = 0;
 static hl_semaphore *mark_threads_done;
+static volatile bool gc_marking = false;
+static int gc_mark_spin = 2000;
 
 #define GC_STACK_BEGIN(st) register void **__current_stack = (st)->cur; gc_mstack *__current_mstack = st;
 #define GC_STACK_END() __current_mstack->cur = __current_stack;
@@ -706,17 +793,22 @@ HL_PRIM void **hl_gc_mark_grow( gc_mstack *stack ) {
 	return stack->cur;
 }
 
-static bool atomic_bit_unset( unsigned char *addr, unsigned char bitmask ) {
-	if( GC_MAX_MARK_THREADS <= 1 ) {
-		unsigned char v = *addr;
-		bool b = (v & bitmask) != 0;
-		if( b ) *addr = v & ~bitmask;
-		return b;
-	}
+static bool atomic_mask_unset( volatile unsigned int *addr, unsigned int bitmask ) {
 #	if defined(HL_VCC)
-	return ((unsigned)InterlockedAnd8((char*)addr,(char)~bitmask) & bitmask) != 0;
+	return (((unsigned)_InterlockedAnd((volatile long*)addr,(long)~bitmask)) & bitmask) != 0;
 #	elif defined(HL_CLANG) || defined(HL_GCC)
 	return (__sync_fetch_and_and(addr,~bitmask) & bitmask) != 0;
+#	else
+	hl_fatal("Not implemented");
+	return false;
+#	endif
+}
+
+static bool atomic_mask_set( volatile unsigned int *addr, unsigned int bitmask ) {
+#	if defined(HL_VCC)
+	return (((unsigned)_InterlockedOr((volatile long*)addr,(long)bitmask)) & bitmask) == 0;
+#	elif defined(HL_CLANG) || defined(HL_GCC)
+	return (__sync_fetch_and_or(addr,bitmask) & bitmask) == 0;
 #	else
 	hl_fatal("Not implemented");
 	return false;
@@ -755,7 +847,7 @@ static void gc_dispatch_mark( gc_mstack *st, bool all ) {
 		return;
 	for(i=0;i<gc_mark_threads;i++) {
 		gc_mthread *t = &mark_threads[i];
-		if( !atomic_bit_set(&mark_threads_active,1<<i) )
+		if( !atomic_mask_set(&mark_threads_active,1<<i) )
 			continue;
 		int push = GC_STACK_COUNT(st);
 		if( push > count ) push = count;
@@ -766,27 +858,44 @@ static void gc_dispatch_mark( gc_mstack *st, bool all ) {
 		st->cur -= push;
 		memcpy(t->stack.cur, st->cur, push * sizeof(void*));
 		t->stack.cur += push;
-		if( !all )
+		if( !all ) {
 			hl_semaphore_release(t->ready);
+			t->has_work = 1;
+		}
 	}
 	if( all ) {
 		if( nthreads != gc_mark_threads ) hl_fatal("assert");
 		for(i=0;i<gc_mark_threads;i++) {
 			gc_mthread *t = &mark_threads[i];
 			hl_semaphore_release(t->ready);
+			t->has_work = 1;
 		}
 	}
 }
 
-#define REGULAR_BITS 16
+#define REGULAR_BITS 8
+#define GC_MARK_BATCH	64
 
 static int gc_flush_mark( gc_mstack *stack ) {
 	GC_STACK_BEGIN(stack);
 	if( !__current_stack ) return 0;
 	int count = 0;
 	int regular_mask = 1 << REGULAR_BITS;
+	void *batch[GC_MARK_BATCH];
+	int bcount = 0, bpos = 0;
 	while( true ) {
-		void **block = (void**)*--__current_stack;
+		if( bpos == bcount ) {
+			bcount = 0;
+			while( bcount < GC_MARK_BATCH ) {
+				void *b = *--__current_stack;
+				if( !b ) { __current_stack++; break; }
+				DRAM_PREFETCH(b);
+				batch[bcount++] = b;
+			}
+			if( bcount == 0 ) break;
+			bpos = 0;
+		}
+		void **block = (void**)batch[bpos++];
 		gc_pheader *page = GC_GET_PAGE(block);
 		unsigned int *mark_bits = nullptr;
 		int pos = 0, nwords;
@@ -794,10 +903,6 @@ static int gc_flush_mark( gc_mstack *stack ) {
 		vdynamic *ptr = (vdynamic*)block;
 		ptr += 0; // prevent unreferenced warning
 #		endif
-		if( !block ) {
-			__current_stack++;
-			break;
-		}
 		if( (count++ & (1 << REGULAR_BITS)) != regular_mask && GC_MAX_MARK_THREADS > 1 && gc_mark_threads > 1 ) {
 			regular_mask = regular_mask ? 0 : 1 << REGULAR_BITS;
 			GC_STACK_END();
@@ -847,10 +952,13 @@ static int gc_flush_mark( gc_mstack *stack ) {
 			page = GC_GET_PAGE(p);
 			if( !page || !INPAGE(p,page) ) continue;
 			int bid = gc_allocator_get_block_id(page,p);
-			if( bid >= 0 && atomic_bit_set(&page->bmp[bid>>3],1<<(bid&7)) ) {
-				if( MEM_HAS_PTR(page->page_kind) ) DRAM_PREFETCH(p);
-				GC_PUSH_GEN(p,page);
-			}
+			if( bid < 0 ) continue;
+			unsigned char *bmp = &page->bmp[bid>>3];
+			unsigned char bmask = (unsigned char)(1<<(bid&7));
+			if( (*bmp & bmask) != 0 ) continue;
+			if( !atomic_bit_set(bmp,bmask) ) continue;
+			if( MEM_HAS_PTR(page->page_kind) ) DRAM_PREFETCH(p);
+			GC_PUSH_GEN(p,page);
 		}
 	}
 	GC_STACK_END();
@@ -928,12 +1036,14 @@ static void gc_mark() {
 	if( gc_mark_threads <= 1 )
 		gc_flush_mark(st);
 	else {
+		gc_marking = true;
 		gc_dispatch_mark(st, true);
 		if( GC_STACK_COUNT(st) > 0 )
 			hl_fatal("assert");
 		// wait threads to finish
 		while( mark_threads_active )
 			hl_semaphore_acquire(mark_threads_done);
+		gc_marking = false;
 		for(i=0;i<gc_mark_threads;i++) {
 			gc_mthread *t = &mark_threads[i];
 			if( GC_STACK_COUNT(&t->stack) > 0 )
@@ -948,6 +1058,10 @@ static void count_free_memory( gc_pheader *page, int size ) {
 }
 
 static void gc_major() {
+
+#ifdef GC_SLICES
+	gc_slice_gen++;
+#endif
 
 	if( gc_flags & GC_PROFILE_MEM ) {
 		double gc_mem = gc_stats.mark_bytes;
@@ -1034,13 +1148,33 @@ static void gc_check_mark() {
 		gc_major();
 }
 
+static int gc_default_mark_threads() {
+	int n = 0;
+#	if defined(HL_WIN)
+	SYSTEM_INFO inf;
+	GetSystemInfo(&inf);
+	n = (int)inf.dwNumberOfProcessors;
+#	elif defined(_SC_NPROCESSORS_ONLN)
+	n = (int)sysconf(_SC_NPROCESSORS_ONLN);
+#	endif
+	if( n <= 0 ) n = 4;
+	if( n > GC_MAX_MARK_THREADS ) n = GC_MAX_MARK_THREADS;
+	return n;
+}
+
 static void mark_thread_main( void *param ) {
 	int index = (int)(int_val)param;
 	gc_mthread *inf = &mark_threads[index];
 	while( true ) {
+		// spinwait a bit before sleeping, so we can get delivered extra work
+		// without a costly sleep/wakeup phase
+		int spin = gc_mark_spin;
+		while( !inf->has_work && gc_marking && spin-- > 0 )
+			GC_CPU_PAUSE();
 		hl_semaphore_acquire(inf->ready);
+		inf->has_work = 0;
 		inf->mark_count += gc_flush_mark(&inf->stack);
-		if( !atomic_bit_unset(&mark_threads_active, 1 << index) ) hl_fatal("assert");
+		if( !atomic_mask_unset(&mark_threads_active, 1 << index) ) hl_fatal("assert");
 		if( mark_threads_active == 0 ) hl_semaphore_release(mark_threads_done);
 	}
 }
@@ -1080,6 +1214,7 @@ static void hl_gc_init() {
 	gc_threads.exclusive_lock = hl_mutex_alloc(false);
 #	ifdef HL_THREADS
 	mark_threads_done = hl_semaphore_alloc(0);
+	gc_mark_threads = gc_default_mark_threads();
 	char *nthreads = getenv("HL_GC_THREADS");
 	if( nthreads ) {
 		gc_mark_threads = atoi(nthreads);
