@@ -13,7 +13,7 @@ HL_COMMIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 HL_COMMIT_NAME ?= $(shell (git log -1 --format=format:%s 2>/dev/null || printf unknown) | od -An -v -tx1 | tr -d ' \n' | sed 's/../\\x&/g')
 HL_COMMIT_DATE ?= $(shell git log -1 --format=%cI 2>/dev/null || echo unknown)
 
-CFLAGS = -Wall -O3 -std=c11 -fvisibility=hidden
+CFLAGS = -Wall -O3 -std=c11 -fvisibility=hidden -MMD -MP
 CPPFLAGS = -I src
 LIBHL_LDFLAGS =
 LIBHL_LDLIBS = -lm -lpthread
@@ -377,10 +377,15 @@ codesign_osx:
 .SUFFIXES:
 .SUFFIXES: .cpp .c .o
 
+ALL_OBJS = ${STD} ${BOOT} ${RUNTIME} ${PCRE} ${HL_OBJ} ${FMT} ${SDL} ${SSL} ${OPENAL} ${UI} ${UV} ${MYSQL} ${SQLITE} ${HEAPS} ${HL_DEBUG}
+DEPS = $(ALL_OBJS:.o=.d)
+
 clean_o:
-	rm -f ${STD} ${BOOT} ${RUNTIME} ${PCRE} ${HL_OBJ} ${FMT} ${SSL} ${OPENAL} ${UI} ${UV} ${MYSQL} ${SQLITE} ${HEAPS} ${HL_DEBUG}
+	rm -f ${STD} ${BOOT} ${RUNTIME} ${PCRE} ${HL_OBJ} ${FMT} ${SSL} ${OPENAL} ${UI} ${UV} ${MYSQL} ${SQLITE} ${HEAPS} ${HL_DEBUG} ${ALL_OBJS} ${DEPS}
 
 clean: clean_o
 	rm -f $(HL) $(HLC) $(LIBHL) *.hdll *.limen
 
 .PHONY: libs release
+
+-include $(DEPS)
