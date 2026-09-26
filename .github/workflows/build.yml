@@ -143,7 +143,7 @@ jobs:
 
         expected=(limen.hdll opengl.limen)
         case "$platform" in
-          linux-*) expected+=(vulkan.limen libshaderc.so.1) ;;
+          linux-*) expected+=(vulkan.limen) ;;
           windows-x64-mingw)
             expected+=(vulkan.limen d3d11.limen)
             expected+=(liblimen.dll.a liblimen_opengl.dll.a liblimen_vulkan.dll.a liblimen_d3d11.dll.a)
