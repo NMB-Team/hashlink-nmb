@@ -22,6 +22,11 @@
 #include <hl.h>
 #include <jit.h>
 #include "hlsystem.h"
+#include "banner.h"
+
+#ifndef HL_WIN
+#include <unistd.h>
+#endif
 
 #ifndef HL_COMMIT_SHA
 #define HL_COMMIT_SHA "unknown"
@@ -217,7 +222,44 @@ static void print_commit() {
 	printf("Commit: %s\nName:   %s\nDate:   %s\n",HL_COMMIT_SHA,HL_COMMIT_NAME,HL_COMMIT_DATE);
 }
 
+static void print_banner() {
+#ifdef HL_WIN_DESKTOP
+	HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD mode;
+	if( output != INVALID_HANDLE_VALUE && GetConsoleMode(output, &mode) &&
+		SetConsoleMode(output, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING) ) {
+		int length = MultiByteToWideChar(CP_UTF8, 0, banner_ansi, -1, nullptr, 0);
+		bool printed = false;
+		if( length > 0 ) {
+			wchar_t *wide = (wchar_t*)malloc(length * sizeof(wchar_t));
+			if( wide != nullptr ) {
+				DWORD written = 0;
+				MultiByteToWideChar(CP_UTF8, 0, banner_ansi, -1, wide, length);
+				printed = WriteConsoleW(output, wide, length - 1, &written, nullptr) && written == length - 1;
+				free(wide);
+			}
+		}
+		SetConsoleMode(output, mode);
+		if( printed ) return;
+	}
+	const char *term = getenv("TERM");
+	if( output != INVALID_HANDLE_VALUE && GetFileType(output) == FILE_TYPE_PIPE &&
+		term != nullptr && *term != 0 && strcmp(term, "dumb") != 0 &&
+		(getenv("MSYSTEM") != nullptr || getenv("CYGWIN") != nullptr || getenv("WSL_DISTRO_NAME") != nullptr) ) {
+		fputs(banner_ansi, stdout);
+		return;
+	}
+#elif !defined(HL_WIN)
+	if( isatty(STDOUT_FILENO) ) {
+		fputs(banner_ansi, stdout);
+		return;
+	}
+#endif
+	fputs(banner_plain, stdout);
+}
+
 static void print_help() {
+	print_banner();
 	printf(
 		"HashLink virtual machine\n"
 		"\n"
@@ -247,9 +289,10 @@ static void print_help() {
 }
 
 static void print_info() {
+	print_banner();
 	printf("HL/JIT %d.%d.%d (C) 2015-2026 Haxe Foundation.\n Use -h or --help to get help info.",HL_VERSION>>16,(HL_VERSION>>8)&0xFF,HL_VERSION&0xFF);
 #	ifdef HL_DEBUG
-	printf("  Debug : hl --dump <file> to dump the jit code without running it\n");
+	printf("\n  Debug : hl --dump <file> to dump the jit code without running it\n");
 #	endif
 }
 
