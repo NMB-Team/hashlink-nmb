@@ -21,6 +21,7 @@
  */
 #include <jit.h>
 #include "data_struct.h"
+#include "trace.h"
 
 static jit_ctx *current_ctx = nullptr;
 
@@ -167,6 +168,7 @@ void hl_jit_reset( jit_ctx *ctx, hl_module *m ) {
 }
 
 int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
+	hl_trace_jit_begin(f->findex,f->field.name);
 	hl_free(&ctx->falloc);
 	ctx->mod = m;
 	ctx->fun = f;
@@ -204,9 +206,12 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 		}
 		memcpy(dbg->vars,ctx->regs_track,dbg->vars_size);
 	}
-	if( !jit_code_append(ctx) )
+	if( !jit_code_append(ctx) ) {
+		hl_trace_end_event("jit");
 		return -1;
+	}
 	current_ctx = nullptr;
+	hl_trace_end_event("jit");
 	return pos;
 }
 

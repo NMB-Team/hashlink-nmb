@@ -76,6 +76,7 @@
       <Filter>std</Filter>
     </ClCompile>
     <ClCompile Include="src\gc.c" />
+    <ClCompile Include="src\trace.c" />
     <ClCompile Include="include\pcre\pcre2_auto_possess.c">
       <Filter>pcre</Filter>
     </ClCompile>

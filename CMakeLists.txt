@@ -214,6 +214,7 @@ endif()
 
 add_library(libhl
     src/gc.c
+    src/trace.c
     ${std_srcs}
 )
 

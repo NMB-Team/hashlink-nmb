@@ -22,6 +22,7 @@
 #include <hl.h>
 #include <hlmodule.h>
 #include "hlsystem.h"
+#include "trace.h"
 
 #ifdef HL_LINUX
 #include <semaphore.h>
@@ -91,17 +92,63 @@ typedef struct {
 
 static struct {
 	int sample_count;
+	bool trace_samples;
+	bool record_samples;
 	volatile int profiling_pause;
 	volatile bool stopLoop;
 	volatile bool waitLoop;
 	thread_handle *handles;
 	thread_handle *olds;
 	void **tmpMemory;
+	char *trace_stack;
 	void *stackOut[MAX_STACK_COUNT];
 	profile_data *record;
 	profile_data *first_record;
 	hl_condition *waitCond;
 } data = {0};
+
+void hl_profile_trace_enable(bool record_profile) {
+	data.trace_samples = true;
+	data.record_samples = record_profile;
+}
+
+static void trace_sample(thread_handle *t, int count) {
+	if( count <= 0 ) return;
+	size_t capacity = (size_t)MAX_STACK_COUNT * 1024 + 1;
+	char *stack = data.trace_stack;
+	if( stack == nullptr ) return;
+	size_t pos = 0;
+	for( int i = 0; i < count; i++ ) {
+		uchar symbol[256];
+		int size = 256;
+		if( hl_module_resolve_symbol_full(data.stackOut[i],symbol,&size,nullptr) ) {
+			for( int j = 0; j < size && pos + 5 < capacity; j++ ) {
+				unsigned int c = symbol[j];
+				if( c >= 0xD800 && c <= 0xDBFF && j + 1 < size && symbol[j+1] >= 0xDC00 && symbol[j+1] <= 0xDFFF )
+					c = 0x10000 + ((c - 0xD800) << 10) + (symbol[++j] - 0xDC00);
+				if( c < 0x80 ) stack[pos++] = (char)c;
+				else if( c < 0x800 ) {
+					stack[pos++] = (char)(0xC0 | (c >> 6));
+					stack[pos++] = (char)(0x80 | (c & 63));
+				} else if( c < 0x10000 ) {
+					stack[pos++] = (char)(0xE0 | (c >> 12));
+					stack[pos++] = (char)(0x80 | ((c >> 6) & 63));
+					stack[pos++] = (char)(0x80 | (c & 63));
+				} else {
+					stack[pos++] = (char)(0xF0 | (c >> 18));
+					stack[pos++] = (char)(0x80 | ((c >> 12) & 63));
+					stack[pos++] = (char)(0x80 | ((c >> 6) & 63));
+					stack[pos++] = (char)(0x80 | (c & 63));
+				}
+			}
+		} else {
+			pos += snprintf(stack + pos,capacity - pos,"%p",data.stackOut[i]);
+		}
+		stack[pos++] = '\n';
+	}
+	stack[pos] = 0;
+	hl_trace_sample(t->tid,stack);
+}
 
 #ifdef HL_LINUX
 static struct
@@ -381,15 +428,20 @@ static void read_thread_data( thread_handle *t ) {
 	}
 #endif
 	int eventId = count | 0x80000000;
-	double time = hl_sys_time();
-	hl_threads_info *gc = hl_gc_threads_info();
-	if( gc->stopping_world ) eventId |= 0x40000000;
-	record_data(&time,sizeof(double));
-	record_data(&t->tid,sizeof(int));
-	record_data(&eventId,sizeof(int));
-	record_data(data.stackOut,sizeof(void*)*count);
-	if( *t->inf->thread_name && !*t->name )
+	if( data.record_samples || !data.trace_samples ) {
+		double time = hl_sys_time();
+		hl_threads_info *gc = hl_gc_threads_info();
+		if( gc->stopping_world ) eventId |= 0x40000000;
+		record_data(&time,sizeof(double));
+		record_data(&t->tid,sizeof(int));
+		record_data(&eventId,sizeof(int));
+		record_data(data.stackOut,sizeof(void*)*count);
+	}
+	if( data.trace_samples ) trace_sample(t,count);
+	if( *t->inf->thread_name && !*t->name ) {
 		memcpy(t->name, t->inf->thread_name, sizeof(t->name));
+		if( data.trace_samples ) hl_trace_set_thread_name_id(t->tid,t->name);
+	}
 }
 
 static void profile_pause() {
@@ -410,6 +462,7 @@ static void hl_profile_loop( void *_ ) {
 	double wait_time = 1. / data.sample_count;
 	double next = hl_sys_time();
 	data.tmpMemory = malloc(MAX_STACK_SIZE);
+	if( data.trace_samples ) data.trace_stack = malloc((size_t)MAX_STACK_COUNT * 1024 + 1);
 	data.waitLoop = false;
 	while( !data.stopLoop ) {
 		double t = hl_sys_time();
@@ -490,6 +543,8 @@ static void hl_profile_loop( void *_ ) {
 	}
 	free(data.tmpMemory);
 	data.tmpMemory = nullptr;
+	free(data.trace_stack);
+	data.trace_stack = nullptr;
 	data.sample_count = 0;
 	data.stopLoop = false;
 }
@@ -720,6 +775,7 @@ static void profile_event( int code, vbyte *ptr, int dataLen ) {
 		break;
 	default:
 		if( code < 0 ) return;
+		if( data.trace_samples && !data.record_samples ) return;
 		if( data.profiling_pause || (code != 0 && (hl_get_thread()->flags & HL_THREAD_PROFILER_PAUSED)) ) return;
 		profile_pause();
 		while( !data.waitLoop ) {}

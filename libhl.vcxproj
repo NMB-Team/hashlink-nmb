@@ -201,6 +201,7 @@
     <ClCompile Include="include\pcre\pcre2_valid_utf.c" />
     <ClCompile Include="include\pcre\pcre2_xclass.c" />
     <ClCompile Include="src\gc.c" />
+    <ClCompile Include="src\trace.c" />
     <ClCompile Include="src\std\array.c" />
     <ClCompile Include="src\std\buffer.c" />
     <ClCompile Include="src\std\bytes.c" />

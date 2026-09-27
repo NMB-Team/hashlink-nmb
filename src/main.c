@@ -22,6 +22,7 @@
 #include <hl.h>
 #include <jit.h>
 #include "hlsystem.h"
+#include "trace.h"
 #include "banner.h"
 #include "update/update.h"
 
@@ -45,6 +46,7 @@ typedef uchar pchar;
 #define pprintf(str,file)	uprintf(USTR(str),file)
 #define pfopen(file,ext) _wfopen(file,USTR(ext))
 #define pcompare wcscmp
+#define pcopy wcscpy
 #define ptoi(s)	wcstol(s,nullptr,10)
 #define PSTR(x) USTR(x)
 #else
@@ -53,9 +55,17 @@ typedef char pchar;
 #define pprintf printf
 #define pfopen fopen
 #define pcompare strcmp
+#define pcopy strcpy
 #define ptoi atoi
 #define PSTR(x) x
 #endif
+
+void hl_profile_trace_enable(bool record_profile);
+
+static void trace_before_exit() {
+	hl_profile_end();
+	hl_trace_end();
+}
 
 #if defined(HL_WIN_DESKTOP) && defined(HL_DX12_AGILITY_VERSION)
 __declspec(dllexport) extern const UINT D3D12SDKVersion = HL_DX12_AGILITY_VERSION;
@@ -277,6 +287,8 @@ static void print_help() {
 		"  -dw, --debug-wait    Wait for the debugger before running (requires --debug)\n"
 		"  -hr, --hot-reload    Enable bytecode hot reloading\n"
 		"  -p,  --profile <hz>  Start the sampling profiler at <hz> samples per second\n"
+		"       --trace         Write a Perfetto-compatible .nmbtrace file\n"
+		"       --trace-file <path>  Write trace to the given path\n"
 #		ifdef HL_DEBUG
 		"  -do, --debug-opt     Enable optimized JIT code while debugging\n"
 		"  -sD, --dump          Dump generated JIT code without running the program\n"
@@ -319,6 +331,9 @@ int main(int argc, pchar *argv[]) {
 	bool hot_reload = false;
 	bool dump = false;
 	int profile_count = -1;
+	bool trace_requested = false;
+	pchar *trace_file = nullptr;
+	bool trace_file_allocated = false;
 	main_context ctx;
 	bool isExc = false;
 	int first_boot_arg = -1;
@@ -368,6 +383,16 @@ int main(int argc, pchar *argv[]) {
 			profile_count = ptoi(*argv++);
 			continue;
 		}
+		if( pcompare(arg,PSTR("--trace")) == 0 ) {
+			trace_requested = true;
+			continue;
+		}
+		if( pcompare(arg,PSTR("--trace-file")) == 0 ) {
+			if( argc-- == 0 ) break;
+			trace_file = *argv++;
+			trace_requested = true;
+			continue;
+		}
 		if( *arg == '-' || *arg == '+' ) {
 			if( first_boot_arg < 0 ) first_boot_arg = argc + 1;
 			// skip value
@@ -400,18 +425,43 @@ int main(int argc, pchar *argv[]) {
 	hl_setup.sys_nargs = argc;
 	hl_sys_init();
 	hl_register_thread(&ctx);
+	if( trace_requested ) {
+		if( trace_file == nullptr ) {
+			size_t len = pstrlen(file);
+			if( len >= 3 && pcompare(file + len - 3,PSTR(".hl")) == 0 ) len -= 3;
+			trace_file = malloc((len + 10) * sizeof(pchar));
+			if( trace_file ) {
+				memcpy(trace_file,file,len * sizeof(pchar));
+				pcopy(trace_file + len,PSTR(".nmbtrace"));
+				trace_file_allocated = true;
+			}
+		}
+		if( trace_file ) {
+#ifdef HL_WIN
+			if( hl_trace_start(hl_to_utf8(trace_file)) ) hl_trace_set_thread_name("Main Thread");
+#else
+			if( hl_trace_start(trace_file) ) hl_trace_set_thread_name("Main Thread");
+#endif
+		} else fprintf(stderr,"Could not allocate trace file path\n");
+		if( trace_file_allocated ) free(trace_file);
+	}
 	main_ctx = &ctx;
 	ctx.file = file;
 	ctx.code = load_code(file, &error_msg, true);
 	if( ctx.code == nullptr ) {
 		if( error_msg ) printf("%s\n", error_msg);
+		hl_trace_end();
 		return 1;
 	}
 	ctx.m = hl_module_alloc(ctx.code);
-	if( ctx.m == nullptr )
+	if( ctx.m == nullptr ) {
+		hl_trace_end();
 		return 2;
-	if( !hl_module_init(ctx.m,(hot_reload?HL_MODULE_HOT_RELOAD:0) | (dump?HL_MODULE_DUMP:0) | (debug_port > 0 && !debug_opt?HL_MODULE_DEBUG:0)) )
+	}
+	if( !hl_module_init(ctx.m,(hot_reload?HL_MODULE_HOT_RELOAD:0) | (dump?HL_MODULE_DUMP:0) | (debug_port > 0 && !debug_opt?HL_MODULE_DEBUG:0)) ) {
+		hl_trace_end();
 		return 3;
+	}
 	if( hot_reload ) {
 		ctx.file_time = pfiletime(ctx.file);
 		hl_setup.reload_check = check_reload;
@@ -424,17 +474,21 @@ int main(int argc, pchar *argv[]) {
 		hl_module_free(ctx.m);
 		hl_free(&ctx.code->alloc);
 		hl_global_free();
+		hl_trace_end();
 		return 0;
 	}
 	if( debug_port > 0 && !hl_module_debug(ctx.m,debug_port,debug_wait) ) {
 		fprintf(stderr,"Could not start debugger on port %d\n",debug_port);
+		hl_trace_end();
 		return 4;
 	}
 	cl.t = ctx.code->functions[ctx.m->functions_indexes[ctx.m->code->entrypoint]].type;
 	cl.fun = ctx.m->functions_ptrs[ctx.m->code->entrypoint];
 	cl.hasValue = 0;
 	setup_handler();
-	hl_profile_setup(profile_count);
+	if( hl_trace_enabled() ) hl_profile_trace_enable(profile_count >= 0);
+	hl_profile_setup(hl_trace_enabled() && profile_count < 0 ? 1000 : profile_count);
+	if( hl_trace_enabled() ) hl_setup.before_exit = trace_before_exit;
 	ctx.ret = hl_dyn_call_safe(&cl,nullptr,0,&isExc);
 	hl_profile_end();
 	if( isExc ) {
@@ -445,6 +499,7 @@ int main(int argc, pchar *argv[]) {
 #else
 		hl_global_free();
 #endif
+		hl_trace_end();
 		return 1;
 	}
 #ifdef HL_THREADS
@@ -455,6 +510,7 @@ int main(int argc, pchar *argv[]) {
 	hl_free(&ctx.code->alloc);
 	hl_global_free();
 #endif
+	hl_trace_end();
 	return 0;
 }
 

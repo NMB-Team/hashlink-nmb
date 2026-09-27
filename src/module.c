@@ -22,6 +22,7 @@
 #include <hl.h>
 #include <hlmodule.h>
 #include <jit.h>
+#include "trace.h"
 
 #ifdef HL_WIN
 #	undef _GUID
@@ -770,9 +771,12 @@ int hl_module_init( hl_module *m, int flags ) {
 	memset(m->unwind_table, 0, sizeof(RUNTIME_FUNCTION) * m->unwind_table_size);
 #	endif
 	// JIT
+	hl_trace_begin("jit","JIT Module");
 	ctx = hl_jit_alloc();
-	if( ctx == nullptr )
+	if( ctx == nullptr ) {
+		hl_trace_end_event("jit");
 		return 0;
+	}
 	bool dump = (flags & HL_MODULE_DUMP) != 0;
 	m->debug = (flags & HL_MODULE_DEBUG) != 0;
 	hl_jit_init(ctx, m);
@@ -781,6 +785,7 @@ int hl_module_init( hl_module *m, int flags ) {
 		int fpos = hl_jit_function(ctx, m, f);
 		if( fpos < 0 ) {
 			hl_jit_free(ctx, false);
+			hl_trace_end_event("jit");
 			return 0;
 		}
 		m->functions_ptrs[f->findex] = (void*)(int_val)fpos;
@@ -812,6 +817,7 @@ int hl_module_init( hl_module *m, int flags ) {
 		hl_code_hash_finalize(m->hash);
 		m->jit_ctx = ctx;
 	}
+	hl_trace_end_event("jit");
 	return 1;
 }
 
@@ -901,6 +907,7 @@ hl_type *hl_module_resolve_type( hl_module *m, hl_type *t, bool err ) {
 }
 
 h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
+	hl_trace_begin("reload","Hot Reload");
 	int i,i1,i2;
 	bool has_changes = false;
 	int changes_count = 0;
@@ -974,7 +981,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 
 				m1->hash->functions_hashes[i1] = hash2; // update hash
 				int fpos = hl_jit_function(ctx, m2, f2);
-				if( fpos < 0 ) return false;
+				if( fpos < 0 ) { hl_trace_end_event("reload"); return false; }
 				m2->functions_ptrs[f2->findex] = (void*)(int_val)fpos;
 				has_changes = true;
 				break;
@@ -983,7 +990,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 		if( i1 == m1->code->nfunctions ) {
 			// not found (signature changed or new method) : inject new method!
 			int fpos = hl_jit_function(ctx, m2, f2);
-			if( fpos < 0 ) return false;
+			if( fpos < 0 ) { hl_trace_end_event("reload"); return false; }
 			m2->hash->functions_hashes[i2] = -1;
 			m2->functions_ptrs[f2->findex] = (void*)(int_val)fpos;
 #			ifdef HL_DEBUG
@@ -1002,6 +1009,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 		printf("[HotReload] No changes found\n");
 		fflush(stdout);
 		hl_jit_free(ctx, true);
+		hl_trace_end_event("reload");
 		return false;
 	}
 
@@ -1069,6 +1077,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 	if( m2->jit_code == nullptr ) {
 		printf("[HotReload] Couldn't JIT result\n");
 		fflush(stdout);
+		hl_trace_end_event("reload");
 		return false;
 	}
 
@@ -1108,6 +1117,7 @@ h_bool hl_module_patch( hl_module *m1, hl_code *c ) {
 		}
 	}
 
+	hl_trace_end_event("reload");
 	return true;
 }
 

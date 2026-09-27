@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include "hl.h"
+#include "trace.h"
 #ifdef HL_WIN
 #	undef _GUID
 #	include <windows.h>
@@ -987,6 +988,7 @@ static void gc_mark_stack( void *start, void *end ) {
 }
 
 static void gc_mark() {
+	hl_trace_begin("gc","GC Mark");
 	GC_STACK_BEGIN(&global_mark_stack);
 	int mark_bytes = gc_stats.mark_bytes;
 	int i;
@@ -1050,7 +1052,10 @@ static void gc_mark() {
 				hl_fatal("assert");
 		}
 	}
+	hl_trace_end_event("gc");
+	hl_trace_begin("gc","GC Sweep");
 	gc_allocator_after_mark();
+	hl_trace_end_event("gc");
 }
 
 static void count_free_memory( gc_pheader *page, int size ) {
@@ -1058,6 +1063,7 @@ static void count_free_memory( gc_pheader *page, int size ) {
 }
 
 static void gc_major() {
+	hl_trace_begin("gc","GC Major");
 
 #ifdef GC_SLICES
 	gc_slice_gen++;
@@ -1115,6 +1121,11 @@ static void gc_major() {
 		last_profile.alloc_time = gc_stats.alloc_time;
 		last_profile.total_allocated = gc_stats.total_allocated;
 	}
+	hl_trace_counter("gc","Heap Allocated",gc_stats.total_allocated);
+	hl_trace_counter("gc","Heap Requested",gc_stats.total_requested);
+	hl_trace_counter("gc","GC Pages",gc_stats.pages_count);
+	hl_trace_counter("gc","GC Mark Bytes",gc_stats.mark_bytes);
+	hl_trace_end_event("gc");
 }
 
 HL_API void hl_gc_major() {
@@ -1164,6 +1175,9 @@ static int gc_default_mark_threads() {
 
 static void mark_thread_main( void *param ) {
 	int index = (int)(int_val)param;
+	char name[32];
+	snprintf(name,sizeof(name),"GC Marker %d",index);
+	bool trace_named = false;
 	gc_mthread *inf = &mark_threads[index];
 	while( true ) {
 		// spinwait a bit before sleeping, so we can get delivered extra work
@@ -1172,6 +1186,10 @@ static void mark_thread_main( void *param ) {
 		while( !inf->has_work && gc_marking && spin-- > 0 )
 			GC_CPU_PAUSE();
 		hl_semaphore_acquire(inf->ready);
+		if( !trace_named && hl_trace_enabled() ) {
+			hl_trace_set_thread_name(name);
+			trace_named = true;
+		}
 		inf->has_work = 0;
 		inf->mark_count += gc_flush_mark(&inf->stack);
 		if( !atomic_mask_unset(&mark_threads_active, 1 << index) ) hl_fatal("assert");

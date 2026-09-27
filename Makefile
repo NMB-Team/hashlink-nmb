@@ -37,7 +37,7 @@ PCRE = include/pcre/pcre2_auto_possess.o include/pcre/pcre2_chartables.o include
 	include/pcre/pcre2_ucd.o include/pcre/pcre2_valid_utf.o include/pcre/pcre2_xclass.o
 endif
 
-RUNTIME = src/gc.o
+RUNTIME = src/gc.o src/trace.o
 
 STD = src/std/array.o src/std/buffer.o src/std/bytes.o src/std/cast.o src/std/date.o src/std/error.o src/std/debug.o \
 	src/std/file.o src/std/fun.o src/std/maps.o src/std/math.o src/std/obj.o src/std/random.o src/std/regexp.o \

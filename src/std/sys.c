@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 #include <hl.h>
+#include "../trace.h"
 
 #ifdef HL_CONSOLE
 #	include <posix/posix.h>
@@ -815,3 +816,39 @@ DEFINE_PRIM(_I32, sys_set_flags, _I32);
 DEFINE_PRIM(_BOOL, sys_has_debugger, _NO_ARG);
 DEFINE_PRIM(_BOOL, sys_load_plugin, _BYTES);
 DEFINE_PRIM(_DYN, sys_resolve_type, _TYPE _TYPE);
+
+HL_PRIM bool hl_nmb_trace_enabled() {
+	return hl_trace_enabled();
+}
+
+HL_PRIM void hl_nmb_trace_begin(vbyte *category, vbyte *name) {
+	if( hl_trace_enabled() ) hl_trace_begin(hl_to_utf8((uchar *)category),hl_to_utf8((uchar *)name));
+}
+
+HL_PRIM void hl_nmb_trace_end(vbyte *category) {
+	if( hl_trace_enabled() ) hl_trace_end_event(hl_to_utf8((uchar *)category));
+}
+
+HL_PRIM void hl_nmb_trace_instant(vbyte *category, vbyte *name) {
+	if( hl_trace_enabled() ) hl_trace_instant(hl_to_utf8((uchar *)category),hl_to_utf8((uchar *)name));
+}
+
+HL_PRIM void hl_nmb_trace_counter(vbyte *category, vbyte *name, double value) {
+	if( hl_trace_enabled() ) hl_trace_counter_float(hl_to_utf8((uchar *)category),hl_to_utf8((uchar *)name),value);
+}
+
+HL_PRIM double hl_nmb_trace_now() {
+	return hl_trace_now();
+}
+
+HL_PRIM void hl_nmb_trace_duration(vbyte *category, vbyte *name, double timestamp_us, double duration_us) {
+	if( hl_trace_enabled() ) hl_trace_duration(hl_to_utf8((uchar *)category),hl_to_utf8((uchar *)name),timestamp_us,duration_us);
+}
+
+DEFINE_PRIM(_BOOL, nmb_trace_enabled, _NO_ARG);
+DEFINE_PRIM(_VOID, nmb_trace_begin, _BYTES _BYTES);
+DEFINE_PRIM(_VOID, nmb_trace_end, _BYTES);
+DEFINE_PRIM(_VOID, nmb_trace_instant, _BYTES _BYTES);
+DEFINE_PRIM(_VOID, nmb_trace_counter, _BYTES _BYTES _F64);
+DEFINE_PRIM(_F64, nmb_trace_now, _NO_ARG);
+DEFINE_PRIM(_VOID, nmb_trace_duration, _BYTES _BYTES _F64 _F64);
