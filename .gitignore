@@ -26,6 +26,7 @@ x64
 /hl
 /include/openal
 /include/zlib-ng
+/include/minizip-ng
 /include/aftermath
 /include/streamline
 ReleaseStatic

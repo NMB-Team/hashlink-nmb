@@ -69,19 +69,19 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);src;src/update;include/zlib-ng-compat;include/zlib-ng</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(Configuration)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);src;include/vtune</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);src;src/update;include/vtune;include/zlib-ng-compat;include/zlib-ng</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;x64/$(Configuration)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);src</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);src;src/update;include/zlib-ng-compat;include/zlib-ng</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(Configuration)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);src;include/vtune</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);src;src/update;include/vtune;include/zlib-ng-compat;include/zlib-ng</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;x64/$(Configuration)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -89,7 +89,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <AdditionalOptions>/wd4456 /wd4100 /wd4204 /wd4702 /wd4457 %(AdditionalOptions)</AdditionalOptions>
@@ -99,7 +99,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libhl.lib;user32.lib</AdditionalDependencies>
+      <AdditionalDependencies>libhl.lib;user32.lib;winhttp.lib</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <LargeAddressAware>true</LargeAddressAware>
@@ -114,7 +114,7 @@
       </PrecompiledHeader>
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;HL_VTUNE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;HL_VTUNE;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd4456 /wd4100 /wd4204 /wd4702 /wd4457 /we4013 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
@@ -122,7 +122,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libhl.lib;user32.lib;include/vtune/jitprofiling.lib</AdditionalDependencies>
+      <AdditionalDependencies>libhl.lib;user32.lib;winhttp.lib;include/vtune/jitprofiling.lib</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <StackReserveSize>4194304</StackReserveSize>
@@ -139,7 +139,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <AdditionalOptions>/wd4456 /wd4100 /wd4204 /wd4702 /wd4457 %(AdditionalOptions)</AdditionalOptions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -151,7 +151,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libhl.lib;user32.lib</AdditionalDependencies>
+      <AdditionalDependencies>libhl.lib;user32.lib;winhttp.lib</AdditionalDependencies>
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <Manifest>
@@ -166,7 +166,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;HL_VTUNE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;HL_VTUNE;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd4456 /wd4100 /wd4204 /wd4702 /wd4457 %(AdditionalOptions)</AdditionalOptions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ConformanceMode>true</ConformanceMode>
@@ -177,7 +177,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libhl.lib;user32.lib;include/vtune/jitprofiling.lib</AdditionalDependencies>
+      <AdditionalDependencies>libhl.lib;user32.lib;winhttp.lib;include/vtune/jitprofiling.lib</AdditionalDependencies>
     </Link>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -192,6 +192,59 @@
     <ClCompile Include="src\jit_regs.c" />
     <ClCompile Include="src\jit_x86_64.c" />
     <ClCompile Include="src\main.c" />
+    <ClCompile Include="src\update\update.c">
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+    </ClCompile>
+    <ClCompile Include="src\update\update_core.c">
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+    </ClCompile>
+    <ClCompile Include="src\update\update_http.c">
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+    </ClCompile>
+    <ClCompile Include="src\update\update_sha256.c">
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+    </ClCompile>
+    <ClCompile Include="include\minizip-ng\mz_crypt.c" />
+    <ClCompile Include="include\minizip-ng\mz_os.c" />
+    <ClCompile Include="include\minizip-ng\mz_os_win32.c" />
+    <ClCompile Include="include\minizip-ng\mz_strm.c" />
+    <ClCompile Include="include\minizip-ng\mz_strm_buf.c" />
+    <ClCompile Include="include\minizip-ng\mz_strm_mem.c" />
+    <ClCompile Include="include\minizip-ng\mz_strm_os_win32.c" />
+    <ClCompile Include="include\minizip-ng\mz_strm_split.c" />
+    <ClCompile Include="include\minizip-ng\mz_strm_zlib.c" />
+    <ClCompile Include="include\minizip-ng\mz_zip.c" />
+    <ClCompile Include="include\minizip-ng\mz_zip_rw.c" />
+    <ClCompile Include="include\zlib-ng\arch\generic\adler32_c.c" />
+    <ClCompile Include="include\zlib-ng\arch\generic\adler32_fold_c.c" />
+    <ClCompile Include="include\zlib-ng\arch\generic\chunkset_c.c" />
+    <ClCompile Include="include\zlib-ng\arch\generic\compare256_c.c" />
+    <ClCompile Include="include\zlib-ng\arch\generic\crc32_braid_c.c" />
+    <ClCompile Include="include\zlib-ng\arch\generic\crc32_fold_c.c" />
+    <ClCompile Include="include\zlib-ng\arch\generic\crc32_chorba_c.c" />
+    <ClCompile Include="include\zlib-ng\arch\generic\slide_hash_c.c" />
+    <ClCompile Include="include\zlib-ng\adler32.c" />
+    <ClCompile Include="include\zlib-ng\compress.c" />
+    <ClCompile Include="include\zlib-ng\crc32.c" />
+    <ClCompile Include="include\zlib-ng\crc32_braid_comb.c" />
+    <ClCompile Include="include\zlib-ng\cpu_features.c" />
+    <ClCompile Include="include\zlib-ng\deflate.c" />
+    <ClCompile Include="include\zlib-ng\deflate_fast.c" />
+    <ClCompile Include="include\zlib-ng\deflate_huff.c" />
+    <ClCompile Include="include\zlib-ng\deflate_medium.c" />
+    <ClCompile Include="include\zlib-ng\deflate_quick.c" />
+    <ClCompile Include="include\zlib-ng\deflate_rle.c" />
+    <ClCompile Include="include\zlib-ng\deflate_slow.c" />
+    <ClCompile Include="include\zlib-ng\deflate_stored.c" />
+    <ClCompile Include="include\zlib-ng\functable.c" />
+    <ClCompile Include="include\zlib-ng\infback.c" />
+    <ClCompile Include="include\zlib-ng\inflate.c" />
+    <ClCompile Include="include\zlib-ng\inftrees.c" />
+    <ClCompile Include="include\zlib-ng\insert_string.c" />
+    <ClCompile Include="include\zlib-ng\insert_string_roll.c" />
+    <ClCompile Include="include\zlib-ng\trees.c" />
+    <ClCompile Include="include\zlib-ng\uncompr.c" />
+    <ClCompile Include="include\zlib-ng\zutil.c" />
     <ClCompile Include="src\module.c" />
     <ClCompile Include="src\profile.c" />
   </ItemGroup>

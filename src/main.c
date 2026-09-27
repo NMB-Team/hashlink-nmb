@@ -23,6 +23,7 @@
 #include <jit.h>
 #include "hlsystem.h"
 #include "banner.h"
+#include "update/update.h"
 
 #ifndef HL_WIN
 #include <unistd.h>
@@ -265,6 +266,7 @@ static void print_help() {
 		"\n"
 		"Usage:\n"
 		"  hl [options] <file.hl> [arguments...]\n"
+		"  hl update [--force | --check]        Verify, repair, or update this installation\n"
 		"  hl [boot arguments]                 Run hlboot.dat from the current directory\n"
 		"\n"
 		"Options:\n"
@@ -301,6 +303,13 @@ int wmain(int argc, pchar *argv[]) {
 #else
 int main(int argc, pchar *argv[]) {
 #endif
+	if( argc > 1 && (
+#ifdef HL_WIN
+		wcscmp(argv[1],L"update")==0 || wcsncmp(argv[1],L"--internal-update-",18)==0
+#else
+		strcmp(argv[1],"update")==0
+#endif
+	) ) return hl_update_command(argc,(const pchar *const *)argv,HL_COMMIT_SHA);
 	static vclosure cl;
 	pchar *file = nullptr;
 	char *error_msg = nullptr;

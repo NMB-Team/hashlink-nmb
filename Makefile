@@ -44,14 +44,28 @@ STD = src/std/array.o src/std/buffer.o src/std/bytes.o src/std/cast.o src/std/da
 	src/std/socket.o src/std/string.o src/std/sys.o src/std/types.o src/std/ucs2.o src/std/thread.o src/std/process.o \
 	src/std/track.o
 
-HL_OBJ = src/code.o src/jit.o src/jit_emit.o src/jit_regs.o src/jit_x86_64.o src/jit_dump.o src/main.o src/module.o src/debugger.o src/profile.o
+UPDATER_OBJ = src/update/update.o src/update/update_core.o src/update/update_http.o src/update/update_sha256.o
+MINIZIP_OBJ = include/minizip-ng/mz_crypt.o include/minizip-ng/mz_os.o include/minizip-ng/mz_strm.o \
+	include/minizip-ng/mz_strm_buf.o include/minizip-ng/mz_strm_mem.o include/minizip-ng/mz_strm_split.o \
+	include/minizip-ng/mz_strm_zlib.o include/minizip-ng/mz_zip.o include/minizip-ng/mz_zip_rw.o
+ifeq ($(OS),Windows_NT)
+MINIZIP_OBJ += include/minizip-ng/mz_os_win32.o include/minizip-ng/mz_strm_os_win32.o
+else
+MINIZIP_OBJ += include/minizip-ng/mz_os_posix.o include/minizip-ng/mz_strm_os_posix.o
+$(MINIZIP_OBJ): CPPFLAGS += -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
+endif
+HL_OBJ = src/code.o src/jit.o src/jit_emit.o src/jit_regs.o src/jit_x86_64.o src/jit_dump.o src/main.o src/module.o src/debugger.o src/profile.o \
+	$(UPDATER_OBJ) $(MINIZIP_OBJ) $(ZLIB_NG_OBJ)
+$(UPDATER_OBJ): CFLAGS := $(filter-out -std=c11,$(CFLAGS)) -std=c23
+$(UPDATER_OBJ): CPPFLAGS += -I include/zlib-ng-compat -I include/zlib-ng
+$(MINIZIP_OBJ): CPPFLAGS += -I src/update -I include/minizip-ng -I include/zlib-ng-compat -I include/zlib-ng
 
-FMT_CPPFLAGS = -I include/mikktspace -I include/minimp3 -I include/spng -I include/zlib-ng
+FMT_CPPFLAGS = -I include/mikktspace -I include/minimp3 -I include/spng -I include/zlib-ng-compat -I include/zlib-ng
 FMT_CPPFLAGS += -D SPNG_STATIC -D SPNG_DISABLE_OPT -D ZLIB_COMPAT -D NO_FSEEKO -D WITH_ALL_FALLBACKS
 
 FMT = libs/fmt/fmt.o libs/fmt/sha1.o include/mikktspace/mikktspace.o libs/fmt/mikkt.o libs/fmt/dxt.o
 FMT += include/spng/spng.o
-FMT += include/zlib-ng/arch/generic/adler32_c.o include/zlib-ng/arch/generic/adler32_fold_c.o \
+ZLIB_NG_OBJ = include/zlib-ng/arch/generic/adler32_c.o include/zlib-ng/arch/generic/adler32_fold_c.o \
 	include/zlib-ng/arch/generic/chunkset_c.o include/zlib-ng/arch/generic/compare256_c.o \
 	include/zlib-ng/arch/generic/crc32_braid_c.o include/zlib-ng/arch/generic/crc32_fold_c.o \
 	include/zlib-ng/arch/generic/slide_hash_c.o include/zlib-ng/adler32.o include/zlib-ng/compress.o \
@@ -63,6 +77,8 @@ FMT += include/zlib-ng/arch/generic/adler32_c.o include/zlib-ng/arch/generic/adl
 	include/zlib-ng/inflate.o include/zlib-ng/inftrees.o include/zlib-ng/insert_string.o \
 	include/zlib-ng/insert_string_roll.o include/zlib-ng/trees.o include/zlib-ng/uncompr.o \
 	include/zlib-ng/zutil.o include/zlib-ng/arch/generic/crc32_chorba_c.o
+FMT += $(ZLIB_NG_OBJ)
+$(ZLIB_NG_OBJ): CPPFLAGS += -I include/zlib-ng-compat -I include/zlib-ng -D ZLIB_COMPAT -D NO_FSEEKO -D WITH_ALL_FALLBACKS
 
 OPENAL = libs/openal/openal.o
 
@@ -165,6 +181,7 @@ ifneq (, $(findstring MINGW64, $(UNAME)))
 CFLAGS += -municode
 LIBHL_LDLIBS += -lws2_32 -lwsock32
 hl_LDLIBS = -lm
+hl_LDLIBS += -lwinhttp
 hlc_LDLIBS = -ldbghelp
 ssl_LDLIBS += -lcrypt32 -lbcrypt -lws2_32
 mysql_LDLIBS += -lws2_32 -lwsock32
@@ -210,6 +227,7 @@ ARCH = arm64
 endif
 
 # Linux
+hl_LDLIBS += -lcurl
 ifneq ($(ARCH),arm64)
 CFLAGS += -m$(MARCH)
 endif

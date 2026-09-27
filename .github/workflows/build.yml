@@ -178,6 +178,7 @@ jobs:
               libuv1-dev${SUFFIX} \
               libvorbis-dev${SUFFIX} \
               libsqlite3-dev${SUFFIX} \
+              libcurl4-openssl-dev${SUFFIX} \
               ${EXTRA_APT_PKGS}
             ;;
 
@@ -594,13 +595,30 @@ jobs:
         set -euo pipefail
 
         short_commit=$(git rev-parse --short HEAD)
+        full_commit=$(git rev-parse HEAD)
+        mkdir -p updater-assets
+        python3 other/tools/make_update_manifest.py \
+          "artifacts/linux-cmake-64/hashlink-${short_commit}-linux-amd64-cmake.tar.gz" \
+          linux-amd64 "$full_commit" updater-assets
+        python3 other/tools/make_update_manifest.py \
+          "artifacts/linux-cmake-arm64/hashlink-${short_commit}-linux-arm64-cmake.tar.gz" \
+          linux-arm64 "$full_commit" updater-assets
+        python3 other/tools/make_update_manifest.py \
+          "artifacts/windows-cmake-64/hashlink-${short_commit}-win64-cmake.zip" \
+          win64 "$full_commit" updater-assets
+        cp "artifacts/linux-cmake-64/hashlink-${short_commit}-linux-amd64-cmake.tar.gz" updater-assets/hashlink-latest-linux-amd64.tar.gz
+        cp "artifacts/linux-cmake-arm64/hashlink-${short_commit}-linux-arm64-cmake.tar.gz" updater-assets/hashlink-latest-linux-arm64.tar.gz
+        cp "artifacts/windows-cmake-64/hashlink-${short_commit}-win64-cmake.zip" updater-assets/hashlink-latest-win64.zip
         assets=(
           "artifacts/darwin-cmake-64/hashlink-${short_commit}-darwin-cmake.tar.gz#hashlink-latest-darwin.tar.gz"
           "artifacts/darwin-cmake-arm64/hashlink-${short_commit}-darwin-arm64-cmake.tar.gz#hashlink-latest-darwin-arm64.tar.gz"
-          "artifacts/linux-cmake-64/hashlink-${short_commit}-linux-amd64-cmake.tar.gz#hashlink-latest-linux-amd64.tar.gz"
-          "artifacts/linux-cmake-arm64/hashlink-${short_commit}-linux-arm64-cmake.tar.gz#hashlink-latest-linux-arm64.tar.gz"
-          "artifacts/windows-cmake-64/hashlink-${short_commit}-win64-cmake.zip#hashlink-latest-win64.zip"
           "artifacts/windows-cmake-mingw-64/hashlink-${short_commit}-win64-cmake-mingw.zip#hashlink-latest-win64-mingw.zip"
+          updater-assets/hashlink-latest-win64.zip
+          updater-assets/hashlink-latest-win64.manifest
+          updater-assets/hashlink-latest-linux-amd64.tar.gz
+          updater-assets/hashlink-latest-linux-amd64.manifest
+          updater-assets/hashlink-latest-linux-arm64.tar.gz
+          updater-assets/hashlink-latest-linux-arm64.manifest
         )
 
         if ! gh release view latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then

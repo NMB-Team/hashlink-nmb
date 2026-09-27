@@ -19,16 +19,17 @@ Here's the dependencies that you install in order to compile all the libraries:
 * ssl: libmbedtls-dev
 * uv: libuv1-dev
 * sqlite: libsqlite3-dev
+* updater HTTPS: libcurl4-openssl-dev
 
 To install all dependencies on the latest **Ubuntu**, for example:
 
-`sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libmbedtls-dev libuv1-dev libsqlite3-dev`
+`sudo apt-get install libpng-dev libturbojpeg-dev libvorbis-dev libopenal-dev libmbedtls-dev libuv1-dev libsqlite3-dev libcurl4-openssl-dev`
 
 For 16.04, see [this note](https://github.com/HaxeFoundation/hashlink/issues/147).
 
 To install all dependencies on the latest **Fedora**, for example:
 
-`sudo dnf install libpng-devel turbojpeg-devel libvorbis-devel openal-soft-devel mbedtls-devel libuv-devel sqlite-devel`
+`sudo dnf install libpng-devel turbojpeg-devel libvorbis-devel openal-soft-devel mbedtls-devel libuv-devel sqlite-devel libcurl-devel`
 
 **And on OSX:**
 
@@ -98,6 +99,16 @@ For LIMEN development, use a separate checkout:
 ```
 cmake -S . -B build -DLIMEN_SOURCE_DIR=/path/to/Limen
 ```
+
+## Self-update
+
+Run `hl update` to check the latest HashLink NMB release. It verifies every managed installation file by size and SHA-256, repairs missing or modified official files, and installs newer releases. Files not managed by HashLink are preserved. `hl update --check` reports changes without installing them; `hl update --force` reinstalls managed files.
+
+The installation is located from the running `hl` executable, regardless of the current directory. System-wide Linux installations may require running with sufficient permissions; the updater does not invoke `sudo`.
+
+Linux ARM64 releases include a native `hl` updater command. The VM/JIT remains unavailable on ARM64.
+
+The updater uses the latest release archives offered for manual download: ZIP on Windows and tar.gz on Linux. A per-platform manifest records the managed files. The updater verifies the manifest and archive against their GitHub release asset SHA-256 digests, then verifies extracted files before changing the installation.
 
 ## Debugging
 

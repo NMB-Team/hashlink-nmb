@@ -2,48 +2,6 @@ set(MINIMP3_INCLUDE_DIR ${INCLUDES_BASE_DIR}/minimp3)
 set(MIKKTSPACE_INCLUDE_DIR ${INCLUDES_BASE_DIR}/mikktspace)
 set(SPNG_INCLUDE_DIR ${INCLUDES_BASE_DIR}/spng)
 
-function(add_fmt_zlibng)
-    set(BUILD_SHARED_LIBS OFF)
-    set(BUILD_TESTING OFF)
-    set(INSTALL_UTILS OFF)
-    set(ZLIB_ALIASES OFF)
-    set(ZLIB_COMPAT ON)
-    set(WITH_ALL_FALLBACKS OFF)
-    set(WITH_BENCHMARKS OFF)
-    set(WITH_BENCHMARK_APPS OFF)
-    set(WITH_FUZZERS OFF)
-    set(WITH_GTEST OFF)
-    set(WITH_NATIVE_INSTRUCTIONS OFF)
-    set(WITH_OPTIM ON)
-    set(WITH_RUNTIME_CPU_DETECTION ON)
-
-    set(_zlibng_source_dir "${INCLUDES_BASE_DIR}/zlib-ng")
-    if(NOT EXISTS "${_zlibng_source_dir}/CMakeLists.txt")
-        include(FetchContent)
-        FetchContent_Declare(fmt_zlibng
-            URL https://github.com/zlib-ng/zlib-ng/archive/refs/tags/2.3.3.tar.gz
-            URL_HASH SHA256=f9c65aa9c852eb8255b636fd9f07ce1c406f061ec19a2e7d508b318ca0c907d1
-            SOURCE_DIR "${_zlibng_source_dir}"
-        )
-        FetchContent_GetProperties(fmt_zlibng)
-        if(POLICY CMP0169)
-            cmake_policy(PUSH)
-            cmake_policy(SET CMP0169 OLD)
-        endif()
-        if(NOT fmt_zlibng_POPULATED)
-            FetchContent_Populate(fmt_zlibng)
-        endif()
-        if(POLICY CMP0169)
-            cmake_policy(POP)
-        endif()
-    endif()
-
-    list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-    add_subdirectory("${_zlibng_source_dir}" "${CMAKE_CURRENT_BINARY_DIR}/zlib-ng" EXCLUDE_FROM_ALL)
-endfunction()
-
-add_fmt_zlibng()
-
 add_library(fmt.hdll
     fmt.c
     sha1.c

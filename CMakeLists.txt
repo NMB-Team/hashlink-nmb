@@ -278,6 +278,86 @@ else()
     endif()
 endif()
 
+function(add_updater_zlibng)
+    set(_zlibng_source_dir "${CMAKE_CURRENT_SOURCE_DIR}/include/zlib-ng")
+    if(NOT EXISTS "${_zlibng_source_dir}/CMakeLists.txt")
+        include(FetchContent)
+        FetchContent_Declare(update_zlibng
+            URL https://github.com/zlib-ng/zlib-ng/archive/refs/tags/2.3.3.tar.gz
+            URL_HASH SHA256=f9c65aa9c852eb8255b636fd9f07ce1c406f061ec19a2e7d508b318ca0c907d1
+            SOURCE_DIR "${_zlibng_source_dir}"
+        )
+        if(POLICY CMP0169)
+            cmake_policy(PUSH)
+            cmake_policy(SET CMP0169 OLD)
+        endif()
+        FetchContent_Populate(update_zlibng)
+        if(POLICY CMP0169)
+            cmake_policy(POP)
+        endif()
+    endif()
+    set(BUILD_SHARED_LIBS OFF)
+    set(BUILD_TESTING OFF)
+    set(INSTALL_UTILS OFF)
+    set(ZLIB_ALIASES OFF)
+    set(ZLIB_COMPAT ON)
+    set(WITH_ALL_FALLBACKS OFF)
+    set(WITH_BENCHMARKS OFF)
+    set(WITH_BENCHMARK_APPS OFF)
+    set(WITH_FUZZERS OFF)
+    set(WITH_GTEST OFF)
+    set(WITH_NATIVE_INSTRUCTIONS OFF)
+    set(WITH_OPTIM ON)
+    set(WITH_RUNTIME_CPU_DETECTION ON)
+    add_subdirectory("${_zlibng_source_dir}" ${CMAKE_CURRENT_BINARY_DIR}/zlib-ng EXCLUDE_FROM_ALL)
+endfunction()
+add_updater_zlibng()
+
+set(_minizipng_source_dir "${CMAKE_CURRENT_SOURCE_DIR}/include/minizip-ng")
+if(NOT EXISTS "${_minizipng_source_dir}/mz_zip_rw.c")
+    include(FetchContent)
+    FetchContent_Declare(update_minizipng
+        URL https://github.com/zlib-ng/minizip-ng/archive/refs/tags/4.2.2.tar.gz
+        URL_HASH SHA256=71af7b9799856d8b03619df3949e9c1be9703f8de0795af71399ba283cb27aac
+        SOURCE_DIR "${_minizipng_source_dir}"
+    )
+    if(POLICY CMP0169)
+        cmake_policy(PUSH)
+        cmake_policy(SET CMP0169 OLD)
+    endif()
+    FetchContent_Populate(update_minizipng)
+    if(POLICY CMP0169)
+        cmake_policy(POP)
+    endif()
+endif()
+
+set(UPDATER_SOURCES
+    src/update/update.c
+    src/update/update_core.c
+    src/update/update_http.c
+    src/update/update_sha256.c
+)
+
+set(UPDATE_ARCHIVE_SOURCES
+    include/minizip-ng/mz_crypt.c
+    include/minizip-ng/mz_os.c
+    include/minizip-ng/mz_strm.c
+    include/minizip-ng/mz_strm_buf.c
+    include/minizip-ng/mz_strm_mem.c
+    include/minizip-ng/mz_strm_split.c
+    include/minizip-ng/mz_strm_zlib.c
+    include/minizip-ng/mz_zip.c
+    include/minizip-ng/mz_zip_rw.c
+)
+if(WIN32)
+    list(APPEND UPDATE_ARCHIVE_SOURCES include/minizip-ng/mz_os_win32.c include/minizip-ng/mz_strm_os_win32.c)
+else()
+    list(APPEND UPDATE_ARCHIVE_SOURCES include/minizip-ng/mz_os_posix.c include/minizip-ng/mz_strm_os_posix.c)
+endif()
+add_library(update_archive STATIC ${UPDATE_ARCHIVE_SOURCES})
+target_include_directories(update_archive PUBLIC "${_minizipng_source_dir}" src/update)
+target_link_libraries(update_archive PUBLIC zlib-ng::zlibstatic)
+
 if (WITH_VM)
     add_executable(hl
         src/code.c
@@ -287,6 +367,7 @@ if (WITH_VM)
         src/jit_x86_64.c
         src/jit_dump.c
         src/main.c
+        ${UPDATER_SOURCES}
         src/module.c
         src/debugger.c
         src/profile.c
@@ -301,7 +382,7 @@ if (WITH_VM)
         )
     endif()
 
-    target_link_libraries(hl libhl)
+    target_link_libraries(hl libhl update_archive)
     target_compile_definitions(hl PRIVATE
         HL_COMMIT_SHA="${HL_COMMIT_SHA}"
         HL_COMMIT_NAME="${HL_COMMIT_NAME_ESCAPED}"
@@ -309,11 +390,38 @@ if (WITH_VM)
     )
 
     if (WIN32)
-        target_link_libraries(hl user32)
+        target_link_libraries(hl user32 winhttp)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        find_package(CURL REQUIRED)
+        target_link_libraries(hl CURL::libcurl)
     endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+    add_executable(hl src/update/update_main.c ${UPDATER_SOURCES})
+    target_link_libraries(hl update_archive)
+    target_compile_definitions(hl PRIVATE HL_COMMIT_SHA="${HL_COMMIT_SHA}" HL_VERSION_TEXT="${HL_VERSION}")
+    find_package(CURL REQUIRED)
+    target_link_libraries(hl CURL::libcurl)
 endif()
 
 if(BUILD_TESTING)
+
+    add_executable(update_test
+        other/tests/update_test.c
+        ${UPDATER_SOURCES}
+    )
+    target_include_directories(update_test PRIVATE src/update)
+    target_link_libraries(update_test update_archive)
+    if(WIN32)
+        target_link_libraries(update_test winhttp)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        find_package(CURL REQUIRED)
+        target_link_libraries(update_test CURL::libcurl)
+    endif()
+    add_test(NAME updater_core COMMAND update_test)
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME updater_package COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/other/tests/update_package_test.py)
+    endif()
 
     find_program(
         HAXE_COMPILER
@@ -509,7 +617,7 @@ set(HDLL_DESTINATION
 )
 
 set(INSTALL_TARGETS libhl)
-if (WITH_VM)
+if (TARGET hl)
     list(APPEND INSTALL_TARGETS hl)
 endif()
 
