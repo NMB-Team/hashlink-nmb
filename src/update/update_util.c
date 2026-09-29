@@ -1004,7 +1004,7 @@ int update_apply_release(const char* root, int prefix, const char* stage, const 
 			count++;
 		}
 	}
-	printf("Installing...\n");
+
 	int ok = apply_operations(operations, count);
 	discard_prepared(operations, count);
 	free(operations);

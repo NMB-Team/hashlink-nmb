@@ -463,8 +463,6 @@ int hl_update_command(int argc,
 #ifdef _WIN32
 	char staged_executable[UPDATE_PATH_MAX];
 
-	puts("Installing...");
-
 	if (!update_path_join(staged_executable, sizeof(staged_executable), stage, "hl.exe") || !spawn_helper(staged_executable, "--internal-update-apply", GetCurrentProcessId(), root, stage)) {
 		fail("could not start the verified update helper");
 		goto done;

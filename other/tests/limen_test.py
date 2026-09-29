@@ -94,7 +94,7 @@ with tempfile.TemporaryDirectory() as temporary:
 	publish(first)
 	run("limen", "install")
 	run("limen", "install", code=1, contains="already installed")
-	assert "Installing..." not in run("limen", "update", contains="up to date").stdout
+	run("limen", "update", contains="up to date")
 	run("limen", "status", contains=COMMIT)
 	for name, data in first.items():
 		assert (root / name).read_bytes() == data
@@ -106,7 +106,7 @@ with tempfile.TemporaryDirectory() as temporary:
 	assert (root / "opengl.limen").read_bytes() == first["opengl.limen"]
 	assert (root / "limen.hdll").read_bytes() == first["limen.hdll"]
 	run("limen", "update", contains="up to date")
-	assert "Installing..." in run("limen", "reinstall", contains="reinstalled").stdout
+	run("limen", "reinstall", contains="reinstalled")
 	assert (root / "limen.hdll").read_bytes() == first["limen.hdll"]
 
 	if sys.platform != "darwin":
