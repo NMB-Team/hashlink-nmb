@@ -193,7 +193,7 @@ static int frame_chain( void **fp, void *stack_base, void *stack_top, void *copy
 		next = rec[0];
 		ret = rec[1];
 		if( next <= (void*)fp || next >= stack_top ) break;
-		if( !is_call_site(ret) ) {
+		if( !is_call_site(ret) && !(n == 0 && module_is_jit_code(ret,true)) ) {
 			*clean = !module_is_jit_code(ret,true);
 			break;
 		}

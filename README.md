@@ -49,7 +49,7 @@ To install hashlink binaries on your system you can then call:
 
 ## Building on Windows
 
-Open `hl.sln` using Visual Studio C++ to build HashLink without LIMEN, or use CMake to build the complete runtime.
+Open `hl.sln` using Visual Studio C++, or use CMake to build HashLink. Limen is installed separately.
 
 To build all of HashLink libraries it is required to download several additional distributions, read each library README file (in hashlink/libs/xxx/README.md) for additional information.
 
@@ -57,48 +57,43 @@ In short you'll probably need:
 
 - [openal-soft](https://github.com/kcat/openal-soft/releases/download/1.23.1/openal-soft-1.23.1-bin.zip), extract to `<hashlink>/include/openal`
 
-## LIMEN
+## Limen
 
-LIMEN is maintained in [NMB-Team/Limen](https://github.com/NMB-Team/Limen).
-The `libs/limen` submodule is the single source of truth for the pinned revision.
-CMake initializes the submodule automatically when necessary and builds LIMEN with HashLink for local source builds.
-GitHub Actions synchronizes the LIMEN submodule checkout to the commit targeted by its `latest` release, downloads the matching platform package, and includes its modules and runtime libraries in every HashLink package.
-LIMEN revisions are never advanced automatically. To update the pin, run the
-`Pin LIMEN revision` workflow manually and provide a full 40-character commit
-SHA. HashLink tests that exact revision across the complete build matrix and
-updates the submodule only after every integration job succeeds.
+Limen is an optional component and is not included with HashLink.
 
-To update and test the pin locally:
+Install it with:
 
-```
-git -C libs/limen fetch origin <commit-sha>
-git -C libs/limen checkout --detach <commit-sha>
-git add libs/limen
+```sh
+hl limen install
 ```
 
-Clone everything and build manually:
+Update it independently:
 
-```
-git clone --recurse-submodules https://github.com/NMB-Team/hashlink-nmb.git
-cd hashlink-nmb
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release --parallel
-cmake --install build --config Release --prefix dist
+```sh
+hl limen update
 ```
 
-To package prebuilt LIMEN binaries instead of compiling the submodule:
+Reinstall the latest verified release, replacing all Limen-managed files:
 
-```
-cmake -S . -B build \
-  -DWITH_LIMEN=OFF \
-  -DLIMEN_PREBUILT_DIR=/path/to/extracted/limen-package
+```sh
+hl limen reinstall
 ```
 
-For LIMEN development, use a separate checkout:
+Check the installed version:
 
+```sh
+hl limen status
 ```
-cmake -S . -B build -DLIMEN_SOURCE_DIR=/path/to/Limen
+
+Remove it:
+
+```sh
+hl limen remove
 ```
+
+Limen uses `.limen-manifest`; `hl update` owns `.hl-manifest` and manages HashLink only. Removal preserves modified files and retains the Limen manifest until they are restored or moved.
+
+Build Limen from source independently in the [Limen repository](https://github.com/NMB-Team/Limen).
 
 ## Self-update
 

@@ -86,84 +86,6 @@ jobs:
     - name: "SCM Checkout"
       uses: actions/checkout@v7
 
-    - name: "Download: LIMEN binaries"
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        set -euo pipefail
-
-        release_revision=$(gh api \
-          repos/NMB-Team/Limen/git/ref/tags/latest \
-          --jq '.object.sha')
-        revision="${LIMEN_GIT_TAG:-$release_revision}"
-        if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
-          echo "::error::LIMEN revision must be a full lowercase commit SHA, got '$revision'"
-          exit 1
-        fi
-        if [[ -n "${LIMEN_GIT_TAG:-}" && "$release_revision" != "$revision" ]]; then
-          echo "::error::LIMEN latest release targets $release_revision, not requested revision $revision"
-          exit 1
-        fi
-
-        case "${{ matrix.target }}${{ matrix.architecture }}" in
-          linux64) platform=linux-x64 ;;
-          linuxarm64) platform=linux-arm64 ;;
-          darwin64) platform=macos-x64 ;;
-          darwinarm64) platform=macos-arm64 ;;
-          windows64)
-            if [[ "${{ matrix.build_system }}" == "cmake-mingw" ]]; then
-              platform=windows-x64-mingw
-            else
-              platform=windows-x64
-            fi
-            ;;
-          *)
-            echo "::error::No LIMEN package for ${{ matrix.target }} ${{ matrix.architecture }}"
-            exit 1
-            ;;
-        esac
-
-        case "$platform" in
-          windows-*) extension=zip ;;
-          *) extension=tar.gz ;;
-        esac
-
-        asset="limen-${platform}.${extension}"
-        download_dir="$RUNNER_TEMP/limen-release"
-        mkdir -p "$download_dir" limen-prebuilt
-        gh release download latest \
-          --repo NMB-Team/Limen \
-          --pattern "$asset" \
-          --dir "$download_dir"
-
-        case "$extension" in
-          zip) 7z x "$download_dir/$asset" -olimen-prebuilt ;;
-          tar.gz) tar -xzf "$download_dir/$asset" -C limen-prebuilt ;;
-        esac
-
-        expected=(limen.hdll opengl.limen)
-        case "$platform" in
-          linux-*) expected+=(vulkan.limen) ;;
-          windows-x64-mingw)
-            expected+=(vulkan.limen d3d11.limen)
-            expected+=(liblimen.dll.a liblimen_opengl.dll.a liblimen_vulkan.dll.a liblimen_d3d11.dll.a)
-            ;;
-          windows-x64)
-            expected+=(vulkan.limen d3d11.limen d3d12.limen)
-            expected+=(limen.lib)
-            expected+=(dxcompiler.dll dxil.dll)
-            ;;
-        esac
-        for file in "${expected[@]}"; do
-          if [[ ! -f "limen-prebuilt/$file" ]]; then
-            echo "::error::$asset does not contain $file"
-            exit 1
-          fi
-        done
-
-        echo "LIMEN_PREBUILT_DIR=$PWD/limen-prebuilt" >> "$GITHUB_ENV"
-        ls -la limen-prebuilt
-
     - name: "Install: Required Dev Packages"
       run: |
         set -ex
@@ -222,38 +144,28 @@ jobs:
               windows*)
                 cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
                   -G "${{ matrix.cmake_generator }}" \
-                  -A ${{ matrix.architecture_string }} \
-                  -DWITH_LIMEN=OFF \
-                  -DLIMEN_PREBUILT_DIR="$LIMEN_PREBUILT_DIR"
+                  -A ${{ matrix.architecture_string }}
                 ;;
               darwin64)
                 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
                   -DDOWNLOAD_DEPENDENCIES=ON \
                   -DCMAKE_OSX_ARCHITECTURES=x86_64 \
                   -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 \
-                  -DFLAT_INSTALL_TREE=ON \
-                  -DWITH_LIMEN=OFF \
-                  -DLIMEN_PREBUILT_DIR="$LIMEN_PREBUILT_DIR"
+                  -DFLAT_INSTALL_TREE=ON
                 ;;
               darwinarm64)
                 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
                   -DDOWNLOAD_DEPENDENCIES=ON \
                   -DCMAKE_OSX_ARCHITECTURES=arm64 \
                   -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
-                  -DFLAT_INSTALL_TREE=ON \
-                  -DWITH_LIMEN=OFF \
-                  -DLIMEN_PREBUILT_DIR="$LIMEN_PREBUILT_DIR"
+                  -DFLAT_INSTALL_TREE=ON
                 ;;
               linux32)
                 cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
-                  -DWITH_LIMEN=OFF \
-                  -DLIMEN_PREBUILT_DIR="$LIMEN_PREBUILT_DIR" \
                   -DCMAKE_TOOLCHAIN_FILE=other/cmake/linux32.toolchain.cmake
                 ;;
               linux*)
-                cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
-                  -DWITH_LIMEN=OFF \
-                  -DLIMEN_PREBUILT_DIR="$LIMEN_PREBUILT_DIR"
+                cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }}
                 ;;
             esac
 
@@ -262,19 +174,12 @@ jobs:
             ;;
 
           cmake-mingw)
-            cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }} \
-              -DWITH_LIMEN=OFF \
-              -DLIMEN_PREBUILT_DIR="$LIMEN_PREBUILT_DIR"
+            cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_configuration }}
 
             cmake --build build --config ${{ matrix.cmake_configuration }} --parallel
             BUILD_FOLDER=build/bin
             ;;
 
-        esac
-
-        case "${{ matrix.build_system }}" in
-          cmake*) ;;
-          *) cp -a limen-prebuilt/. "$BUILD_FOLDER/" ;;
         esac
 
         ls -l $BUILD_FOLDER
@@ -395,8 +300,7 @@ jobs:
   #     run: |
   #       set -ex
   #       cmake -B build -G Ninja --toolchain $ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-  #         -DANDROID_PLATFORM=24 -DANDROID_ABI=arm64-v8a -DBUILD_SHARED_LIBS=OFF \
-  #         -DWITH_VM=OFF -DWITH_LIMEN=OFF
+  #         -DANDROID_PLATFORM=24 -DANDROID_ABI=arm64-v8a -DBUILD_SHARED_LIBS=OFF
   #       cmake --build build
 
   haxe-test-suite:
@@ -492,9 +396,9 @@ jobs:
         else
           sudo cp "$binary_dir/hl" /usr/local/bin/
         fi
-        sudo cp "$library_dir"/libhl.* "$library_dir"/*.hdll "$library_dir"/*.limen /usr/local/lib/
+        sudo cp "$library_dir"/libhl.* "$library_dir"/*.hdll /usr/local/lib/
         if [[ "${{ matrix.os }}" == "darwin" ]]; then
-          sudo cp "$library_dir"/*.hdll "$library_dir"/*.limen "$library_dir"/*.dylib /usr/local/bin/
+          sudo cp "$library_dir"/*.hdll "$library_dir"/*.dylib /usr/local/bin/
         fi
         if compgen -G "$library_dir/libshaderc.so*" > /dev/null; then
           sudo cp "$library_dir"/libshaderc.so* /usr/local/lib/

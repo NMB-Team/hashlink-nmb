@@ -103,7 +103,6 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libhl.lib;delayimp.lib::foreach libraries::;::name::.lib::end::</AdditionalDependencies>
-      <DelayLoadDLLs>::foreach libraries::::if (name == "limen_opengl")::opengl.limen;::end::::if (name == "limen_vulkan")::vulkan.limen;::end::::if (name == "limen_d3d11")::d3d11.limen;::end::::if (name == "limen_d3d12")::d3d12.limen;::end::::if (name == "limen_dlss")::dlss.limen;::end::::end::%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -123,7 +122,6 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libhl.lib;delayimp.lib::foreach libraries::;::name::.lib::end::</AdditionalDependencies>
-      <DelayLoadDLLs>::foreach libraries::::if (name == "limen_opengl")::opengl.limen;::end::::if (name == "limen_vulkan")::vulkan.limen;::end::::if (name == "limen_d3d11")::d3d11.limen;::end::::if (name == "limen_d3d12")::d3d12.limen;::end::::if (name == "limen_dlss")::dlss.limen;::end::::end::%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -139,7 +137,6 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libhl.lib;delayimp.lib::foreach libraries::;::name::.lib::end::</AdditionalDependencies>
-      <DelayLoadDLLs>::foreach libraries::::if (name == "limen_opengl")::opengl.limen;::end::::if (name == "limen_vulkan")::vulkan.limen;::end::::if (name == "limen_d3d11")::d3d11.limen;::end::::if (name == "limen_d3d12")::d3d12.limen;::end::::if (name == "limen_dlss")::dlss.limen;::end::::end::%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -159,7 +156,6 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>libhl.lib;delayimp.lib::foreach libraries::;::name::.lib::end::</AdditionalDependencies>
-      <DelayLoadDLLs>::foreach libraries::::if (name == "limen_opengl")::opengl.limen;::end::::if (name == "limen_vulkan")::vulkan.limen;::end::::if (name == "limen_d3d11")::d3d11.limen;::end::::if (name == "limen_d3d12")::d3d12.limen;::end::::if (name == "limen_dlss")::dlss.limen;::end::::end::%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <!--
@@ -176,4 +172,10 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="CopyLimenModules" AfterTargets="Build" Condition="'$(HASHLINK_BIN)' != ''">
+    <ItemGroup>
+      <LimenModule Include="$(HASHLINK_BIN)\*.limen;$(HASHLINK_BIN)\lib\*.limen;$(HASHLINK_BIN)\bin\*.limen" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LimenModule)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="'@(LimenModule)' != ''" />
+  </Target>
 </Project>

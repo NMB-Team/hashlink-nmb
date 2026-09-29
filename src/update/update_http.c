@@ -1,4 +1,5 @@
 #include "update_http.h"
+#include "update_util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,20 +10,8 @@
 #include <winhttp.h>
 #include "../hl.h"
 
-static wchar_t* wide(const char* value) {
-	int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value, -1, nullptr, 0);
-	if (!count)
-		return nullptr;
-	wchar_t* result = malloc((size_t)count * sizeof(wchar_t));
-	if (result && !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value, -1, result, count)) {
-		free(result);
-		return nullptr;
-	}
-	return result;
-}
-
 int update_download(const char* url, const char* destination, uint64_t limit) {
-	wchar_t *address = wide(url), *target = wide(destination);
+	wchar_t *address = update_to_wide(url), *target = update_to_wide(destination);
 	HINTERNET session = nullptr, connection = nullptr, request = nullptr;
 	FILE* file = nullptr;
 	int ok = 0;
@@ -98,7 +87,7 @@ done:
 	free(target);
 	return ok;
 }
-#elif defined(__linux__) && !defined(__ANDROID__)
+#elif (defined(__linux__) && !defined(__ANDROID__)) || defined(__APPLE__)
 #include <curl/curl.h>
 #include "../hl.h"
 

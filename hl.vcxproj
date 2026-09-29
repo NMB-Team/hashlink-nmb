@@ -195,6 +195,12 @@
     <ClCompile Include="src\update\update.c">
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
+    <ClCompile Include="src\update\update_util.c">
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+    </ClCompile>
+    <ClCompile Include="src\update\limen_update.c">
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+    </ClCompile>
     <ClCompile Include="src\update\update_core.c">
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>

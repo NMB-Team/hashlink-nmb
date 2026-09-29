@@ -57,39 +57,9 @@ jobs:
             libxss-dev \
             libxtst-dev \
             libsqlite3-dev \
+            libcurl4-openssl-dev${SUFFIX} \
             pkg-config \
             wget
-
-      - name: Download LIMEN binaries
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          release_revision=$(gh release view latest \
-            --repo NMB-Team/Limen \
-            --json targetCommitish \
-            --jq .targetCommitish)
-          git -C libs/limen fetch --depth 1 origin "$release_revision"
-          git -C libs/limen checkout --detach "$release_revision"
-
-          asset=limen-linux-x64.tar.gz
-          download_dir="$RUNNER_TEMP/limen-release"
-          mkdir -p "$download_dir" limen-prebuilt
-          gh release download latest \
-            --repo NMB-Team/Limen \
-            --pattern "$asset" \
-            --dir "$download_dir"
-          tar -xzf "$download_dir/$asset" -C limen-prebuilt
-
-          for file in limen.hdll opengl.limen vulkan.limen libshaderc.so.1; do
-            if [[ ! -f "limen-prebuilt/$file" ]]; then
-              echo "::error::$asset does not contain $file"
-              exit 1
-            fi
-          done
-
-          echo "LIMEN_PREBUILT_DIR=$PWD/limen-prebuilt" >> "$GITHUB_ENV"
 
       - name: Install Haxe
         uses: krdlab/setup-haxe@master
@@ -103,9 +73,7 @@ jobs:
 
       - name: Build and install HashLink
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
-            -DWITH_LIMEN=OFF \
-            -DLIMEN_PREBUILT_DIR="$LIMEN_PREBUILT_DIR"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --parallel
           sudo cmake --install build
           sudo ldconfig

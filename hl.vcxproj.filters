@@ -3,6 +3,8 @@
   <ItemGroup>
     <ClCompile Include="src\main.c" />
     <ClCompile Include="src\update\update.c" />
+    <ClCompile Include="src\update\update_util.c" />
+    <ClCompile Include="src\update\limen_update.c" />
     <ClCompile Include="src\update\update_core.c" />
     <ClCompile Include="src\update\update_http.c" />
     <ClCompile Include="src\update\update_sha256.c" />

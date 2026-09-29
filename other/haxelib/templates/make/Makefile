@@ -18,11 +18,14 @@ else
 HASHLINK = /usr/local
 endif
 
+LIMEN_DIR := $(firstword $(foreach dir,$(HASHLINK)/lib $(HASHLINK)/bin $(HASHLINK),$(if $(wildcard $(dir)/*.limen),$(dir))))
+LIMEN_FILES := $(if $(LIMEN_DIR),$(wildcard $(LIMEN_DIR)/*.limen))
+
 ifeq ($(UNAME),Darwin)
-LDLIBS = -lhl -lm::foreach libraries::::if (name == "uv"):: -luv::end:: $(HASHLINK)/lib/::name::.hdll::end:: $(HASHLINK)/lib/opengl.limen
+LDLIBS = -lhl -lm::foreach libraries::::if (name == "uv"):: -luv::end:: $(HASHLINK)/lib/::name::.hdll::end::
 LDFLAGS += -rpath $(HASHLINK)/lib
 else
-LDLIBS = -lhl -lm::foreach libraries::::if (name == "uv"):: -luv::end:: -l:::name::.hdll::end:: -l:opengl.limen
+LDLIBS = -lhl -lm::foreach libraries::::if (name == "uv"):: -luv::end:: -l:::name::.hdll::end::
 LDFLAGS += -Wl,-rpath $(HASHLINK)/lib
 endif
 
@@ -32,7 +35,7 @@ LDLIBS+=-ldbghelp
 EXE_SUFFIX=.exe
 endif
 ::if (jumboBuild == "true")::
-::name::$(EXE_SUFFIX): ::name::.c
+::name::$(EXE_SUFFIX): ::name::.c | copy-limen
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@ $(LDFLAGS) $(LDLIBS)
 ::else::
 SRC_FILES=::foreach cfiles:: \
@@ -46,7 +49,7 @@ RSP_FILE = objects.txt
 $(shell rm -f $(RSP_FILE))
 $(foreach o,$(OBJ_FILES),$(eval $(shell printf '%s\n' '$(o)' >> $(RSP_FILE))))
 
-::name::$(EXE_SUFFIX): $(OBJ_FILES)
+::name::$(EXE_SUFFIX): $(OBJ_FILES) | copy-limen
 	$(CC) @$(RSP_FILE) -o $@ $(LDFLAGS) $(LDLIBS)
 
 -include $(DEP_FILES)
@@ -55,6 +58,10 @@ $(foreach o,$(OBJ_FILES),$(eval $(shell printf '%s\n' '$(o)' >> $(RSP_FILE))))
 	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c ::relDir::$*.c -o $@
 ::end::
+.PHONY: copy-limen
+copy-limen:
+	$(if $(LIMEN_FILES),cp $(LIMEN_FILES) .)
+
 clean:
 	find . \( -name '*.o' -o -name '*.d' \) -delete
 	rm -f ::name::$(EXE_SUFFIX) objects.txt

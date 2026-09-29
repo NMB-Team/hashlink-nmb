@@ -7,7 +7,6 @@ INSTALL_BIN_DIR ?= $(PREFIX)/bin
 INSTALL_LIB_DIR ?= $(PREFIX)/lib
 INSTALL_INCLUDE_DIR ?= $(PREFIX)/include
 LIBS = $(addsuffix .hdll,fmt ssl openal ui uv mysql sqlite heaps)
-LIMEN_MODULES = $(wildcard *.limen)
 ARCH ?= $(shell uname -m)
 HL_COMMIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 HL_COMMIT_NAME ?= $(shell (git log -1 --format=format:%s 2>/dev/null || printf unknown) | od -An -v -tx1 | tr -d ' \n' | sed 's/../\\x&/g')
@@ -44,7 +43,7 @@ STD = src/std/array.o src/std/buffer.o src/std/bytes.o src/std/cast.o src/std/da
 	src/std/socket.o src/std/string.o src/std/sys.o src/std/types.o src/std/ucs2.o src/std/thread.o src/std/process.o \
 	src/std/track.o
 
-UPDATER_OBJ = src/update/update.o src/update/update_core.o src/update/update_http.o src/update/update_sha256.o
+UPDATER_OBJ = src/update/update.o src/update/update_util.o src/update/limen_update.o src/update/update_core.o src/update/update_http.o src/update/update_sha256.o
 MINIZIP_OBJ = include/minizip-ng/mz_crypt.o include/minizip-ng/mz_os.o include/minizip-ng/mz_strm.o \
 	include/minizip-ng/mz_strm_buf.o include/minizip-ng/mz_strm_mem.o include/minizip-ng/mz_strm_split.o \
 	include/minizip-ng/mz_strm_zlib.o include/minizip-ng/mz_zip.o include/minizip-ng/mz_zip_rw.o
@@ -217,6 +216,7 @@ HL_DEBUG = include/mdbg/mdbg.o include/mdbg/mach_excServer.o include/mdbg/mach_e
 LIB += ${HL_DEBUG}
 endif
 
+hl_LDLIBS += -lcurl
 LIBHL_LDFLAGS += -install_name @rpath/libhl.dylib
 USE_LIBHL_LDFLAGS = -rpath @executable_path -rpath $(INSTALL_LIB_DIR)
 HDLL_LDFLAGS += -install_name @rpath/$@
@@ -245,7 +245,6 @@ endif
 
 openal_LDLIBS = -lopenal
 RELEASE_NAME = linux
-LIMEN_RUNTIME_LIBS = $(wildcard libshaderc.so*)
 
 endif
 
@@ -259,27 +258,24 @@ LIBHL = libhl.$(LIBEXT)
 HL = hl$(EXE_SUFFIX)
 HLC = hlc$(EXE_SUFFIX)
 
-all: $(LIBHL) libs
 ifeq ($(ARCH),arm64)
-	$(warning HashLink vm is not supported on arm64, skipping)
-else
-all: $(HL)
+HL_OBJ = src/update/update_main.o $(UPDATER_OBJ) $(MINIZIP_OBJ) $(ZLIB_NG_OBJ)
 endif
+
+all: $(LIBHL) libs $(HL)
 
 install:
 	$(UNAME)==Darwin && ${MAKE} uninstall
-ifneq ($(ARCH),arm64)
 	mkdir -p $(INSTALL_BIN_DIR)
 	cp $(HL) $(INSTALL_BIN_DIR)
-endif
 	mkdir -p $(INSTALL_LIB_DIR)
-	cp *.hdll $(LIMEN_MODULES) $(INSTALL_LIB_DIR)
+	cp $(LIBS) $(INSTALL_LIB_DIR)
 	cp $(LIBHL) $(INSTALL_LIB_DIR)
 	mkdir -p $(INSTALL_INCLUDE_DIR)
 	cp src/hl.h src/hl_ffi.h src/hlc.h src/hlc_main.c $(INSTALL_INCLUDE_DIR)
 
 uninstall:
-	rm -f $(INSTALL_BIN_DIR)/$(HL) $(INSTALL_LIB_DIR)/$(LIBHL) $(INSTALL_LIB_DIR)/*.hdll $(INSTALL_LIB_DIR)/*.limen
+	rm -f $(INSTALL_BIN_DIR)/$(HL) $(INSTALL_LIB_DIR)/$(LIBHL) $(addprefix $(INSTALL_LIB_DIR)/,$(LIBS))
 	rm -f $(INSTALL_INCLUDE_DIR)/hl.h $(INSTALL_INCLUDE_DIR)/hl_ffi.h $(INSTALL_INCLUDE_DIR)/hlc.h $(INSTALL_INCLUDE_DIR)/hlc_main.c
 
 libs: $(LIBS)
@@ -291,7 +287,8 @@ $(LIBHL): $(LIB)
 
 $(HL): $(HL_OBJ) $(LIBHL)
 $(HLC): $(BOOT) $(LIBHL)
-src/main.o: CPPFLAGS += -DHL_COMMIT_SHA='"$(HL_COMMIT_SHA)"'
+src/update/update_main.o: CFLAGS := $(filter-out -std=c11,$(CFLAGS)) -std=c23
+src/main.o src/update/update_main.o: CPPFLAGS += -DHL_COMMIT_SHA='"$(HL_COMMIT_SHA)"'
 src/main.o: CPPFLAGS += -DHL_COMMIT_NAME='"$(HL_COMMIT_NAME)"'
 src/main.o: CPPFLAGS += -DHL_COMMIT_DATE='"$(HL_COMMIT_DATE)"'
 $(HL) $(HLC):
@@ -355,7 +352,6 @@ release_haxelib_package:
 	rm -rf $(HLIB)_release
 
 BUILD_DIR ?= .
-LIMEN_BUILD_MODULES = $(wildcard $(BUILD_DIR)/*.limen)
 PACKAGE_NAME = $(eval PACKAGE_NAME := hashlink-$(shell $(BUILD_DIR)/$(HL) --version)-$(RELEASE_NAME))$(PACKAGE_NAME)
 
 release_prepare:
@@ -365,8 +361,7 @@ release_prepare:
 	cp src/hl.h src/hl_ffi.h src/hlc.h src/hlc_main.c $(PACKAGE_NAME)/include
 
 release_win:
-	cp $(BUILD_DIR)/{$(HL),*.dll,*.hdll,*.lib} $(LIMEN_BUILD_MODULES) $(PACKAGE_NAME)
-	rm  $(PACKAGE_NAME)/hl.lib # avoid confusion between hl.lib and libhl.lib
+	cp $(addprefix $(BUILD_DIR)/,$(HL) libhl.dll libhl.lib) $(wildcard $(addprefix $(BUILD_DIR)/,$(LIBS) $(LIBS:.hdll=.lib))) $(PACKAGE_NAME)
 	cp $(VS_RUNTIME_LIBRARY) $(PACKAGE_NAME)
 	cp $(VS_OPENAL_LIBRARY) $(PACKAGE_NAME)/OpenAL32.dll
 	# 7z switches: https://sevenzip.osdn.jp/chm/cmdline/switches/
@@ -374,11 +369,7 @@ release_win:
 	rm -rf $(PACKAGE_NAME)
 
 release_linux release_osx:
-ifeq ($(ARCH),arm64)
-	cp $(LIBHL) *.hdll $(LIMEN_MODULES) $(LIMEN_RUNTIME_LIBS) $(PACKAGE_NAME)
-else
-	cp $(HL) $(LIBHL) *.hdll $(LIMEN_MODULES) $(LIMEN_RUNTIME_LIBS) $(PACKAGE_NAME)
-endif
+	cp $(HL) $(LIBHL) $(wildcard $(LIBS)) $(PACKAGE_NAME)
 	tar -cvzf $(PACKAGE_NAME).tar.gz $(PACKAGE_NAME)
 	rm -rf $(PACKAGE_NAME)
 
@@ -402,7 +393,7 @@ clean_o:
 	rm -f ${STD} ${BOOT} ${RUNTIME} ${PCRE} ${HL_OBJ} ${FMT} ${SSL} ${OPENAL} ${UI} ${UV} ${MYSQL} ${SQLITE} ${HEAPS} ${HL_DEBUG} ${ALL_OBJS} ${DEPS}
 
 clean: clean_o
-	rm -f $(HL) $(HLC) $(LIBHL) *.hdll *.limen
+	rm -f $(HL) $(HLC) $(LIBHL) $(LIBS)
 
 .PHONY: libs release
 

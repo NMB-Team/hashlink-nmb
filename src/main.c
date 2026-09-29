@@ -25,6 +25,7 @@
 #include "trace.h"
 #include "banner.h"
 #include "update/update.h"
+#include "update/limen_update.h"
 
 #ifndef HL_WIN
 #include <unistd.h>
@@ -279,6 +280,13 @@ static void print_help() {
 		"  hl update [--force | --check]        Verify, repair, or update this installation\n"
 		"  hl [boot arguments]                 Run hlboot.dat from the current directory\n"
 		"\n"
+		"LIMEN package:\n"
+		"  hl limen install                  Install LIMEN\n"
+		"  hl limen update                   Update LIMEN\n"
+		"  hl limen reinstall                Reinstall LIMEN\n"
+		"  hl limen status                   Show LIMEN installation status\n"
+		"  hl limen remove                   Remove LIMEN\n"
+		"\n"
 		"Options:\n"
 		"  -h,  --help          Show this help and exit\n"
 		"  -v,  --version       Show the HashLink version and commit SHA\n"
@@ -317,11 +325,21 @@ int main(int argc, pchar *argv[]) {
 #endif
 	if( argc > 1 && (
 #ifdef HL_WIN
-		wcscmp(argv[1],L"update")==0 || wcsncmp(argv[1],L"--internal-update-",18)==0
+		wcscmp(argv[1],L"update")==0
+		|| wcsncmp(argv[1],L"--internal-update-",18)==0
 #else
 		strcmp(argv[1],"update")==0
 #endif
 	) ) return hl_update_command(argc,(const pchar *const *)argv,HL_COMMIT_SHA);
+
+	if( argc > 1 && (
+#ifdef HL_WIN
+		wcscmp(argv[1],L"limen")==0
+#else
+		strcmp(argv[1],"limen")==0
+#endif
+	) ) return hl_limen_command(argc,(const pchar *const *)argv);
+
 	static vclosure cl;
 	pchar *file = nullptr;
 	char *error_msg = nullptr;

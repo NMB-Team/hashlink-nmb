@@ -74,25 +74,25 @@
     <LinkIncremental>true</LinkIncremental>
     <IntDir>$(ProjectDir)\$(Configuration)\</IntDir>
     <IncludePath>$$makePath(::relDir::);$(HASHLINK)/include;$(HASHLINK)/src;$(IncludePath)</IncludePath>
-    <LibraryPath>$(HASHLINK);$(HASHLINK)/$(Configuration);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(HASHLINK);$(HASHLINK)/lib;$(HASHLINK)/bin;$(HASHLINK)/$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IntDir>$(ProjectDir)\$(Configuration)\</IntDir>
     <IncludePath>$$makePath(::relDir::);$(HASHLINK)/include;$(HASHLINK)/src;$(IncludePath)</IncludePath>
-    <LibraryPath>$(HASHLINK);$(HASHLINK)/$(Configuration);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(HASHLINK);$(HASHLINK)/lib;$(HASHLINK)/bin;$(HASHLINK)/$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IntDir>$(ProjectDir)\$(Platform)\$(Configuration)\</IntDir>
     <IncludePath>$$makePath(::relDir::);$(HASHLINK)/include;$(HASHLINK)/src;$(IncludePath)</IncludePath>
-    <LibraryPath>$(HASHLINK);$(HASHLINK)/x64/$(Configuration);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(HASHLINK);$(HASHLINK)/lib;$(HASHLINK)/bin;$(HASHLINK)/x64/$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IntDir>$(ProjectDir)\$(Platform)\$(Configuration)\</IntDir>
     <IncludePath>$$makePath(::relDir::);$(HASHLINK)/include;$(HASHLINK)/src;$(IncludePath)</IncludePath>
-    <LibraryPath>$(HASHLINK);$(HASHLINK)/x64/$(Configuration);$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(HASHLINK);$(HASHLINK)/lib;$(HASHLINK)/bin;$(HASHLINK)/x64/$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -195,4 +195,10 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="CopyLimenModules" AfterTargets="Build" Condition="'$(HASHLINK)' != ''">
+    <ItemGroup>
+      <LimenModule Include="$(HASHLINK)\*.limen;$(HASHLINK)\lib\*.limen;$(HASHLINK)\bin\*.limen" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LimenModule)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="'@(LimenModule)' != ''" />
+  </Target>
 </Project>

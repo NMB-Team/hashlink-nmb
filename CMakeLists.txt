@@ -337,6 +337,8 @@ set(UPDATER_SOURCES
     src/update/update_core.c
     src/update/update_http.c
     src/update/update_sha256.c
+    src/update/update_util.c
+    src/update/limen_update.c
 )
 
 set(UPDATE_ARCHIVE_SOURCES
@@ -392,11 +394,11 @@ if (WITH_VM)
 
     if (WIN32)
         target_link_libraries(hl user32 winhttp)
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR APPLE)
         find_package(CURL REQUIRED)
         target_link_libraries(hl CURL::libcurl)
     endif()
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+elseif((CMAKE_SYSTEM_NAME STREQUAL "Linux" OR APPLE) AND (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64" OR CMAKE_OSX_ARCHITECTURES STREQUAL "arm64"))
     add_executable(hl src/update/update_main.c ${UPDATER_SOURCES})
     target_link_libraries(hl update_archive)
     target_compile_definitions(hl PRIVATE HL_COMMIT_SHA="${HL_COMMIT_SHA}" HL_VERSION_TEXT="${HL_VERSION}")
@@ -414,13 +416,27 @@ if(BUILD_TESTING)
     target_link_libraries(update_test update_archive)
     if(WIN32)
         target_link_libraries(update_test winhttp)
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR APPLE)
         find_package(CURL REQUIRED)
         target_link_libraries(update_test CURL::libcurl)
     endif()
     add_test(NAME updater_core COMMAND update_test)
+    add_executable(limen_test_runner
+        other/tests/limen_runner.c
+        src/update/update.c
+        src/update/limen_update.c
+        src/update/update_util.c
+        src/update/update_core.c
+        src/update/update_sha256.c
+    )
+    target_include_directories(limen_test_runner PRIVATE src/update)
+    target_link_libraries(limen_test_runner update_archive)
+    if(MINGW)
+        target_link_options(limen_test_runner PRIVATE -municode)
+    endif()
     find_package(Python3 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
+        add_test(NAME limen_lifecycle COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/other/tests/limen_test.py $<TARGET_FILE:limen_test_runner> $<BOOL:${MINGW}>)
         add_test(NAME updater_package COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/other/tests/update_package_test.py)
     endif()
 
