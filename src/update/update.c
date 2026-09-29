@@ -450,7 +450,7 @@ int hl_update_command(int argc,
 	if (!update_path_join(package_path, sizeof(package_path), stage, package_name))
 		goto done;
 	printf("Downloading %s...\n", package_name);
-	if (!update_download_verified(UPDATE_BASE, package_name, package_path, 2ULL * 1024 * 1024 * 1024, package_hash)) {
+	if (!update_download_verified(UPDATE_BASE, package_name, package_path, 2ULL * 1024 * 1024 * 1024, package_hash, 1)) {
 		fail("package download or SHA-256 verification failed");
 		goto done;
 	}
@@ -470,7 +470,7 @@ int hl_update_command(int argc,
 		goto done;
 	}
 
-	puts("Update prepared; installation will finish in the background.");
+	puts("Update installed; Try to use `hl` again.");
 	result = 0;
 	stage[0] = 0;
 #else

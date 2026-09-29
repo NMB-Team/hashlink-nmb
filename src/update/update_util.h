@@ -25,7 +25,7 @@ int update_remove_package(const char* root, int prefix, const update_manifest* m
 int update_apply_release(const char* root, int prefix, const char* stage, const update_manifest* latest, const update_manifest* previous, int force, const char* manifest_name, const char* executable);
 int update_package_owned(const char* root, int prefix, const update_manifest* manifest, const update_manifest* other);
 int update_current_root(char root[UPDATE_PATH_MAX], int* prefix);
-int update_download_verified(const char* base, const char* name, const char* target, uint64_t limit, const char* expected);
+int update_download_verified(const char* base, const char* name, const char* target, uint64_t limit, const char* expected, int show_progress);
 int update_fetch_manifest(const char* api, const char* base, const char* name, const char* package, const char* stage, const char* manifest_name, update_manifest* manifest, char package_hash[65]);
 
 #endif

@@ -1131,11 +1131,11 @@ int update_current_root(char root[UPDATE_PATH_MAX], int* prefix) {
 	return 1;
 }
 
-int update_download_verified(const char* base, const char* name, const char* target, uint64_t limit, const char* expected) {
+int update_download_verified(const char* base, const char* name, const char* target, uint64_t limit, const char* expected, int show_progress) {
 	char url[512], actual[65];
 	uint64_t size;
 	int count = snprintf(url, sizeof(url), "%s%s", base, name);
-	return count > 0 && (size_t)count < sizeof(url) && update_download(url, target, limit) &&
+	return count > 0 && (size_t)count < sizeof(url) && update_download(url, target, limit, show_progress) &&
 	       hash_file(target, actual, &size) && strcmp(actual, expected) == 0;
 }
 
@@ -1143,13 +1143,13 @@ int update_fetch_manifest(const char* api, const char* base, const char* name, c
 	char metadata[UPDATE_PATH_MAX], target[UPDATE_PATH_MAX], manifest_hash[65];
 	char* data = nullptr;
 	size_t length;
-	if (!update_path_join(metadata, sizeof(metadata), stage, "release.json") || !update_download(api, metadata, 8 * 1024 * 1024) ||
+	if (!update_path_join(metadata, sizeof(metadata), stage, "release.json") || !update_download(api, metadata, 8 * 1024 * 1024, 0) ||
 	    !update_read_file(metadata, &data, 8 * 1024 * 1024, &length))
 		return 0;
 	int ok = update_release_digests(data, length, name, package, manifest_hash, package_hash);
 	free(data);
 	return ok && update_path_join(target, sizeof(target), stage, manifest_name) &&
-	       update_download_verified(base, name, target, 8 * 1024 * 1024, manifest_hash) && update_load_manifest(target, manifest);
+	       update_download_verified(base, name, target, 8 * 1024 * 1024, manifest_hash, 0) && update_load_manifest(target, manifest);
 }
 
 int update_remove_package(const char* root, int prefix, const update_manifest* manifest, const char* manifest_name) {

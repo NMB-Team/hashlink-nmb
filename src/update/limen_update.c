@@ -132,7 +132,7 @@ static int limen_manage(const char* root, int prefix, const char* platform, cons
 		}
 	}
 	if (!update_path_join(archive, sizeof(archive), stage, package_name) ||
-	    !update_download_verified(LIMEN_BASE, package_name, archive, 2ULL * 1024 * 1024 * 1024, package_hash) ||
+	    !update_download_verified(LIMEN_BASE, package_name, archive, 2ULL * 1024 * 1024 * 1024, package_hash, 1) ||
 	    !update_extract_archive(archive, stage, &latest, 1)) {
 		fail("archive SHA-256, extraction, or staged file verification failed");
 		goto done;

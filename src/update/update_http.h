@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-int update_download(const char* url, const char* destination, uint64_t limit);
+int update_download(const char* url, const char* destination, uint64_t limit, int show_progress);
 
 #endif

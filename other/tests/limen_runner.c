@@ -7,12 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-int update_download(const char* url, const char* destination, uint64_t limit) {
+int update_download(const char* url, const char* destination, uint64_t limit, int show_progress) {
 	const char* fixture = getenv("HL_TEST_RELEASE");
 	const char* name = strrchr(url, '/');
 	char path[UPDATE_PATH_MAX];
 	if (!fixture || !name || !update_path_join(path, sizeof(path), fixture, strstr(url, "api.github.com") ? "release.json" : name + 1))
 		return 0;
+	if (show_progress != (!strstr(url, "api.github.com") && !strstr(name, ".manifest"))) {
+		fprintf(stderr, "Incorrect progress setting for %s\n", name);
+		return 0;
+	}
 	FILE* source = fopen(path, "rb");
 #ifdef _WIN32
 	wchar_t* wide = update_to_wide(destination);

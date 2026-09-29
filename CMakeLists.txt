@@ -421,6 +421,20 @@ if(BUILD_TESTING)
         target_link_libraries(update_test CURL::libcurl)
     endif()
     add_test(NAME updater_core COMMAND update_test)
+    add_executable(update_http_test
+        other/tests/update_http_test.c
+        src/update/update_util.c
+        src/update/update_core.c
+        src/update/update_sha256.c
+    )
+    target_include_directories(update_http_test PRIVATE src/update)
+    target_link_libraries(update_http_test update_archive)
+    if(WIN32)
+        target_link_libraries(update_http_test winhttp)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR APPLE)
+        target_link_libraries(update_http_test CURL::libcurl)
+    endif()
+    add_test(NAME updater_download_progress COMMAND update_http_test)
     add_executable(limen_test_runner
         other/tests/limen_runner.c
         src/update/update.c
