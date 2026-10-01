@@ -43,7 +43,6 @@ typedef struct {
 	int scope_end;
 } vreg;
 
-#define MAX_TMP_ARGS	32
 #define MAX_TRAPS		32
 
 typedef struct _linked_inf linked_inf;
@@ -138,7 +137,8 @@ struct _emit_ctx {
 	int phi_depth;
 	bool flushed;
 
-	ereg tmp_args[MAX_TMP_ARGS];
+	ereg *tmp_args;
+	int max_tmp_args;
 	trap_inf traps[MAX_TRAPS];
 	int *pos_map;
 	int pos_map_size;
@@ -292,7 +292,14 @@ static ereg new_value( emit_ctx *ctx ) {
 }
 
 static ereg *get_tmp_args( emit_ctx *ctx, int count ) {
-	if( count > MAX_TMP_ARGS ) jit_error("Too many arguments");
+	if( count > ctx->max_tmp_args ) {
+		int next_size = ctx->max_tmp_args ? ctx->max_tmp_args : 32;
+		while( next_size < count ) next_size *= 2;
+		ereg *args = (ereg*)realloc(ctx->tmp_args, sizeof(ereg) * next_size);
+		if( args == nullptr ) jit_error("Out of memory");
+		ctx->tmp_args = args;
+		ctx->max_tmp_args = next_size;
+	}
 	return ctx->tmp_args;
 }
 
@@ -358,7 +365,7 @@ static void emit_store_mem( emit_ctx *ctx, ereg to, int offs, ereg from ) {
 #define store_args hl_emit_store_args
 void hl_emit_store_args( emit_ctx *ctx, einstr *e, ereg *args, int count ) {
 	if( count < 0 ) jit_assert();
-	if( count > 256 ) jit_error("Too many arguments");
+	if( count > MAX_CALL_ARGS ) jit_error("Too many arguments");
 	e->nargs = (unsigned short)count;
 	if( count == 0 ) return;
 	if( count == 1 ) {
@@ -1213,6 +1220,7 @@ void hl_emit_free( jit_ctx *jit ) {
 	free(ctx->vregs);
 	free(ctx->instrs);
 	free(ctx->pos_map);
+	free(ctx->tmp_args);
 	free(ctx);
 	jit->emit = nullptr;
 }

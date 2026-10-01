@@ -423,6 +423,20 @@ endif()
 
 if(BUILD_TESTING)
 
+    if(WITH_VM)
+        add_executable(jit_args_test
+            other/tests/jit_args_test.c
+            src/code.c
+            src/jit.c
+            src/jit_emit.c
+            src/jit_regs.c
+            src/jit_x86_64.c
+            src/jit_dump.c
+        )
+        target_link_libraries(jit_args_test libhl)
+        add_test(NAME jit_arguments COMMAND jit_args_test)
+    endif()
+
     add_executable(update_test
         other/tests/update_test.c
         ${UPDATER_SOURCES}

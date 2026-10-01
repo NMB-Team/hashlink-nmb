@@ -144,6 +144,7 @@ typedef enum {
 #define IS_FLOAT(mode)	((mode) == M_F64 || (mode) == M_F32)
 
 #define MAX_ARGS	16
+#define MAX_CALL_ARGS	256
 
 #if defined(HL_WIN_CALL) && defined(HL_64)
 #	define IS_WINCALL64 1

@@ -52,7 +52,8 @@ OBJ_FILES=$(patsubst %.c,%.o,$(SRC_FILES))
 DEP_FILES=$(patsubst %.c,%.d,$(SRC_FILES))
 
 RSP_FILE = objects.txt
-$(file >$(RSP_FILE),$(OBJ_FILES))
+$(shell rm -f $(RSP_FILE))
+$(foreach o,$(OBJ_FILES),$(eval $(shell printf '%s\n' '$(o)' >> $(RSP_FILE))))
 
 ::name::$(EXE_SUFFIX): $(OBJ_FILES) | copy-limen
 	$(CC) @$(RSP_FILE) -o $@ $(LDFLAGS) $(LDLIBS)

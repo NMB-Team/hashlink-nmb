@@ -740,15 +740,15 @@ static void regs_emit_instrs( regs_ctx *ctx ) {
 		if( IS_CALL(e.op) ) {
 			ereg *args = hl_emit_get_args(ctx->jit->emit,&e);
 			call_regs regs = {0};
+			call_regs arg_counts = {0};
 			int stack_args = 0;
-			int stack_bits = 0;
 			for(int k=0;k<e.nargs;k++) {
 				value_info *v = REG_IS_VAL(args[k]) ? VAL_REG(args[k]) : nullptr;
 				emit_mode mode = v ? v->mode : M_I32;
 				ereg r = get_call_reg(ctx,regs,mode);
+				arg_counts[IS_WINCALL64 ? 0 : REG_MODE(mode)]++;
 				if( IS_NULL(r) ) {
 					stack_args += get_stack_size(mode);
-					stack_bits |= 1 << k;
 				} else if( !v || r != v->reg ) {
 					int_arr_add(ctx->pack_movs,r);
 					int_arr_add(ctx->pack_movs,v ? v->reg : args[k]);
@@ -764,8 +764,11 @@ static void regs_emit_instrs( regs_ctx *ctx ) {
 				if( offset )
 					regs_emit(ctx,UNUSED,STACK_OFFS,UNUSED,UNUSED,0,-offset);
 				for(int k=e.nargs-1;k>=0;k--) {
-					if( stack_bits & (1 << k) ) {
-						value_info *v = REG_IS_VAL(args[k]) ? VAL_REG(args[k]) : nullptr;
+					value_info *v = REG_IS_VAL(args[k]) ? VAL_REG(args[k]) : nullptr;
+					emit_mode mode = v ? v->mode : M_I32;
+					// win64 shares argument slots; system v has separate integer and float banks
+					int slot = --arg_counts[IS_WINCALL64 ? 0 : REG_MODE(mode)];
+					if( slot >= REG_CFG(REG_MODE(mode))->nargs ) {
 						EMIT(PUSH,VAL_REG(args[k])->reg,UNUSED,v && IS_FLOAT(v->mode) ? v->mode : M_PTR);
 					}
 				}
