@@ -12,7 +12,7 @@ HL_COMMIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 HL_COMMIT_NAME ?= $(shell (git log -1 --format=format:%s 2>/dev/null || printf unknown) | od -An -v -tx1 | tr -d ' \n' | sed 's/../\\x&/g')
 HL_COMMIT_DATE ?= $(shell git log -1 --format=%cI 2>/dev/null || echo unknown)
 
-CFLAGS = -Wall -O3 -std=c11 -fvisibility=hidden -MMD -MP
+CFLAGS = -Wall -O3 -fvisibility=hidden -MMD -MP
 CPPFLAGS = -I src
 LIBHL_LDFLAGS =
 LIBHL_LDLIBS = -lm -lpthread
@@ -55,7 +55,6 @@ $(MINIZIP_OBJ): CPPFLAGS += -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 endif
 HL_OBJ = src/code.o src/jit.o src/jit_emit.o src/jit_regs.o src/jit_x86_64.o src/jit_dump.o src/main.o src/module.o src/debugger.o src/profile.o \
 	$(UPDATER_OBJ) $(MINIZIP_OBJ) $(ZLIB_NG_OBJ)
-$(UPDATER_OBJ): CFLAGS := $(filter-out -std=c11,$(CFLAGS)) -std=c23
 $(UPDATER_OBJ): CPPFLAGS += -I include/zlib-ng-compat -I include/zlib-ng
 $(MINIZIP_OBJ): CPPFLAGS += -I src/update -I include/minizip-ng -I include/zlib-ng-compat -I include/zlib-ng
 
@@ -252,6 +251,12 @@ ifdef DEBUG
 CFLAGS += -g
 endif
 
+C23_FLAG := $(shell for flag in -std=c23 -std=c2x; do printf '%s\n' 'int main(void) { void *p = nullptr; return p != nullptr; }' | $(CC) $$flag -Werror -x c -fsyntax-only - >/dev/null 2>&1 && { echo $$flag; break; }; done)
+ifeq ($(C23_FLAG),)
+$(error HashLink and HLC require a C23 compiler with nullptr support ($(CC)))
+endif
+override CFLAGS := $(filter-out -std=%,$(CFLAGS)) $(C23_FLAG)
+
 LDFLAGS += $(CFLAGS)
 
 LIBHL = libhl.$(LIBEXT)
@@ -287,7 +292,6 @@ $(LIBHL): $(LIB)
 
 $(HL): $(HL_OBJ) $(LIBHL)
 $(HLC): $(BOOT) $(LIBHL)
-src/update/update_main.o: CFLAGS := $(filter-out -std=c11,$(CFLAGS)) -std=c23
 src/main.o src/update/update_main.o: CPPFLAGS += -DHL_COMMIT_SHA='"$(HL_COMMIT_SHA)"'
 src/main.o: CPPFLAGS += -DHL_COMMIT_NAME='"$(HL_COMMIT_NAME)"'
 src/main.o: CPPFLAGS += -DHL_COMMIT_DATE='"$(HL_COMMIT_DATE)"'
@@ -322,7 +326,7 @@ mysql.hdll: $(MYSQL) $(LIBHL)
 sqlite_LDLIBS = -lsqlite3
 sqlite.hdll: $(SQLITE) $(LIBHL)
 
-CXXFLAGS:=$(filter-out -std=c11,$(CFLAGS)) -std=c++11
+CXXFLAGS:=$(filter-out -std=%,$(CFLAGS)) -std=c++11
 
 $(HEAPS): CPPFLAGS += $(HEAPS_CPPFLAGS)
 heaps_LDLIBS = -ldl

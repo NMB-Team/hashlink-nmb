@@ -11,6 +11,8 @@
 
 ## Building on Linux/OSX
 
+HashLink and generated HLC applications require C23 mode. CMake builds require CMake 3.21 or newer. Make builds detect `-std=c23` or the older `-std=c2x` spelling and fail if neither supports `nullptr`.
+
 HashLink is distributed with some graphics libraries allowing to develop various applications, you can manually disable the libraries you want to compile in Makefile.
 Here's the dependencies that you install in order to compile all the libraries:
 
@@ -50,6 +52,14 @@ To install hashlink binaries on your system you can then call:
 ## Building on Windows
 
 Open `hl.sln` using Visual Studio C++, or use CMake to build HashLink. Limen is installed separately.
+
+MSVC builds use `/std:clatest` and require a toolset with C23 `typeof` support; the existing HashLink headers provide MSVC's `nullptr` compatibility definition.
+
+When compiling generated HLC code manually, pass `-std=c23` (`-std=c2x` on older GCC/Clang versions) or `/std:clatest` with MSVC. For example, from a directory containing generated `hello.c`:
+
+```sh
+cc -std=c23 -I. -I/usr/local/include hello.c -L/usr/local/lib -lhl -lm -o hello
+```
 
 To build all of HashLink libraries it is required to download several additional distributions, read each library README file (in hashlink/libs/xxx/README.md) for additional information.
 

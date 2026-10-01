@@ -123,9 +123,9 @@ class Benchs {
 					// build
 					var cmd;
 					if( useMSVC )
-						cmd = 'cl.exe /nologo /Ox /I hlc /I ../../src /Fehlc.exe hlc/bench.c ../../Release/libhl.lib';
+						cmd = 'cl.exe /nologo /std:clatest /Ox /I hlc /I ../../src /Fehlc.exe hlc/bench.c ../../Release/libhl.lib';
 					else
-						cmd = '$gcc -O3 ${is32?'-m32':''} -std=c11 -o hlc -I hlc -I ../../src -L ../.. hlc/bench.c -lhl -lm';
+						cmd = '$gcc -O3 ${is32?'-m32':''} -std=c2x -o hlc -I hlc -I ../../src -L ../.. hlc/bench.c -lhl -lm';
 					if( Sys.command(cmd) != 0 ) {
 						Sys.println("Failed to run "+cmd);
 						Sys.println(t.name+" failed to compile");

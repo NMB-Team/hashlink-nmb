@@ -1,7 +1,11 @@
 # Auto-generated from hashlink's Makefile template; do not edit
 
 UNAME := $(shell uname)
-CFLAGS = -std=c2x $(EXTRA_CFLAGS)
+CFLAGS = $(EXTRA_CFLAGS)
+C23_FLAG := $(shell for flag in -std=c23 -std=c2x; do printf '%s\n' 'int main(void) { void *p = nullptr; return p != nullptr; }' | $(CC) $$flag -Werror -x c -fsyntax-only - >/dev/null 2>&1 && { echo $$flag; break; }; done)
+ifeq ($(C23_FLAG),)
+$(error HLC requires a C23 compiler with nullptr support ($(CC)))
+endif
 CPPFLAGS = ::if (jumboBuild != "true")::-DHL_MAKE ::end::-I$$makePath(::relDir::)
 LDFLAGS = $(EXTRA_LDFLAGS)
 
@@ -10,6 +14,8 @@ CFLAGS += -g
 else
 CFLAGS += -O3
 endif
+
+override CFLAGS := $(filter-out -std=%,$(CFLAGS)) $(C23_FLAG)
 
 ifdef HASHLINK
 CPPFLAGS += -I$(HASHLINK)/include -I$(HASHLINK)/src

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.21)
 
 set(HL_VERSION_MAJOR 2)
 set(HL_VERSION_MINOR 0)
@@ -117,6 +117,21 @@ list(APPEND CMAKE_MODULE_PATH
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+if(CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+    set(CMAKE_C23_STANDARD_COMPILE_OPTION /std:clatest)
+    set(CMAKE_C23_EXTENSION_COMPILE_OPTION /std:clatest)
+endif()
+include(CheckCSourceCompiles)
+check_c_source_compiles("
+#if defined(_MSC_VER) && !defined(__clang__)
+int main(void) { typeof(0) value = 0; return value; }
+#else
+int main(void) { void *p = nullptr; return p != nullptr; }
+#endif
+" HL_HAS_C23)
+if(NOT HL_HAS_C23)
+    message(FATAL_ERROR "HashLink and HLC require C23 support (-std=c23, -std=c2x, or /std:clatest).")
+endif()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

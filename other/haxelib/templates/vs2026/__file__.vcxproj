@@ -96,6 +96,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
@@ -115,6 +116,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -138,6 +140,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
@@ -157,6 +160,7 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -195,6 +199,15 @@ $$setDefaultJumboBuild(true)<?xml version="1.0" encoding="utf-8"?>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="CheckC23Support" BeforeTargets="ClCompile" DependsOnTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <WriteLinesToFile File="$(IntDir)hl-c23-check.c" Lines="int main(void) { typeof(0) value = 0%3B return value%3B }" Overwrite="true" />
+    <CL Sources="$(IntDir)hl-c23-check.c" CompileAs="CompileAsC" LanguageStandard_C="stdclatest"
+        ObjectFileName="$(IntDir)hl-c23-check.obj" SuppressStartupBanner="true" TreatWarningAsError="true"
+        ToolPath="$(CLToolPath)" ToolExe="$(CLToolExe)" ContinueOnError="WarnAndContinue">
+      <Output TaskParameter="ExitCode" PropertyName="HLC_C23_EXIT_CODE" />
+    </CL>
+    <Error Condition="'$(HLC_C23_EXIT_CODE)' != '0'" Text="HLC requires a compiler with C23 /std:clatest support." />
+  </Target>
   <Target Name="CopyLimenModules" AfterTargets="Build" Condition="'$(HASHLINK)' != ''">
     <ItemGroup>
       <LimenModule Include="$(HASHLINK)\*.limen;$(HASHLINK)\lib\*.limen;$(HASHLINK)\bin\*.limen" />

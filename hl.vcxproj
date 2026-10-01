@@ -94,7 +94,7 @@
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <AdditionalOptions>/wd4456 /wd4100 /wd4204 /wd4702 /wd4457 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -117,7 +117,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;HL_VTUNE;ZLIB_COMPAT;NO_FSEEKO;WITH_ALL_FALLBACKS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/wd4456 /wd4100 /wd4204 /wd4702 /wd4457 /we4013 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,7 +144,7 @@
       <AdditionalOptions>/wd4456 /wd4100 /wd4204 /wd4702 /wd4457 %(AdditionalOptions)</AdditionalOptions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -170,7 +170,7 @@
       <AdditionalOptions>/wd4456 /wd4100 /wd4204 /wd4702 /wd4457 %(AdditionalOptions)</AdditionalOptions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

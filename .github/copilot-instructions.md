@@ -100,7 +100,7 @@ HashLink is mostly tested as part of the Haxe tests over at https://github.com/H
 
 ## Code Style and Conventions
 
-- The VM and libraries are written in **C11** (`-std=c11`).
+- HashLink and generated HLC applications require **C23** mode (`-std=c23`, `-std=c2x`, or MSVC `/std:clatest`).
 - Use `${CC}` for C compilation; `${CXX}` for C++ (only in the `heaps` library).
 - Follow the existing pattern of adding new native functions via `HL_PRIM` macros defined in `src/hl.h`.
 - New native libraries should be placed under `libs/<name>/` and expose a `DEFINE_PRIM` table.
