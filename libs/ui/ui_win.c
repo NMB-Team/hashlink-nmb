@@ -340,21 +340,24 @@ HL_PRIM vbyte *HL_NAME(ui_choose_file)( bool forSave, vdynamic *options ) {
 	op.Flags |= OFN_NOCHANGEDIR;
 	if( multiple )
 		op.Flags |= OFN_ALLOWMULTISELECT | OFN_EXPLORER;
+	// can be called from any thread: the GC must not wait for the dialog
+	bool ok;
+	hl_blocking(true);
 	if( forSave ) {
 		op.Flags |= OFN_OVERWRITEPROMPT;
-		if( !GetSaveFileName(&op) )
-			return NULL;
+		ok = GetSaveFileName(&op);
 	} else {
 		if (!isFolder) {
 			op.Flags |= OFN_CREATEPROMPT;
-			if( !GetOpenFileName(&op) )
-				return NULL;
+			ok = GetOpenFileName(&op);
 		} else {
-			if (!chooseFolder(op.lpstrTitle, op.lpstrInitialDir, outputFile))
-				return NULL;
+			ok = chooseFolder(op.lpstrTitle, op.lpstrInitialDir, outputFile);
 		}
 	}
-	return hl_copy_bytes((vbyte*)outputFile, sizeof(outputFile));
+	hl_blocking(false);
+	if( !ok )
+		return nullptr;
+	return hl_copy_bytes((vbyte*)outputFile, (int)(wcslen(outputFile)+1)*2);
 }
 
 HL_PRIM bool HL_NAME(ui_set_clipboard_text)(char* text) {
