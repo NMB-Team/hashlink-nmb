@@ -1010,6 +1010,13 @@ typedef struct {
 	#endif
 	int tls_arr_size;
 	void **tls_arr;
+	// where the gc context was saved (return address and stack pointer in the frame that saved it),
+	// and in its caller for hl_blocking which returns before the thread blocks : lets the profiler
+	// unwind the stack of a blocked thread
+	void *gc_ctx_pc;
+	void *gc_ctx_sp;
+	void *gc_ctx_caller_pc;
+	void *gc_ctx_caller_sp;
 } hl_thread_info;
 
 typedef struct {

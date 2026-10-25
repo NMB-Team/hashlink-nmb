@@ -29,6 +29,8 @@
 #	include <sys/mman.h>
 #	ifndef HL_CONSOLE
 #		include <unistd.h>
+#	else
+#		include <posix/posix.h>
 #	endif
 #endif
 
@@ -52,6 +54,17 @@
 #	define GC_CPU_PAUSE()	__asm__ __volatile__("yield")
 #else
 #	define GC_CPU_PAUSE()
+#endif
+
+#if defined(HL_VCC)
+#	include <intrin.h>
+#	define GC_NOINLINE		__declspec(noinline)
+#	define GC_RETURN_PC	_ReturnAddress()
+#	define GC_RETURN_SP	((char*)_AddressOfReturnAddress() + sizeof(void*))
+#else
+#	define GC_NOINLINE
+#	define GC_RETURN_PC	NULL
+#	define GC_RETURN_SP	NULL
 #endif
 
 #define MZERO(ptr,size)		memset(ptr,0,size)
@@ -276,10 +289,15 @@ HL_API hl_thread_info *hl_get_thread() {
 #	define GC_RELEASE_BARRIER()	__atomic_thread_fence(__ATOMIC_RELEASE)
 #endif
 
-static void gc_save_context(hl_thread_info *t, void *prev_stack ) {
+// never inlined : its return address is the frame that saved the context
+static GC_NOINLINE void gc_save_context(hl_thread_info *t, void *prev_stack, void *caller_pc, void *caller_sp ) {
 	t->gc_ctx_seq++;
 	GC_RELEASE_BARRIER();
 	setjmp(t->gc_regs);
+	t->gc_ctx_pc = GC_RETURN_PC;
+	t->gc_ctx_sp = GC_RETURN_SP;
+	t->gc_ctx_caller_pc = caller_pc;
+	t->gc_ctx_caller_sp = caller_sp;
 	// some compilers (such as clang) might push/pop some callee registers in call
 	// to gc_save_context (or before) which might hold a gc value !
 	// let's capture them immediately in extra per-thread data
@@ -312,7 +330,7 @@ static void gc_global_lock( bool lock ) {
 	if( lock ) {
 		if( !t )
 			hl_fatal("Can't lock GC in unregistered thread");
-		if( mt ) gc_save_context(t,&lock);
+		if( mt ) gc_save_context(t,&lock,NULL,NULL);
 		GC_MEMORY_BARRIER();
 		t->gc_blocking++;
 		if( mt ) hl_mutex_acquire(gc_threads.global_lock);
@@ -491,7 +509,7 @@ static void gc_stop_world( bool b ) {
 		gc_threads.stopping_world = false;
 	}
 #	else
-	if( b ) gc_save_context(current_thread,&b);
+	if( b ) gc_save_context(current_thread,&b,NULL,NULL);
 #	endif
 }
 
@@ -1276,7 +1294,7 @@ HL_API void hl_blocking( bool b ) {
 	if( b ) {
 #		ifdef HL_THREADS
 		if( t->gc_blocking == 0 ) {
-			gc_save_context(t,&b);
+			gc_save_context(t,&b,GC_RETURN_PC,GC_RETURN_SP);
 			GC_MEMORY_BARRIER();
 		}
 #		endif
@@ -1301,7 +1319,7 @@ HL_API void hl_gc_safepoint() {
 		return; // allow hl_gc_safepoint in non-GC threads
 	if( t->gc_blocking == 0 && gc_threads.stopping_world ) {
 #		ifdef HL_THREADS
-		gc_save_context(t,&t);
+		gc_save_context(t,&t,NULL,NULL);
 #		endif
 		gc_global_lock(true);
 		gc_global_lock(false);
