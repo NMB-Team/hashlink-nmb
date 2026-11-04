@@ -358,7 +358,7 @@ jobs:
           chmod +x /usr/local/bin/gcc
         fi
         sudo apt-get update -qqy
-        sudo apt-get install -qqy libjpeg-turbo8${SUFFIX} libturbojpeg${SUFFIX} zlib1g${SUFFIX} libogg0${SUFFIX} libvorbis0a${SUFFIX} \
+        sudo apt-get install -qqy libmbedtls-dev${SUFFIX} libjpeg-turbo8${SUFFIX} libturbojpeg${SUFFIX} zlib1g${SUFFIX} libogg0${SUFFIX} libvorbis0a${SUFFIX} \
           libvorbisfile3${SUFFIX} libvorbisenc2${SUFFIX} libsqlite3-0${SUFFIX} ${EXTRA_APT_PKGS}
 
     - name: Install brew packages
