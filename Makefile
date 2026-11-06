@@ -61,7 +61,7 @@ $(MINIZIP_OBJ): CPPFLAGS += -I src/update -I include/minizip-ng -I include/zlib-
 FMT_CPPFLAGS = -I include/mikktspace -I include/minimp3 -I include/spng -I include/zlib-ng-compat -I include/zlib-ng
 FMT_CPPFLAGS += -D SPNG_STATIC -D SPNG_DISABLE_OPT -D ZLIB_COMPAT -D NO_FSEEKO -D WITH_ALL_FALLBACKS
 
-FMT = libs/fmt/fmt.o libs/fmt/sha1.o include/mikktspace/mikktspace.o libs/fmt/mikkt.o libs/fmt/dxt.o
+FMT = libs/fmt/fmt.o libs/fmt/qoi.o libs/fmt/sha1.o include/mikktspace/mikktspace.o libs/fmt/mikkt.o libs/fmt/dxt.o
 FMT += include/spng/spng.o
 ZLIB_NG_OBJ = include/zlib-ng/arch/generic/adler32_c.o include/zlib-ng/arch/generic/adler32_fold_c.o \
 	include/zlib-ng/arch/generic/chunkset_c.o include/zlib-ng/arch/generic/compare256_c.o \

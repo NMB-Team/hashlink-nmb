@@ -4,6 +4,7 @@ set(SPNG_INCLUDE_DIR ${INCLUDES_BASE_DIR}/spng)
 
 add_library(fmt.hdll
     fmt.c
+    qoi.c
     sha1.c
     dxt.c
     mikkt.c

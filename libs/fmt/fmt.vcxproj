@@ -129,6 +129,7 @@
     <ClCompile Include="..\..\include\zlib-ng\arch\generic\crc32_chorba_c.c" />
     <ClCompile Include="dxt.c" />
     <ClCompile Include="fmt.c" />
+    <ClCompile Include="qoi.c" />
     <ClCompile Include="mikkt.c" />
     <ClCompile Include="sha1.c" />
   </ItemGroup>
