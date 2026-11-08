@@ -518,6 +518,7 @@ jobs:
     - name: "Extract release artifacts"
       run: |
         set -eu
+        mkdir -p artifacts
         for zip in _artifacts/*/*; do
           unzip -q "$zip" -d "artifacts/$(basename "$(dirname "$zip")")"
         done
