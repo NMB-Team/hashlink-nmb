@@ -507,32 +507,19 @@ jobs:
     - name: "SCM Checkout"
       uses: actions/checkout@v7
 
+    # Extract with unzip to avoid streaming extraction failures on nested CPack zips.
     - name: "Get: release artifacts"
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: actions/download-artifact@v8
+      with:
+        path: _artifacts
+        pattern: '*-cmake-*'
+        skip-decompress: true
+
+    - name: "Extract release artifacts"
       run: |
         set -eu
-
-        artifacts=(
-          darwin-cmake-64
-          darwin-cmake-arm64
-          linux-cmake-64
-          linux-cmake-arm64
-          windows-cmake-64
-          windows-cmake-mingw-64
-        )
-
-        for artifact in "${artifacts[@]}"; do
-          for attempt in 1 2 3 4 5; do
-            rm -rf "artifacts/$artifact"
-            if gh run download "$GITHUB_RUN_ID" --name "$artifact" --dir "artifacts/$artifact"; then
-              continue 2
-            fi
-            sleep $((attempt * 10))
-          done
-
-          echo "::error::Failed to download $artifact after 5 attempts"
-          exit 1
+        for zip in _artifacts/*/*; do
+          unzip -q "$zip" -d "artifacts/$(basename "$(dirname "$zip")")"
         done
 
     - name: "Update 'latest' Release"

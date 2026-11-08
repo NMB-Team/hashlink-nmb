@@ -80,6 +80,17 @@ final class Build {
 		log('Code generated in $output');
 	}
 
+	private function isDebugBuild():Bool {
+		final configuration = config.defines.get("hlgen.build.configuration");
+		if (configuration == null)
+			return config.defines.exists("debug");
+		return switch configuration.toLowerCase() {
+			case "debug": true;
+			case "release": false;
+			default: throw 'Invalid hlgen.build.configuration "$configuration" (expected debug or release)';
+		}
+	}
+
 	public function compile() {
 		final tpl = config.defines.get("hlgen.makefile");
 		if (tpl == null) {
@@ -106,7 +117,7 @@ final class Build {
 	}
 
 	private function compileCmake() {
-		final configuration = config.defines.exists("debug") ? "Debug" : "Release";
+		final configuration = isDebugBuild() ? "Debug" : "Release";
 		final system = Sys.systemName();
 		final isWindows = system == "Windows";
 		final isMac = system == "Mac" || system == "MacOS";
@@ -281,7 +292,7 @@ final class Build {
 		if (msbuild.length > 0) {
 			final prevCwd = Sys.getCwd();
 			final platform = 'x64';
-			final configuration = config.defines.exists("debug") ? "Debug" : "Release";
+			final configuration = isDebugBuild() ? "Debug" : "Release";
 
 			final msbuildArgs = [
 				'$name.sln',
@@ -310,11 +321,11 @@ final class Build {
 	}
 
 	private function compileMake() {
-		return Sys.command("make", ["-j", "-C", targetDir].concat(config.defines.exists("debug") ? ["DEBUG=1"] : []));
+		return Sys.command("make", ["-j", "-C", targetDir].concat(isDebugBuild() ? ["DEBUG=1"] : []));
 	}
 
 	private function compileHxcpp() {
-		return Sys.command("haxelib", ["--cwd", targetDir, "run", "hxcpp", "Build.xml"].concat(config.defines.exists("debug") ? ["-Ddebug"] : []));
+		return Sys.command("haxelib", ["--cwd", targetDir, "run", "hxcpp", "Build.xml"].concat(isDebugBuild() ? ["-Ddebug"] : []));
 	}
 
 	private function isBinary(bytes:haxe.io.Bytes):Bool {
