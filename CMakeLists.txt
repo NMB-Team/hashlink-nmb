@@ -529,6 +529,13 @@ if(BUILD_TESTING)
         haxe
     )
 
+    if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND WITH_VM AND Python3_Interpreter_FOUND AND HAXE_COMPILER)
+        add_test(NAME jit_lazy COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/other/tests/lazy_jit_test.py $<TARGET_FILE:hl>
+            --haxe ${HAXE_COMPILER} --runs 3)
+        set_tests_properties(jit_lazy PROPERTIES TIMEOUT 180)
+    endif()
+
     if(CMAKE_SIZEOF_VOID_P EQUAL 4)
         SET(HAXE_HL_FLAGS -D hl-legacy32)
     endif()

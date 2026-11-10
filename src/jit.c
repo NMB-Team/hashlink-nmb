@@ -128,8 +128,10 @@ static bool jit_code_append( jit_ctx *ctx ) {
 
 void hl_jit_init( jit_ctx *ctx, hl_module *m ) {
 	ctx->mod = m;
-	hl_jit_tag_callback(hl_dyn_call);
-	hl_jit_tag_callback(hl_dyn_call_obj);
+	if( !m->lazy_child ) {
+		hl_jit_tag_callback(hl_dyn_call);
+		hl_jit_tag_callback(hl_dyn_call_obj);
+	}
 #ifdef WIN64_UNWIND_TABLES
 	unsigned char version = 1;
 	unsigned char flags = 0;
@@ -151,8 +153,8 @@ void hl_jit_init( jit_ctx *ctx, hl_module *m ) {
 	hl_codegen_init(ctx);
 	jit_code_append(ctx);
 	if( m->code->hasdebug ) {
-		m->jit_debug = (hl_debug_infos*)malloc(sizeof(hl_debug_infos) * m->code->nfunctions);
-		memset(m->jit_debug, 0, sizeof(hl_debug_infos) * m->code->nfunctions);
+		m->jit_debug = (hl_debug_infos*)malloc(sizeof(hl_debug_infos) * (m->lazy_child ? 1 : m->code->nfunctions));
+		memset(m->jit_debug, 0, sizeof(hl_debug_infos) * (m->lazy_child ? 1 : m->code->nfunctions));
 	}
 }
 
@@ -161,6 +163,8 @@ void hl_jit_free( jit_ctx *ctx, h_bool can_reset ) {
 	hl_regs_free(ctx);
 	hl_emit_free(ctx);
 	hl_free(&ctx->falloc);
+	hl_free(&ctx->galloc);
+	free(ctx->output);
 	free(ctx);
 }
 
@@ -192,7 +196,7 @@ int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 			else
 				((int*)debug)[i] = cpos;
 		}
-		int fid = (int)(f - m->code->functions);
+		int fid = m->lazy_child ? 0 : (int)(f - m->code->functions);
 		hl_debug_infos *dbg = &m->jit_debug[fid];
 		dbg->start = pos;
 		dbg->offsets = debug;
@@ -356,19 +360,20 @@ void *hl_jit_code( jit_ctx *ctx, hl_module *m, int *codesize, hl_debug_infos **d
 	if( size & 4095 ) size += 4096 - (size&4095);
 	unsigned char *code = (unsigned char*)hl_alloc_executable_memory(size);
 	if( code == NULL ) return NULL;
-	memcpy(code,ctx->output,size);
+	memcpy(code,ctx->output,ctx->out_pos);
 	*codesize = size;
 	*debug = m->jit_debug;
 	ctx->final_code = code;
 	hl_emit_final(ctx);
 	hl_codegen_final(ctx);
+#ifdef WIN64_UNWIND_TABLES
+	ctx->mod->unwind_table_size = ctx->fdef_index;
+#endif
+	if( m->lazy_child ) return code;
 	arg_reg_count = ctx->cfg.regs.nargs;
 	arg_fp_count = ctx->cfg.floats.nargs;
 	call_jit_c2hl = ctx->final_code + ctx->code_funs.c2hl;
 	call_jit_hl2c = ctx->final_code + ctx->code_funs.hl2c;
-#	ifdef WIN64_UNWIND_TABLES
-	ctx->mod->unwind_table_size = ctx->fdef_index;
-#	endif
 	hl_setup.get_wrapper = default_wrapper;
 	hl_setup.static_call = callback_c2hl;
 	return code;
@@ -376,4 +381,8 @@ void *hl_jit_code( jit_ctx *ctx, hl_module *m, int *codesize, hl_debug_infos **d
 
 void hl_jit_patch_method( void*fun, void**newt ) {
 	jit_assert();
+}
+
+void hl_jit_append_stub( jit_ctx *ctx ) {
+	if( !jit_code_append(ctx) ) hl_fatal("Lazy JIT stub allocation failed");
 }

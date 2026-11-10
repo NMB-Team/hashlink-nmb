@@ -1610,7 +1610,8 @@ void hl_emit_final( jit_ctx *jit ) {
 	while( l ) {
 		vclosure *n = (vclosure*)l->value;
 		l->value = nullptr;
-		l->fun = jit->final_code + (int_val)jit->mod->functions_ptrs[(int_val)l->fun];
+		l->fun = jit->mod->lazy ? jit->mod->functions_ptrs[(int_val)l->fun]
+			: jit->final_code + (int_val)jit->mod->functions_ptrs[(int_val)l->fun];
 		l = n;
 	}
 	ctx->closure_list = nullptr;
@@ -1824,6 +1825,8 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 		}
 		if( hl_get_obj_rt(at)->compareFun ) {
 			ereg args[] = {a,b};
+			void *compare = ctx->mod->lazy ? hl_get_obj_proto(at)->compareFun : at->obj->rt->compareFun;
+
 			switch( op ) {
 			case OJEq:
 				{
@@ -1834,7 +1837,10 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 					int ja = emit_jump(ctx, true);
 					emit_test(ctx,b,OJNull);
 					int jb = emit_jump(ctx, true);
-					emit_test(ctx, emit_call_fid(ctx,(int)(int_val)at->obj->rt->compareFun,args,2,M_I32),OJNotNull);
+					ereg result = ctx->mod->lazy ? emit_native_call(ctx,compare,args,2,&hlt_i32)
+						: emit_call_fid(ctx,(int)(int_val)compare,args,2,M_I32);
+
+					emit_test(ctx,result,OJNotNull);
 					int jcmp = emit_jump(ctx, true);
 					patch_jump(ctx, jeq);
 					register_block_jump(ctx, offset, false);
@@ -1856,7 +1862,10 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 					emit_test(ctx,b,OJEq);
 					register_block_jump(ctx,offset,true);
 					split_block(ctx);
-					emit_test(ctx, emit_call_fid(ctx,(int)(int_val)at->obj->rt->compareFun,args,2,M_I32),OJNotNull);
+					ereg result = ctx->mod->lazy ? emit_native_call(ctx,compare,args,2,&hlt_i32)
+						: emit_call_fid(ctx,(int)(int_val)compare,args,2,M_I32);
+
+					emit_test(ctx,result,OJNotNull);
 					register_block_jump(ctx,offset,true);
 					patch_jump(ctx,jeq);
 				}
@@ -1868,7 +1877,10 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 					int ja = emit_jump(ctx, true);
 					emit_test(ctx,b,OJNull);
 					int jb = emit_jump(ctx, true);
-					emit_cmp(ctx, emit_call_fid(ctx,(int)(int_val)at->obj->rt->compareFun,args,2,M_I32), LOAD_CONST(0,&hlt_i32),op);
+					ereg result = ctx->mod->lazy ? emit_native_call(ctx,compare,args,2,&hlt_i32)
+						: emit_call_fid(ctx,(int)(int_val)compare,args,2,M_I32);
+
+					emit_cmp(ctx,result,LOAD_CONST(0,&hlt_i32),op);
 					register_block_jump(ctx,offset,true);
 					patch_jump(ctx,ja);
 					patch_jump(ctx,jb);

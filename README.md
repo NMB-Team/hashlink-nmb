@@ -122,3 +122,23 @@ You can debug Haxe/HashLink applications by using the [Visual Studio Code Debugg
 ## Documentation
 
 Read the [Documentation](https://github.com/HaxeFoundation/hashlink/wiki) on the HashLink wiki.
+
+## Optional lazy JIT
+
+On Windows x64, `hl --lazy-jit program.hl` emits stable first-call stubs during
+initialization and compiles each function when invoked. `--eager-jit` restores
+the default eager compilation. Embedders can pass `HL_MODULE_LAZY_JIT` to
+`hl_module_init`.
+
+Compilation is serialized across lazy modules. Each stub publishes its cached
+target atomically after relocation, instruction-cache synchronization, and
+Windows unwind registration. Existing closures, object methods, and native
+callbacks keep the same stable entry address. Bytecode stays resident until
+module teardown. Compiled functions retain their source mappings for exception
+stacks and profiling.
+
+Debugging, hot reload, and code dumps use eager compilation. Other platforms
+also fall back to eager compilation. Lazy mode trades lower startup compilation
+work for first-call latency, an indirect dispatch on subsequent calls, and a
+separate executable allocation per compiled function. Applications that execute
+most functions during startup may benefit less or become slower.

@@ -293,6 +293,8 @@ static void print_help() {
 		"  -c,  --commit        Show the commit SHA, name, and date\n"
 		"  -d,  --debug <port>  Listen for a debugger on 127.0.0.1:<port>\n"
 		"  -dw, --debug-wait    Wait for the debugger before running (requires --debug)\n"
+		"       --lazy-jit      Compile functions on first call (Windows x64)\n"
+		"       --eager-jit     Compile all functions at startup (default)\n"
 		"  -hr, --hot-reload    Enable bytecode hot reloading\n"
 		"  -p,  --profile <hz>  Start the sampling profiler at <hz> samples per second\n"
 		"       --trace         Write a Perfetto-compatible .nmbtrace file\n"
@@ -347,6 +349,7 @@ int main(int argc, pchar *argv[]) {
 	bool debug_wait = false;
 	bool debug_opt = false;
 	bool hot_reload = false;
+	bool lazy_jit = false;
 	bool dump = false;
 	int profile_count = -1;
 	bool trace_requested = false;
@@ -392,6 +395,14 @@ int main(int argc, pchar *argv[]) {
 			continue;
 		}
 #		endif
+		if( pcompare(arg,PSTR("--lazy-jit")) == 0 ) {
+			lazy_jit = true;
+			continue;
+		}
+		if( pcompare(arg,PSTR("--eager-jit")) == 0 ) {
+			lazy_jit = false;
+			continue;
+		}
 		if( pcompare(arg,PSTR("--hot-reload")) == 0 || pcompare(arg,PSTR("-hr")) == 0 ) {
 			hot_reload = true;
 			continue;
@@ -476,7 +487,7 @@ int main(int argc, pchar *argv[]) {
 		hl_trace_end();
 		return 2;
 	}
-	if( !hl_module_init(ctx.m,(hot_reload?HL_MODULE_HOT_RELOAD:0) | (dump?HL_MODULE_DUMP:0) | (debug_port > 0 && !debug_opt?HL_MODULE_DEBUG:0)) ) {
+	if( !hl_module_init(ctx.m,(lazy_jit && debug_port <= 0?HL_MODULE_LAZY_JIT:0) | (hot_reload?HL_MODULE_HOT_RELOAD:0) | (dump?HL_MODULE_DUMP:0) | (debug_port > 0 && !debug_opt?HL_MODULE_DEBUG:0)) ) {
 		hl_trace_end();
 		return 3;
 	}

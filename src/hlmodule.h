@@ -114,6 +114,8 @@ typedef struct {
 	bool large;
 } hl_debug_infos;
 
+typedef struct _hl_lazy_jit hl_lazy_jit;
+
 typedef struct {
 	hl_code *code;
 	int *types_hashes;
@@ -133,6 +135,8 @@ typedef struct {
 
 typedef struct _jit_ctx jit_ctx;
 
+typedef struct _hl_lazy_jit hl_lazy_jit;
+
 typedef struct {
 	hl_code *code;
 	int codesize;
@@ -146,6 +150,9 @@ typedef struct {
 	hl_debug_infos *jit_debug;
 	jit_ctx *jit_ctx;
 	bool debug;
+	hl_lazy_jit *lazy;
+	bool lazy_child;
+	int lazy_index;
 	hl_module_context ctx;
 #ifdef WIN64_UNWIND_TABLES
 	int unwind_table_size;
@@ -170,6 +177,7 @@ typedef unsigned char h_bool;
 #define HL_MODULE_HOT_RELOAD 1
 #define HL_MODULE_DUMP 2
 #define HL_MODULE_DEBUG 4
+#define HL_MODULE_LAZY_JIT 8
 
 extern int hl_jit_trampoline;
 void hl_jit_tag_callback( void *native );

@@ -45,13 +45,100 @@ HL_API void hl_prim_not_loaded( const uchar *err );
 static hl_module **cur_modules = nullptr;
 static int modules_count = 0;
 
+struct _hl_lazy_jit {
+	hl_alloc bytecode;
+	void **targets;
+	hl_module **chunks;
+};
+
+#if defined(HL_WIN) && defined(HL_64)
+static SRWLOCK lazy_compile_lock = SRWLOCK_INIT;
+#endif
+
+static hl_module *module_code_region( hl_module *m, void *addr ) {
+	if( addr >= m->jit_code && addr < (void*)((char*)m->jit_code + m->codesize) )
+		return m;
+
+#if defined(HL_WIN) && defined(HL_64)
+	if( m->lazy && !m->lazy_child ) {
+		for(int i=0;i<m->code->nfunctions;i++) {
+			hl_module *chunk = InterlockedCompareExchangePointer((void *volatile*)(m->lazy->chunks + i),nullptr,nullptr);
+			if( chunk && addr >= chunk->jit_code && addr < (void*)((char*)chunk->jit_code + chunk->codesize) )
+				return chunk;
+		}
+	}
+#endif
+	return nullptr;
+}
+
+void *hl_jit_lazy_resolve( hl_module *m, int index ) {
+#if defined(HL_WIN) && defined(HL_64)
+	if( !TryAcquireSRWLockExclusive(&lazy_compile_lock) ) {
+		hl_blocking(true);
+		AcquireSRWLockExclusive(&lazy_compile_lock);
+		hl_blocking(false);
+	}
+	hl_module *chunk = m->lazy->chunks[index];
+
+	if( !chunk ) {
+		chunk = calloc(1,sizeof(hl_module));
+		chunk->code = m->code;
+		chunk->ctx = m->ctx;
+		memset(&chunk->ctx.alloc,0,sizeof(hl_alloc));
+		chunk->functions_ptrs = m->functions_ptrs;
+		chunk->functions_indexes = m->functions_indexes;
+		chunk->globals_data = m->globals_data;
+		chunk->globals_indexes = m->globals_indexes;
+		chunk->lazy = m->lazy;
+		chunk->lazy_child = true;
+		chunk->lazy_index = index;
+#ifdef WIN64_UNWIND_TABLES
+		chunk->unwind_table_size = 16;
+		chunk->unwind_table = calloc(16,sizeof(RUNTIME_FUNCTION));
+#endif
+		jit_ctx *ctx = hl_jit_alloc();
+		hl_jit_init(ctx,chunk);
+		int offset = hl_jit_function(ctx,chunk,m->code->functions + index);
+		if( offset >= 0 )
+			chunk->jit_code = hl_jit_code(ctx,chunk,&chunk->codesize,&chunk->jit_debug,nullptr);
+		hl_jit_free(ctx,false);
+
+		if( !chunk->jit_code ) {
+			ReleaseSRWLockExclusive(&lazy_compile_lock);
+			hl_fatal("Lazy JIT compilation failed");
+		}
+#ifdef WIN64_UNWIND_TABLES
+		if( !RtlAddFunctionTable(chunk->unwind_table,chunk->unwind_table_size,(DWORD64)chunk->jit_code) )
+			hl_fatal("Lazy JIT unwind registration failed");
+#endif
+		FlushInstructionCache(GetCurrentProcess(),chunk->jit_code,chunk->codesize);
+		InterlockedExchangePointer((void *volatile*)(m->lazy->chunks + index),chunk);
+		InterlockedExchangePointer((void *volatile*)(m->lazy->targets + index),(char*)chunk->jit_code + offset);
+	}
+
+	void *target = m->lazy->targets[index];
+	ReleaseSRWLockExclusive(&lazy_compile_lock);
+	return target;
+#else
+	hl_fatal("Lazy JIT is unavailable on this platform");
+	return nullptr;
+#endif
+}
+
 static bool module_resolve_pos( hl_module *m, void *addr, int *fidx, int *fpos ) {
 	int code_pos = ((int)(int_val)((unsigned char*)addr - (unsigned char*)m->jit_code));
 	int min, max;
 	hl_debug_infos *dbg;
 	hl_function *fdebug;
-	if( m->jit_debug == nullptr )
+	if( m->jit_debug == nullptr || (m->lazy && !m->lazy_child) )
 		return false;
+	// lazy chunks contain one function and keep its original debug index
+	if( m->lazy_child ) {
+		*fidx = m->lazy_index;
+		dbg = m->jit_debug;
+		fdebug = m->code->functions + m->lazy_index;
+		goto lookup_offset;
+	}
 	// lookup function from code pos
 	min = 0;
 	max = m->code->nfunctions;
@@ -71,6 +158,7 @@ static bool module_resolve_pos( hl_module *m, void *addr, int *fidx, int *fpos )
 		dbg = m->jit_debug + min;
 		fdebug = m->code->functions + min;
 	} while( !dbg->offsets );
+lookup_offset:
 	// lookup inside function
 	min = 0;
 	max = fdebug->nops;
@@ -103,8 +191,8 @@ uchar *hl_module_resolve_symbol_full( void *addr, uchar *out, int *outSize, int 
 	int i;
 	hl_module *m = nullptr;
 	for(i=0;i<modules_count;i++) {
-		m = cur_modules[i];
-		if( addr >= m->jit_code && addr <= (void*)((char*)m->jit_code + m->codesize) ) break;
+		m = module_code_region(cur_modules[i],addr);
+		if( m ) break;
 	}
 	if( i == modules_count )
 		return nullptr;
@@ -140,7 +228,8 @@ static uchar *module_resolve_symbol( void *addr, uchar *out, int *outSize ) {
 
 static bool module_is_jit_code( void *addr, bool functions_only ) {
 	for(int i=0;i<modules_count;i++) {
-		hl_module *m = cur_modules[i];
+		hl_module *m = module_code_region(cur_modules[i],addr);
+		if( !m ) continue;
 		unsigned char *code = m->jit_code;
 		int code_size = m->codesize;
 		if( functions_only && m->jit_debug ) {
@@ -477,10 +566,7 @@ static int module_capture_stack( void **stack, int size ) {
 		}
 		void *module_addr = (void*)ip;
 		for(int i=0;i<modules_count;i++) {
-			hl_module *m = cur_modules[i];
-			unsigned char *code = m->jit_code;
-			int code_size = m->codesize;
-			if( module_addr >= (void*)code && module_addr < (void*)(code + code_size) ) {
+			if( module_code_region(cur_modules[i],module_addr) ) {
 				if( stack && count == size )
 					break;
 				if( stack )
@@ -1027,11 +1113,20 @@ int hl_module_init( hl_module *m, int flags ) {
 		return 0;
 	}
 	bool dump = (flags & HL_MODULE_DUMP) != 0;
+#if defined(HL_WIN) && defined(HL_64)
+	if( (flags & HL_MODULE_LAZY_JIT) && !(flags & (HL_MODULE_DEBUG | HL_MODULE_HOT_RELOAD | HL_MODULE_DUMP)) ) {
+		m->lazy = calloc(1,sizeof(hl_lazy_jit));
+		m->lazy->bytecode = m->code->falloc;
+		memset(&m->code->falloc,0,sizeof(hl_alloc));
+		m->lazy->targets = calloc(m->code->nfunctions,sizeof(void*));
+		m->lazy->chunks = calloc(m->code->nfunctions,sizeof(hl_module*));
+	}
+#endif
 	m->debug = (flags & HL_MODULE_DEBUG) != 0;
 	hl_jit_init(ctx, m);
 	for(i=0;i<m->code->nfunctions;i++) {
 		hl_function *f = m->code->functions + i;
-		int fpos = hl_jit_function(ctx, m, f);
+		int fpos = m->lazy ? hl_jit_lazy_stub(ctx,m->lazy->targets + i,m,i) : hl_jit_function(ctx, m, f);
 		if( fpos < 0 ) {
 			hl_jit_free(ctx, false);
 			hl_trace_end_event("jit");
@@ -1041,9 +1136,18 @@ int hl_module_init( hl_module *m, int flags ) {
 		if( dump ) hl_emit_dump(ctx);
 	}
 	m->jit_code = hl_jit_code(ctx, m, &m->codesize, &m->jit_debug, nullptr);
+	if( !m->jit_code ) {
+		hl_jit_free(ctx,false);
+		hl_trace_end_event("jit");
+		return 0;
+	}
 	for(i=0;i<m->code->nfunctions;i++) {
 		hl_function *f = m->code->functions + i;
 		m->functions_ptrs[f->findex] = ((unsigned char*)m->jit_code) + ((int_val)m->functions_ptrs[f->findex]);
+	}
+	if( m->lazy ) {
+		for(i=0;i<m->code->nfunctions;i++)
+			m->lazy->targets[i] = (char*)m->jit_code + (int_val)m->lazy->targets[i];
 	}
 	// INIT constants
 	for(i=0;i<m->code->nconstants;i++) {
@@ -1376,7 +1480,29 @@ void hl_module_free( hl_module *m ) {
 			hl_remove_root(m->globals_data+m->globals_indexes[i]);
 	}
 	hl_free(&m->ctx.alloc);
-	hl_free_executable_memory(m->code, m->codesize);
+	if( m->lazy ) {
+		for(int i=0;i<m->code->nfunctions;i++) {
+			hl_module *chunk = m->lazy->chunks[i];
+			if( !chunk ) continue;
+#ifdef WIN64_UNWIND_TABLES
+			RtlDeleteFunctionTable(chunk->unwind_table);
+			free(chunk->unwind_table);
+#endif
+			if( chunk->jit_debug ) {
+				free(chunk->jit_debug[0].offsets);
+				free(chunk->jit_debug[0].vars);
+				free(chunk->jit_debug);
+			}
+			hl_free_executable_memory(chunk->jit_code,chunk->codesize);
+			hl_free(&chunk->ctx.alloc);
+			free(chunk);
+		}
+		hl_free(&m->lazy->bytecode);
+		free(m->lazy->targets);
+		free(m->lazy->chunks);
+		free(m->lazy);
+	}
+	hl_free_executable_memory(m->jit_code, m->codesize);
 #ifdef WIN64_UNWIND_TABLES
 	RtlDeleteFunctionTable(m->unwind_table);
 	free(m->unwind_table);

@@ -1449,6 +1449,11 @@ void hl_codegen_function( jit_ctx *jit ) {
 		case LOAD_FUN:
 			{
 				ereg w = IS_REG(out) ? out : RTMP;
+				if( jit->mod->lazy ) {
+					emit_ext(ctx,_MOV,w,VAL_CONST,M_PTR,(int_val)jit->mod->functions_ptrs[e->size_offs]);
+					if( w != out ) emit_mov(ctx,out,w,M_PTR);
+					break;
+				}
 				int pos = emit_lea_rel(ctx,w);
 				int fid = e->size_offs;
 				int_arr_add_impl(&ctx->jit->galloc,&ctx->funs,pos);
@@ -1458,6 +1463,11 @@ void hl_codegen_function( jit_ctx *jit ) {
 			}
 			break;
 		case CALL_FUN:
+			if( jit->mod->lazy ) {
+				emit_ext(ctx,_MOV,RTMP,VAL_CONST,M_PTR,(int_val)jit->mod->functions_ptrs[e->a]);
+				EMIT(_CALL,RTMP,UNUSED,M_NONE);
+				break;
+			}
 			B(0xE8);
 			{
 				int pos = jit->out_pos + byte_count(ctx->code);
@@ -1995,4 +2005,52 @@ void hl_codegen_final( jit_ctx *jit ) {
 		*(void**)(jit->final_code + ctx->const_table_pos + pos) = jit->final_code + offs;
 	}
 	int_arr_free(&ctx->const_addr);
+}
+
+void hl_jit_append_stub( jit_ctx *ctx );
+
+int hl_jit_lazy_stub( jit_ctx *jit, void **target, hl_module *m, int index ) {
+#if defined(HL_WIN) && defined(HL_64)
+	code_ctx *ctx = jit->code;
+	regs_config *cfg = &jit->cfg;
+	ctx->flushed = false;
+	ctx->code.cur = 0;
+	int start = jit->out_pos;
+
+	emit_ext(ctx,_MOV,R(R11),VAL_CONST,M_PTR,(int_val)target);
+	emit_mov(ctx,R(R11),MK_ADDR(R11,0),M_PTR);
+	EMIT(JMP,R(R11),UNUSED,M_PTR);
+	int slow = jit->out_pos + byte_count(ctx->code);
+	*target = (void*)(int_val)slow;
+
+	EMIT(_PUSH,R(RBP),UNUSED,M_PTR);
+	EMIT(_MOV,R(RBP),R(RSP),M_PTR);
+	int frame = 32 + (cfg->regs.nargs + cfg->floats.nargs) * 8;
+	frame += jit_pad_size(frame,16);
+	EMIT(SUB,R(RSP),MK_CONST(frame),M_PTR);
+	for(int i=0;i<cfg->regs.nargs;i++)
+		emit_mov(ctx,MK_ADDR(RSP,32+i*8),cfg->regs.arg[i],M_PTR);
+	for(int i=0;i<cfg->floats.nargs;i++)
+		emit_mov(ctx,MK_ADDR(RSP,32+(cfg->regs.nargs+i)*8),cfg->floats.arg[i],M_F64);
+
+	emit_ext(ctx,_MOV,cfg->regs.arg[0],VAL_CONST,M_PTR,(int_val)m);
+	emit_ext(ctx,_MOV,cfg->regs.arg[1],VAL_CONST,M_I32,index);
+	emit_ext(ctx,_MOV,R(RAX),VAL_CONST,M_PTR,(int_val)hl_jit_lazy_resolve);
+	EMIT(_CALL,R(RAX),UNUSED,M_PTR);
+	emit_mov(ctx,R(R11),R(RAX),M_PTR);
+
+	for(int i=0;i<cfg->regs.nargs;i++)
+		emit_mov(ctx,cfg->regs.arg[i],MK_ADDR(RSP,32+i*8),M_PTR);
+	for(int i=0;i<cfg->floats.nargs;i++)
+		emit_mov(ctx,cfg->floats.arg[i],MK_ADDR(RSP,32+(cfg->regs.nargs+i)*8),M_F64);
+	EMIT(_MOV,R(RSP),R(RBP),M_PTR);
+	EMIT(_POP,R(RBP),UNUSED,M_PTR);
+	EMIT(JMP,R(R11),UNUSED,M_PTR);
+	flush_function(ctx,start);
+	hl_codegen_flush(jit);
+	hl_jit_append_stub(jit);
+	return start;
+#else
+	return -1;
+#endif
 }
