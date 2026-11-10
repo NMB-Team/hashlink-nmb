@@ -21,6 +21,9 @@
  */
 #include "hl.h"
 #include "trace.h"
+#if defined(HL_LINUX)
+#	include <time.h>
+#endif
 #ifdef HL_WIN
 #	undef _GUID
 #	include <windows.h>
@@ -214,7 +217,9 @@ HL_THREAD_STATIC_VAR hl_thread_info *current_thread;
 
 #if !defined(GC_EXTERN_API) && defined(HL_THREADS) && !defined(GC_DEBUG)
 #	define GC_SLICES
-#	define GC_SLICE_BYTES		2048
+#	ifndef GC_SLICE_BYTES
+#		define GC_SLICE_BYTES	4096
+#	endif
 #	define GC_SLICE_SLOTS		(GC_FIXED_PARTS << PAGE_KIND_BITS)
 
 typedef struct {
@@ -247,19 +252,36 @@ static struct {
 	int pages_allocated;
 	int pages_blocks;
 	int mark_bytes;
-	int mark_time;
+	double mark_time;
 	int mark_count;
-	int alloc_time; // only measured if gc_profile active
+	double alloc_time; // only measured if gc_profile active
 } gc_stats = {0};
 
 static struct {
 	int64 total_allocated;
 	int64 allocation_count;
-	int alloc_time;
+	double alloc_time;
 } last_profile;
 
+static double gc_lock_time;
+static int64 gc_slow_allocs;
+
 #ifdef HL_WIN
-#	define TIMESTAMP() ((int)GetTickCount())
+static double gc_timestamp() {
+	LARGE_INTEGER ticks, frequency;
+	QueryPerformanceCounter(&ticks);
+	QueryPerformanceFrequency(&frequency);
+	return (double)ticks.QuadPart * 1000. / frequency.QuadPart;
+}
+#	define TIMESTAMP() gc_timestamp()
+#elif defined(HL_LINUX)
+static double gc_timestamp() {
+	struct timespec ts;
+	if( clock_gettime(CLOCK_MONOTONIC, &ts) != 0 )
+		hl_fatal("Failed to read GC monotonic clock");
+	return (double)ts.tv_sec * 1000. + ts.tv_nsec / 1000000.;
+}
+#	define TIMESTAMP() gc_timestamp()
 #else
 #	define TIMESTAMP() 0
 #endif
@@ -637,7 +659,7 @@ static void gc_check_mark();
 
 void *hl_gc_alloc_gen( hl_type *t, int size, int flags ) {
 	void *ptr;
-	int time = 0;
+	double time = 0;
 	int allocated = 0;
 	if( size == 0 )
 		return nullptr;
@@ -662,7 +684,13 @@ void *hl_gc_alloc_gen( hl_type *t, int size, int flags ) {
 		}
 	}
 #	endif
+	if( gc_flags & GC_PROFILE ) time = TIMESTAMP();
 	gc_global_lock(true);
+	if( gc_flags & GC_PROFILE ) {
+		gc_lock_time += TIMESTAMP() - time;
+		gc_slow_allocs++;
+	}
+
 	gc_check_mark();
 #	ifdef GC_MEMCHK
 	size += HL_WSIZE;
@@ -1116,7 +1144,7 @@ static void gc_major() {
 		printf("GC-PROFILE-MEM %.2fMB total, %.2f%% free %.2f%% gc\n", gc_mem / (1024.0 * 1024.0), (gc_stats.free_memory * 100.0 / gc_mem), (gc_mem - gc_stats.pages_total_memory) * 100.0 / gc_mem);
 	}
 
-	int time = TIMESTAMP(), dt;
+	double time = TIMESTAMP(), dt;
 	gc_stats.last_mark = gc_stats.total_allocated;
 	gc_stats.last_mark_allocs = gc_stats.allocation_count;
 	gc_stop_world(true);
@@ -1135,6 +1163,9 @@ static void gc_major() {
 			(int)(gc_stats.allocation_count - last_profile.allocation_count),
 			(int)((gc_stats.total_allocated - last_profile.total_allocated)>>10)
 		);
+		printf("\tlock-time %.6g\n\tslow-allocations %lld\n", gc_lock_time / 1000., (long long)gc_slow_allocs);
+		gc_lock_time = 0;
+		gc_slow_allocs = 0;
 		last_profile.allocation_count = gc_stats.allocation_count;
 		last_profile.alloc_time = gc_stats.alloc_time;
 		last_profile.total_allocated = gc_stats.total_allocated;

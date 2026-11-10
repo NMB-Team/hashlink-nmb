@@ -429,6 +429,9 @@ endif()
 
 if(BUILD_TESTING)
 
+    add_executable(gc_bench other/benchs/gc.c)
+    target_link_libraries(gc_bench libhl)
+
     add_executable(dynobj_bench other/benchs/dynobj.c)
     target_link_libraries(dynobj_bench libhl)
     add_test(NAME dynobj COMMAND dynobj_bench --test)

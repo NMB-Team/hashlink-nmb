@@ -203,6 +203,13 @@ static void flush_free_list( gc_pheader *ph ) {
 	unsigned char *bmp = ph->bmp;
 
 	while( bid < last ) {
+		// fully live fixed-size bitmap bytes cannot contribute free blocks
+		if( !p->sizes && !(bid & 7) && bmp[bid >> 3] == 0xFF &&
+			bid + 8 <= last && (next_bid < 0 || bid + 8 <= next_bid) ) {
+			bid += 8;
+			continue;
+		}
+
 		if( bid == next_bid ) {
 			if( cur_pos && cur_pos->pos + cur_pos->count == bid ) {
 				cur_pos->count += reuse->count;
@@ -219,8 +226,13 @@ static void flush_free_list( gc_pheader *ph ) {
 		if( p->sizes ) {
 			count = p->sizes[bid];
 			if( !count ) count = 1;
-		} else
+		} else {
 			count = 1;
+			// coalesce dead fixed-size blocks a bitmap byte at a time
+			if( !(bid & 7) && bmp[bid >> 3] == 0 && bid + 8 <= last &&
+				(next_bid < 0 || bid + 8 <= next_bid) )
+				count = 8;
+		}
 		if( (bmp[bid>>3] & (1<<(bid&7))) == 0 ) {
 			if( p->sizes ) p->sizes[bid] = 0;
 			if( cur_pos && cur_pos->pos + cur_pos->count == bid )
