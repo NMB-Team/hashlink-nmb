@@ -597,7 +597,7 @@ static void regs_assign_regs( regs_ctx *ctx ) {
 		default:
 			break;
 		}
-		if( write ) regs_assign(ctx, write);
+		if( write && e.op != NOP ) regs_assign(ctx, write);
 	}
 	// assign stack regs
 	int nvalues = jit->value_count + jit->phi_count;
@@ -799,6 +799,7 @@ static void regs_emit_instrs( regs_ctx *ctx ) {
 			}
 		}
 		switch( e.op ) {
+		case NOP:
 		case ALLOC_STACK:
 		case CATCH:
 			break;

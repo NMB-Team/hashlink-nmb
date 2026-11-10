@@ -136,6 +136,7 @@ struct _emit_ctx {
 	int phi_count;
 	int phi_depth;
 	bool flushed;
+	bool optimize;
 
 	ereg *tmp_args;
 	int max_tmp_args;
@@ -385,7 +386,53 @@ ereg *hl_emit_get_args( emit_ctx *ctx, einstr *e ) {
 	return (ereg*)(ctx->args_data.values + e->size_offs);
 }
 
+static ereg emit_load_const( emit_ctx *ctx, uint64 value, hl_type *size_t );
+
+static bool emit_pure_integer( emit_op op, int mode, int operation ) {
+	if( mode != M_I32 ) return false;
+	if( op == MOV || op == LOAD_CONST ) return true;
+	if( op != BINOP ) return false;
+
+	switch( operation ) {
+	case OAdd: case OSub: case OMul: case OAnd: case OOr: case OXor:
+		return true;
+	default:
+		return false;
+	}
+}
+
 static ereg emit_gen_ext( emit_ctx *ctx, emit_op op, ereg a, ereg b, int mode, int size_offs ) {
+	// variable tracking expects a concrete value rather than a phi
+	if( ctx->optimize && mode == M_I32 && op == MOV && a > 0 && GET_MODE(a) == M_I32 )
+		return a;
+
+	if( ctx->optimize && emit_pure_integer(op,mode,size_offs) ) {
+		uint64 ca, cb;
+		if( op == BINOP && emit_get_const(ctx,a,&ca) && emit_get_const(ctx,b,&cb) ) {
+			unsigned int x = (unsigned int)ca, y = (unsigned int)cb, result;
+			switch( size_offs ) {
+			case OAdd: result = x + y; break;
+			case OSub: result = x - y; break;
+			case OMul: result = x * y; break;
+			case OAnd: result = x & y; break;
+			case OOr: result = x | y; break;
+			default: result = x ^ y; break;
+			}
+			return emit_load_const(ctx,(uint64)(int64)(int)result,&hlt_i32);
+		}
+
+		// bound lookup cost and only reuse values from this block
+		int first = ctx->current_block->start_pos;
+		int count = int_arr_count(ctx->values);
+		for(int i=count-1;i>0 && i>=count-32;i--) {
+			int pos = int_arr_get(ctx->values,i);
+			if( pos < first ) break;
+			einstr *prev = ctx->instrs + pos;
+			if( prev->op == op && prev->mode == mode && prev->size_offs == size_offs && prev->a == a && prev->b == b )
+				return i;
+		}
+	}
+
 	einstr *e = emit_instr(ctx, op);
 	if( (unsigned char)mode != mode ) jit_assert();
 	e->mode = (unsigned char)mode;
@@ -518,6 +565,17 @@ static void register_jump( emit_ctx *ctx, int jpos, int offs ) {
 }
 
 static ereg emit_load_const( emit_ctx *ctx, uint64 value, hl_type *size_t ) {
+	if( ctx->optimize ) {
+		int count = int_arr_count(ctx->values);
+		for(int i=count-1;i>0 && i>=count-32;i--) {
+			int pos = int_arr_get(ctx->values,i);
+			if( pos < ctx->current_block->start_pos ) break;
+			einstr *prev = ctx->instrs + pos;
+			if( prev->op == LOAD_CONST && prev->mode == hl_type_mode(size_t) && prev->value == value )
+				return i;
+		}
+	}
+
 	einstr *e = emit_instr(ctx, LOAD_CONST);
 	e->mode = hl_type_mode(size_t);
 	e->value = value;
@@ -727,6 +785,45 @@ static ereg emit_call_fid( emit_ctx *ctx, int findex, ereg *args, int nargs, emi
 	return mode == M_VOID ? UNUSED : new_value(ctx);
 }
 
+static bool emit_inline_call( emit_ctx *ctx, hl_function *f, ereg *args, int count, ereg *out ) {
+	if( !ctx->optimize || ctx->mod->hash || f == ctx->fun || f->nops < 1 || f->nops > 8 || f->nregs > 16 || f->type->fun->nargs != count )
+		return false;
+	if( f->type->fun->ret->kind != HI32 || f->ops[f->nops-1].op != ORet ) return false;
+
+	unsigned int defined = (1u << count) - 1;
+	for(int i=0;i<f->nregs;i++)
+		if( f->regs[i]->kind != HI32 ) return false;
+
+	for(int i=0;i<f->nops;i++) {
+		hl_opcode *o = f->ops + i;
+		if( o->op == ORet ) {
+			if( i != f->nops-1 || !(defined & (1u << o->p1)) ) return false;
+			continue;
+		}
+		if( o->op != OInt && o->op != OMov && !emit_pure_integer(BINOP,M_I32,o->op) ) return false;
+		if( o->op != OInt && !(defined & (1u << o->p2)) ) return false;
+		if( o->op != OInt && o->op != OMov && !(defined & (1u << o->p3)) ) return false;
+		defined |= 1u << o->p1;
+	}
+
+	ereg values[16];
+	memcpy(values,args,count*sizeof(ereg));
+	for(int i=0;i<f->nops;i++) {
+		hl_opcode *o = f->ops + i;
+		if( o->op == ORet ) {
+			*out = emit_gen(ctx,MOV,values[o->p1],UNUSED,M_I32);
+			return true;
+		}
+		if( o->op == OInt )
+			values[o->p1] = LOAD_CONST(ctx->mod->code->ints[o->p2],&hlt_i32);
+		else if( o->op == OMov )
+			values[o->p1] = values[o->p2];
+		else
+			values[o->p1] = emit_gen_ext(ctx,BINOP,values[o->p2],values[o->p3],M_I32,o->op);
+	}
+	return false;
+}
+
 static void emit_call_fun( emit_ctx *ctx, vreg *dst, int findex, int count, int *args_regs ) {
 	hl_module *m = ctx->mod;
 	int fid = m->functions_indexes[findex];
@@ -737,7 +834,9 @@ static void emit_call_fun( emit_ctx *ctx, vreg *dst, int findex, int count, int 
 	if( isNative )
 		STORE(dst, emit_native_call(ctx, m->functions_ptrs[findex], args, count, dst->t));
 	else {
-		ereg out = emit_call_fid(ctx,findex,args,count,hl_type_mode(dst->t));
+		ereg out;
+		if( !emit_inline_call(ctx,m->code->functions + fid,args,count,&out) )
+			out = emit_call_fid(ctx,findex,args,count,hl_type_mode(dst->t));
 		if( out ) STORE(dst, out);
 	}
 }
@@ -1054,6 +1153,60 @@ void hl_emit_remap_jumps( emit_ctx *ctx, void *_jumps, einstr *instrs, int *pos_
 	int_arr_reset((int_arr*)_jumps);
 }
 
+typedef struct {
+	int *uses;
+	int *queue;
+	int count;
+} dead_values;
+
+static void emit_count_use( void *data, ereg *r ) {
+	dead_values *dead = data;
+	if( *r > 0 && REG_KIND(*r) == R_VALUE ) dead->uses[*r]++;
+}
+
+static void emit_remove_use( void *data, ereg *r ) {
+	dead_values *dead = data;
+	if( *r > 0 && REG_KIND(*r) == R_VALUE && --dead->uses[*r] == 0 )
+		dead->queue[dead->count++] = *r;
+}
+
+static void emit_eliminate_dead( jit_ctx *jit ) {
+	if( !jit->emit->optimize ) return;
+
+	dead_values dead = {0};
+	dead.uses = calloc(jit->value_count,sizeof(int));
+	dead.queue = malloc(sizeof(int)*jit->value_count);
+	if( !dead.uses || !dead.queue ) jit_error("Out of memory");
+
+	for(int i=0;i<jit->instr_count;i++)
+		hl_emit_reg_iter(jit,jit->instrs+i,&dead,emit_count_use);
+
+	// keep phi inputs even when the phi itself is unused
+	for(int b=0;b<jit->block_count;b++) {
+		eblock *block = jit->blocks+b;
+		for(int p=0;p<block->phi_count;p++) {
+			ephi *phi = block->phis+p;
+			for(int k=0;k<phi->nvalues;k++) emit_count_use(&dead,phi->values+k);
+		}
+	}
+
+	for(int i=1;i<jit->value_count;i++)
+		if( dead.uses[i] == 0 ) dead.queue[dead.count++] = i;
+
+	while( dead.count ) {
+		int value = dead.queue[--dead.count];
+		einstr *e = jit->instrs+jit->values_writes[value];
+		if( !emit_pure_integer(e->op,e->mode,e->size_offs) ) continue;
+
+		hl_emit_reg_iter(jit,e,&dead,emit_remove_use);
+		e->op = NOP;
+		e->a = e->b = UNUSED;
+	}
+
+	free(dead.uses);
+	free(dead.queue);
+}
+
 void hl_emit_flush( jit_ctx *jit ) {
 	emit_ctx *ctx = jit->emit;
 	if( ctx->flushed ) return;
@@ -1214,6 +1367,11 @@ void hl_emit_function( jit_ctx *jit ) {
 	ctx->current_assign = 0;
 	ctx->in_args = false;
 	ctx->flushed = false;
+	ctx->optimize = !ctx->mod->debug;
+	for(i=0;i<f->nops;i++) {
+		// addressable locals and trap snapshots can change SSA storage
+		if( f->ops[i].op == ORef || f->ops[i].op == OTrap ) ctx->optimize = false;
+	}
 	int_arr_free(&ctx->args_data);
 	int_arr_free(&ctx->jump_regs);
 	int_arr_free(&ctx->values);
@@ -1307,6 +1465,7 @@ void hl_emit_function( jit_ctx *jit ) {
 	emit_null_checks(ctx);
 	hl_emit_clean_phis(ctx);
 	hl_emit_flush(ctx->jit);
+	emit_eliminate_dead(ctx->jit);
 	if( ctx->wait_seal ) jit_assert();
 }
 
