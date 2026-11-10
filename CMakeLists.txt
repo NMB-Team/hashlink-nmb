@@ -429,6 +429,10 @@ endif()
 
 if(BUILD_TESTING)
 
+    add_executable(dynobj_bench other/benchs/dynobj.c)
+    target_link_libraries(dynobj_bench libhl)
+    add_test(NAME dynobj COMMAND dynobj_bench --test)
+
     add_executable(maps_bench other/benchs/maps.c)
     target_link_libraries(maps_bench libhl)
     add_test(NAME maps COMMAND maps_bench --test)

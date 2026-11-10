@@ -720,7 +720,7 @@ static void hl_dynobj_delete_field( vdynobj *o, hl_field_lookup *f ) {
 				f->field_index--;
 		}
 	} else {
-		// no erase needed, compaction will be performed on next add
+		// no erase needed, compaction will be performed on next growth
 	}
 
 	// remove from virtuals
@@ -754,72 +754,107 @@ static void hl_dynobj_delete_field( vdynobj *o, hl_field_lookup *f ) {
 	}
 }
 
+static int hl_dynobj_capacity( void *data ) {
+	if( !data ) return 0;
+
+	int size = hl_gc_get_memsize(data);
+#if defined(HL_DEBUG) && !defined(HL_CONSOLE)
+	// the debug allocator reserves a trailing guard word
+	size -= HL_WSIZE;
+#endif
+
+	return size;
+}
+
 static hl_field_lookup *hl_dynobj_add_field( vdynobj *o, int hfield, hl_type *t ) {
 	int index;
-	int_val address_offset;
+	int_val address_offset = 0;
 
 	// expand data
 	if( hl_is_ptr(t) ) {
 		index = o->nvalues;
 		if( index > HL_DYNOBJ_INDEX_MASK ) hl_error("Too many dynobj values");
-		void **nvalues = hl_gc_alloc_raw( (o->nvalues + 1) * sizeof(void*) );
-		memcpy(nvalues,o->values,o->nvalues * sizeof(void*));
-		nvalues[index] = nullptr;
-		address_offset = (char*)nvalues - (char*)o->values;
-		o->values = nvalues;
+		int capacity = hl_dynobj_capacity(o->values) / sizeof(void*);
+
+		if( index == capacity ) {
+			int count = capacity ? capacity * 2 : 4;
+			void **nvalues = hl_gc_alloc_gen(&hlt_abstract, count * sizeof(void*), MEM_KIND_RAW | MEM_ZERO);
+			memcpy(nvalues, o->values, o->nvalues * sizeof(void*));
+			address_offset = (int_val)nvalues - (int_val)o->values;
+			o->values = nvalues;
+		}
+
+		o->values[index] = nullptr;
 		o->nvalues++;
 	} else {
-		int raw_size = 0;
-		int i;
-		for(i=0;i<o->nfields;i++) {
-			hl_field_lookup *f = o->lookup + i;
-			if( hl_is_ptr(f->t) ) continue;
-			raw_size += hl_pad_size(raw_size, f->t);
-			raw_size += hl_type_size(f->t);
-		}
-		if( raw_size > o->raw_size ) // our current mapping is better
-			raw_size = o->raw_size;
-		int pad = hl_pad_size(raw_size, t);
+		int pad = hl_pad_size(o->raw_size, t);
 		int size = hl_type_size(t);
+		int capacity = hl_dynobj_capacity(o->raw_data);
 
-		if( raw_size + pad > HL_DYNOBJ_INDEX_MASK ) hl_error("Too many dynobj values");
-
-		char *newData = (char*)hl_gc_alloc_noptr(raw_size + pad + size);
-		if( raw_size == o->raw_size )
-			memcpy(newData,o->raw_data,o->raw_size);
-		else {
-			raw_size = 0;
+		if( o->raw_size + pad <= HL_DYNOBJ_INDEX_MASK && o->raw_size + pad + size <= capacity ) {
+			index = o->raw_size + pad;
+			o->raw_size = index + size;
+		} else {
+			int raw_size = 0;
+			int i;
 			for(i=0;i<o->nfields;i++) {
 				hl_field_lookup *f = o->lookup + i;
-				int index = f->field_index & HL_DYNOBJ_INDEX_MASK;
 				if( hl_is_ptr(f->t) ) continue;
 				raw_size += hl_pad_size(raw_size, f->t);
-				memcpy(newData + raw_size, o->raw_data + index, hl_type_size(f->t));
-				f->field_index = raw_size | (hl_dynobj_order(f) << HL_DYNOBJ_INDEX_SHIFT);
-				if( index != raw_size )
-					hl_dynobj_remap_virtuals(o, f, 0);
 				raw_size += hl_type_size(f->t);
 			}
-			o->raw_size = raw_size;
+			if( raw_size > o->raw_size ) // our current mapping is better
+				raw_size = o->raw_size;
+			int pad = hl_pad_size(raw_size, t);
+
+			if( raw_size + pad > HL_DYNOBJ_INDEX_MASK ) hl_error("Too many dynobj values");
+
+			int required = raw_size + pad + size;
+			int grown = required <= capacity ? capacity : capacity ? capacity * 2 : 16;
+			char *newData = (char*)hl_gc_alloc_noptr(required > grown ? required : grown);
+			if( raw_size == o->raw_size )
+				memcpy(newData,o->raw_data,o->raw_size);
+			else {
+				raw_size = 0;
+				for(i=0;i<o->nfields;i++) {
+					hl_field_lookup *f = o->lookup + i;
+					int index = f->field_index & HL_DYNOBJ_INDEX_MASK;
+					if( hl_is_ptr(f->t) ) continue;
+					raw_size += hl_pad_size(raw_size, f->t);
+					memcpy(newData + raw_size, o->raw_data + index, hl_type_size(f->t));
+					f->field_index = raw_size | (hl_dynobj_order(f) << HL_DYNOBJ_INDEX_SHIFT);
+					if( index != raw_size )
+						hl_dynobj_remap_virtuals(o, f, 0);
+					raw_size += hl_type_size(f->t);
+				}
+				o->raw_size = raw_size;
+			}
+			address_offset = (int_val)newData - (int_val)o->raw_data;
+			o->raw_data = newData;
+			o->raw_size += pad;
+			index = o->raw_size;
+			o->raw_size += size;
 		}
-		address_offset = newData - o->raw_data;
-		o->raw_data = newData;
-		o->raw_size += pad;
-		index = o->raw_size;
-		o->raw_size += size;
 	}
 
 	// update field table
-	hl_field_lookup *new_lookup = (hl_field_lookup*)hl_gc_alloc_noptr(sizeof(hl_field_lookup) * (o->nfields + 1));
+	int capacity = hl_dynobj_capacity(o->lookup) / sizeof(hl_field_lookup);
 	int field_pos = hl_lookup_find_index(o->lookup, o->nfields, hfield);
-	memcpy(new_lookup,o->lookup,field_pos * sizeof(hl_field_lookup));
-	hl_field_lookup *f = new_lookup + field_pos;
+
+	if( o->nfields == capacity ) {
+		int count = capacity ? capacity * 2 : 4;
+		hl_field_lookup *new_lookup = (hl_field_lookup*)hl_gc_alloc_noptr(sizeof(hl_field_lookup) * count);
+		memcpy(new_lookup, o->lookup, field_pos * sizeof(hl_field_lookup));
+		memcpy(new_lookup + field_pos + 1, o->lookup + field_pos, (o->nfields - field_pos) * sizeof(hl_field_lookup));
+		o->lookup = new_lookup;
+	} else
+		memmove(o->lookup + field_pos + 1, o->lookup + field_pos, (o->nfields - field_pos) * sizeof(hl_field_lookup));
+
+	hl_field_lookup *f = o->lookup + field_pos;
 	f->t = t;
 	f->hashed_name = hfield;
 	f->field_index = index | (o->nfields << HL_DYNOBJ_INDEX_SHIFT);
-	memcpy(new_lookup + (field_pos + 1),o->lookup + field_pos, (o->nfields - field_pos) * sizeof(hl_field_lookup));
 	o->nfields++;
-	o->lookup = new_lookup;
 
 	hl_dynobj_remap_virtuals(o, f, address_offset);
 	return f;
