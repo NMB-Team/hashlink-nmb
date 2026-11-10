@@ -37,12 +37,12 @@ _MSTATIC _MVAL_TYPE *_MNAME(find)( t_map *m, t_key key ) {
 
 	if (m->nbuckets == 0) return nullptr;
 	hash = _MNAME(hash)(key);
-	c = hash % ((unsigned)m->nbuckets);
+	c = hash & ((unsigned)m->nbuckets - 1);
 	while( m->psl[c] >= 0 && dc <= m->psl[c] ) {
 		if (_MMATCH(c))
 			return &m->values[c].value;
 		dc++;
-		c = (c + 1) % m->nbuckets;
+		c = (c + 1) & (m->nbuckets - 1);
 	}
 	return nullptr;
 }
@@ -53,7 +53,7 @@ _MSTATIC void _MNAME(set_impl)( t_map *m, t_key key, _MVAL_TYPE value ) {
 	int c = -1, prev = -1, dc = 0;
 	unsigned int hash = _MNAME(hash)(key);
 	if( m->nbuckets > 0 ) {
-		c = hash % ((unsigned)m->nbuckets);
+		c = hash & ((unsigned)m->nbuckets - 1);
 		while (m->psl[c] >= 0 && dc <= m->psl[c]) {
 			if (_MMATCH(c)) {
 				m->values[c].value = value;
@@ -61,7 +61,7 @@ _MSTATIC void _MNAME(set_impl)( t_map *m, t_key key, _MVAL_TYPE value ) {
 			}
 			dc++;
 			prev = c;
-			c = (c + 1) % m->nbuckets;
+			c = (c + 1) & (m->nbuckets - 1);
 		}
 		if (prev > 0) {
 			dc--;
@@ -71,7 +71,7 @@ _MSTATIC void _MNAME(set_impl)( t_map *m, t_key key, _MVAL_TYPE value ) {
 	if (m->nentries >= m->maxentries) {
 		_MNAME(resize)(m);
 		dc = 0;
-		c = hash % ((unsigned)m->nbuckets);
+		c = hash & ((unsigned)m->nbuckets - 1);
 	}
 	while (m->psl[c] >= 0) {
 		if (dc > m->psl[c]) {
@@ -87,7 +87,7 @@ _MSTATIC void _MNAME(set_impl)( t_map *m, t_key key, _MVAL_TYPE value ) {
 			hash = _MNAME(hash)(key);
 		}
 		dc++;
-		c = (c + 1) % m->nbuckets;
+		c = (c + 1) & (m->nbuckets - 1);
 	}
 	_MSET(c);
 	m->values[c].value = value;
@@ -102,6 +102,7 @@ static void _MNAME(resize)( t_map *m ) {
 	if( m->nentries != m->maxentries ) hl_error("assert");
 
 	// resize
+	// bucket counts stay powers of two for masked probing
 	int nbuckets = old.nbuckets ? old.nbuckets << 1 : H_SIZE_INIT;
 	m->entries = (t_entry *)hl_gc_alloc_noptr(nbuckets * sizeof(t_entry));
 	m->values = (t_value *)hl_gc_alloc_raw(nbuckets * sizeof(t_value));
@@ -142,7 +143,7 @@ HL_PRIM bool _MNAME(remove)( t_map *m, t_key key ) {
 	if( m->nentries == 0 ) return false;
 	key = _MNAME(filter)(key);
 	hash = _MNAME(hash)(key);
-	c = hash % ((unsigned)m->nbuckets);
+	c = hash & ((unsigned)m->nbuckets - 1);
 	while (m->psl[c] >= 0 && dc <= m->psl[c]) {
 		if (_MMATCH(c)) {
 			m->nentries--;
@@ -150,7 +151,7 @@ HL_PRIM bool _MNAME(remove)( t_map *m, t_key key ) {
 			m->values[c].value = nullptr;
 			m->psl[c] = -1;
 			// Move all following elements
-			int next = (c + 1) % m->nbuckets;
+			int next = (c + 1) & (m->nbuckets - 1);
 			while (m->psl[next] > 0) {
 				key = _MKEY(m, next);
 				hash = _MNAME(hash)(key);
@@ -161,12 +162,12 @@ HL_PRIM bool _MNAME(remove)( t_map *m, t_key key ) {
 				m->psl[c] = m->psl[next] - 1;
 				m->psl[next] = -1;
 				c = next;
-				next = (c + 1) % m->nbuckets;
+				next = (c + 1) & (m->nbuckets - 1);
 			}
 			return true;
 		}
 		dc++;
-		c = (c + 1) % m->nbuckets;
+		c = (c + 1) & (m->nbuckets - 1);
 	}
 	return false;
 }

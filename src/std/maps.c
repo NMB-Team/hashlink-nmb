@@ -26,6 +26,27 @@
 
 #define H_SIZE_INIT 8
 
+// mix aligned addresses before selecting the low bucket bits
+static unsigned int hl_map_pointer_hash( const void *key ) {
+	uintptr_t hash = (uintptr_t)key;
+
+#ifdef HL_64
+	hash ^= hash >> 33;
+	hash *= UINT64_C(0xff51afd7ed558ccd);
+	hash ^= hash >> 33;
+	hash *= UINT64_C(0xc4ceb9fe1a85ec53);
+	hash ^= hash >> 33;
+#else
+	hash ^= hash >> 16;
+	hash *= UINT32_C(0x85ebca6b);
+	hash ^= hash >> 13;
+	hash *= UINT32_C(0xc2b2ae35);
+	hash ^= hash >> 16;
+#endif
+
+	return (unsigned int)hash;
+}
+
 #define _MVAL_TYPE vdynamic*
 
 // ----- INT MAP ---------------------------------
@@ -126,7 +147,7 @@ static vdynamic *hl_hofilter( vdynamic *key ) {
 }
 
 #define hlt_key		hlt_dyn
-#define hl_hohash(key)	((unsigned int)(int_val)(key))
+#define hl_hohash(key)	hl_map_pointer_hash(key)
 #define _MKEY_TYPE	vdynamic*
 #define _MNAME(n)	hl_ho##n
 #define _MMATCH(c)	m->values[c].key == key
@@ -149,7 +170,7 @@ typedef struct {
 	int value;
 } hl_mlookup__value;
 
-#define hl_mlookup_hash(h) ((unsigned int)(int_val)(h))
+#define hl_mlookup_hash(h) hl_map_pointer_hash(h)
 #define _MKEY_TYPE	void*
 #define _MNAME(n)	hl_mlookup_##n
 #define _MMATCH(c)	m->entries[c].key == key

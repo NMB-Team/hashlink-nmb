@@ -429,6 +429,10 @@ endif()
 
 if(BUILD_TESTING)
 
+    add_executable(maps_bench other/benchs/maps.c)
+    target_link_libraries(maps_bench libhl)
+    add_test(NAME maps COMMAND maps_bench --test)
+
     if(WITH_VM)
         add_executable(jit_args_test
             other/tests/jit_args_test.c
