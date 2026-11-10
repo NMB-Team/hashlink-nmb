@@ -812,6 +812,7 @@ HL_API void *hl_gc_alloc_gen( hl_type *t, int size, int flags );
 HL_API void hl_add_root( void *ptr );
 HL_API void hl_remove_root( void *ptr );
 HL_API void hl_gc_major( void );
+HL_API void hl_gc_stats( double *total_allocated, double *allocation_count, double *current_memory );
 HL_API bool hl_is_gc_ptr( void *ptr );
 HL_API int hl_gc_get_memsize( void *ptr );
 

@@ -2009,7 +2009,7 @@ void hl_codegen_final( jit_ctx *jit ) {
 
 void hl_jit_append_stub( jit_ctx *ctx );
 
-int hl_jit_lazy_stub( jit_ctx *jit, void **target, hl_module *m, int index ) {
+int hl_jit_lazy_stub( jit_ctx *jit, void **target, hl_module *m, int index, void *(*resolve)(hl_module *, int) ) {
 #if defined(HL_WIN) && defined(HL_64)
 	code_ctx *ctx = jit->code;
 	regs_config *cfg = &jit->cfg;
@@ -2035,7 +2035,7 @@ int hl_jit_lazy_stub( jit_ctx *jit, void **target, hl_module *m, int index ) {
 
 	emit_ext(ctx,_MOV,cfg->regs.arg[0],VAL_CONST,M_PTR,(int_val)m);
 	emit_ext(ctx,_MOV,cfg->regs.arg[1],VAL_CONST,M_I32,index);
-	emit_ext(ctx,_MOV,R(RAX),VAL_CONST,M_PTR,(int_val)hl_jit_lazy_resolve);
+	emit_ext(ctx,_MOV,R(RAX),VAL_CONST,M_PTR,(int_val)resolve);
 	EMIT(_CALL,R(RAX),UNUSED,M_PTR);
 	emit_mov(ctx,R(R11),R(RAX),M_PTR);
 

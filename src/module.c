@@ -71,7 +71,7 @@ static hl_module *module_code_region( hl_module *m, void *addr ) {
 	return nullptr;
 }
 
-void *hl_jit_lazy_resolve( hl_module *m, int index ) {
+static void *hl_jit_lazy_resolve( hl_module *m, int index ) {
 #if defined(HL_WIN) && defined(HL_64)
 	if( !TryAcquireSRWLockExclusive(&lazy_compile_lock) ) {
 		hl_blocking(true);
@@ -1126,7 +1126,7 @@ int hl_module_init( hl_module *m, int flags ) {
 	hl_jit_init(ctx, m);
 	for(i=0;i<m->code->nfunctions;i++) {
 		hl_function *f = m->code->functions + i;
-		int fpos = m->lazy ? hl_jit_lazy_stub(ctx,m->lazy->targets + i,m,i) : hl_jit_function(ctx, m, f);
+		int fpos = m->lazy ? hl_jit_lazy_stub(ctx,m->lazy->targets + i,m,i,hl_jit_lazy_resolve) : hl_jit_function(ctx, m, f);
 		if( fpos < 0 ) {
 			hl_jit_free(ctx, false);
 			hl_trace_end_event("jit");

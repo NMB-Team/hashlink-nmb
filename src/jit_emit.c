@@ -403,10 +403,6 @@ static bool emit_pure_integer( emit_op op, int mode, int operation ) {
 }
 
 static ereg emit_gen_ext( emit_ctx *ctx, emit_op op, ereg a, ereg b, int mode, int size_offs ) {
-	// variable tracking expects a concrete value rather than a phi
-	if( ctx->optimize && mode == M_I32 && op == MOV && a > 0 && GET_MODE(a) == M_I32 )
-		return a;
-
 	if( ctx->optimize && emit_pure_integer(op,mode,size_offs) ) {
 		uint64 ca, cb;
 		if( op == BINOP && emit_get_const(ctx,a,&ca) && emit_get_const(ctx,b,&cb) ) {

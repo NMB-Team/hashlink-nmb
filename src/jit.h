@@ -258,8 +258,7 @@ struct _jit_ctx {
 	unsigned char *final_code;
 };
 
-int hl_jit_lazy_stub( jit_ctx *ctx, void **target, hl_module *m, int index );
-void *hl_jit_lazy_resolve( hl_module *m, int index );
+int hl_jit_lazy_stub( jit_ctx *ctx, void **target, hl_module *m, int index, void *(*resolve)(hl_module *, int) );
 jit_ctx *hl_jit_alloc();
 void hl_jit_free( jit_ctx *ctx, h_bool can_reset );
 void hl_jit_reset( jit_ctx *ctx, hl_module *m );

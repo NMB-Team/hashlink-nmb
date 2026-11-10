@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <time.h>
 
+HL_API bool hl_obj_delete_field( vdynamic *obj, int hash );
+
 #ifdef __MINGW32__
 int wmain(void) {
 #else

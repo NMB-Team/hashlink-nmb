@@ -440,6 +440,12 @@ if(BUILD_TESTING)
     target_link_libraries(maps_bench libhl)
     add_test(NAME maps COMMAND maps_bench --test)
 
+    if(MINGW)
+        target_link_options(gc_bench PRIVATE -mno-unicode)
+        target_link_options(dynobj_bench PRIVATE -mno-unicode)
+        target_link_options(maps_bench PRIVATE -mno-unicode)
+    endif()
+
     if(WITH_VM)
         add_executable(jit_args_test
             other/tests/jit_args_test.c
