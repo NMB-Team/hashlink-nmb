@@ -841,6 +841,114 @@ static bool dyn_need_type( hl_type *t ) {
 	return !(t->kind == HF32 || t->kind == HF64 || t->kind == HI64 || t->kind == HGUID);
 }
 
+// cache records are published once and live as long as their module's code
+typedef struct {
+	int ready;
+	hl_type *type;
+	hl_type_obj *layout;
+	int slot;
+	int index;
+} dyn_field_cache;
+
+HL_PRIM int hl_atomic_compare_exchange32( int *a, int expected, int replacement );
+
+static void warm_dyn_field_cache( vdynamic *obj, int hash, hl_type *type, dyn_field_cache *cache ) {
+	if( hl_atomic_compare_exchange32(&cache->ready, 0, 0) != 0 ) return;
+
+	hl_field_lookup *field = nullptr;
+	hl_field_lookup *lookup = nullptr;
+	hl_type_obj *layout = nullptr;
+
+	if( obj->t->kind == HDYNOBJ ) {
+		vdynobj *dyn = (vdynobj*)obj;
+		lookup = dyn->lookup;
+		field = hl_lookup_find(lookup, dyn->nfields, hash);
+	} else if( obj->t->kind == HOBJ ) {
+		layout = obj->t->obj;
+		hl_runtime_obj *rt = hl_get_obj_rt(obj->t);
+		lookup = rt->lookup;
+		field = hl_lookup_find(lookup, rt->nlookup, hash);
+	}
+
+	if( !field || field->t != type || (layout && field->field_index < 0) ) return;
+	if( hl_atomic_compare_exchange32(&cache->ready, 0, -1) != 0 ) return;
+
+	cache->type = obj->t;
+	cache->layout = layout;
+	cache->slot = (int)(field - lookup);
+	cache->index = field->field_index;
+	hl_atomic_compare_exchange32(&cache->ready, -1, 1);
+}
+
+static int emit_dyn_field_cache( emit_ctx *ctx, vreg *obj_reg, vreg *value, int hash, bool set, int *dyn_end_out ) {
+	hl_type *type = value->t;
+	// guid uses the i64 runtime API, while structs need copying rather than a pointer store
+	if( type->kind == HSTRUCT || type->kind == HGUID || type->kind == HVOID ) return -1;
+
+	dyn_field_cache *cache = hl_zalloc(&ctx->mod->ctx.alloc, sizeof(dyn_field_cache));
+	ereg obj = LOAD(obj_reg);
+	ereg record = LOAD_CONST_PTR(cache);
+	int misses[10], count = 0;
+
+#ifdef HL_TRACK_ENABLE
+	emit_cmp(ctx, LOAD_MEM(LOAD_CONST_PTR(&hl_track), offsetof(hl_track_info, flags), &hlt_i32), LOAD_CONST(0, &hlt_i32), OJNotEq);
+	misses[count++] = emit_jump(ctx, true);
+#endif
+	emit_test(ctx, obj, OJNull);
+	misses[count++] = emit_jump(ctx, true);
+	emit_cmp(ctx, LOAD_MEM(record, offsetof(dyn_field_cache, ready), &hlt_i32), LOAD_CONST(1, &hlt_i32), OJNotEq);
+	misses[count++] = emit_jump(ctx, true);
+	ereg actual_type = LOAD_MEM_PTR(obj, 0);
+	emit_cmp(ctx, actual_type, LOAD_MEM_PTR(record, offsetof(dyn_field_cache, type)), OJNotEq);
+	misses[count++] = emit_jump(ctx, true);
+	ereg layout = LOAD_MEM_PTR(record, offsetof(dyn_field_cache, layout));
+	emit_test(ctx, layout, OJNotNull);
+	int class_path = emit_jump(ctx, true);
+
+	ereg slot = LOAD_MEM(record, offsetof(dyn_field_cache, slot), &hlt_i32);
+	emit_cmp(ctx, slot, LOAD_MEM(obj, offsetof(vdynobj, nfields), &hlt_i32), OJSGte);
+	misses[count++] = emit_jump(ctx, true);
+	ereg entry = OFFSET(LOAD_MEM_PTR(obj, offsetof(vdynobj, lookup)), emit_gen_ext(ctx, BINOP, slot, MK_CONST(sizeof(hl_field_lookup)), M_I32, OMul), 1, 0);
+	emit_cmp(ctx, LOAD_MEM(entry, offsetof(hl_field_lookup, hashed_name), &hlt_i32), LOAD_CONST(hash, &hlt_i32), OJNotEq);
+	misses[count++] = emit_jump(ctx, true);
+	emit_cmp(ctx, LOAD_MEM_PTR(entry, offsetof(hl_field_lookup, t)), LOAD_CONST_PTR(type), OJNotEq);
+	misses[count++] = emit_jump(ctx, true);
+	emit_cmp(ctx, LOAD_MEM(entry, offsetof(hl_field_lookup, field_index), &hlt_i32), LOAD_MEM(record, offsetof(dyn_field_cache, index), &hlt_i32), OJNotEq);
+	misses[count++] = emit_jump(ctx, true);
+	ereg index = emit_gen_ext(ctx, BINOP, LOAD_MEM(record, offsetof(dyn_field_cache, index), &hlt_i32), MK_CONST(HL_DYNOBJ_INDEX_MASK), M_I32, OAnd);
+	ereg address = OFFSET(LOAD_MEM_PTR(obj, hl_is_ptr(type) ? offsetof(vdynobj, values) : offsetof(vdynobj, raw_data)), index, hl_is_ptr(type) ? HL_WSIZE : 1, 0);
+	if( set )
+		STORE_MEM(address, 0, LOAD(value));
+	else
+		STORE(value, LOAD_MEM(address, 0, type));
+
+	int dyn_end = emit_jump(ctx, false);
+
+	patch_jump(ctx, class_path);
+	emit_cmp(ctx, LOAD_MEM_PTR(actual_type, offsetof(hl_type, obj)), layout, OJNotEq);
+	misses[count++] = emit_jump(ctx, true);
+	address = OFFSET(obj, LOAD_MEM(record, offsetof(dyn_field_cache, index), &hlt_i32), 1, 0);
+	if( set )
+		STORE_MEM(address, 0, LOAD(value));
+	else
+		STORE(value, LOAD_MEM(address, 0, type));
+
+	int class_end = emit_jump(ctx, false);
+
+	for(int i=0;i<count;i++) patch_jump(ctx, misses[i]);
+
+	// preserve the runtime's null access behavior
+	emit_test(ctx, obj, OJNull);
+	int null_obj = emit_jump(ctx, true);
+	ereg args[] = { obj, LOAD_CONST(hash, &hlt_i32), LOAD_CONST_PTR(type), record };
+	emit_native_call(ctx, warm_dyn_field_cache, args, 4, &hlt_void);
+	patch_jump(ctx, null_obj);
+	// both successful paths join after the caller emits the existing runtime fallback
+	*dyn_end_out = dyn_end;
+
+	return class_end;
+}
+
 static void emit_dyn_cast( emit_ctx *ctx, ereg v, hl_type *t, vreg *dst ) {
 	hl_type *dt = dst->t;
 	if( t->kind == HNULL && t->tparam->kind == dt->kind ) {
@@ -2193,16 +2301,25 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 		break;
 	case ODynGet:
 		{
+			int dyn_end;
+			int cache_end = emit_dyn_field_cache(ctx, ra, dst, hl_hash_utf8(m->code->strings[o->p3]), false, &dyn_end);
 			bool need_type = dyn_need_type(dst->t);
 			ereg args[3];
 			args[0] = LOAD(ra);
 			args[1] = LOAD_CONST(hl_hash_utf8(m->code->strings[o->p3]),&hlt_i32);
 			if( need_type ) args[2] = LOAD_CONST_PTR(dst->t);
 			STORE(dst, emit_native_call(ctx, get_dynget(dst->t), args, need_type ? 3 : 2, dst->t));
+
+			if( cache_end >= 0 ) {
+				patch_jump(ctx, dyn_end);
+				patch_jump(ctx, cache_end);
+			}
 		}
 		break;
 	case ODynSet:
 		{
+			int dyn_end;
+			int cache_end = emit_dyn_field_cache(ctx, dst, rb, hl_hash_gen(hl_get_ustring(m->code,o->p2),true), true, &dyn_end);
 			bool need_type = dyn_need_type(rb->t);
 			ereg args[4];
 			args[0] = LOAD(dst);
@@ -2213,6 +2330,11 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 			} else
 				args[2] = LOAD(rb);
 			emit_native_call(ctx, get_dynset(rb->t), args, need_type ? 4 : 3, &hlt_void);
+
+			if( cache_end >= 0 ) {
+				patch_jump(ctx, dyn_end);
+				patch_jump(ctx, cache_end);
+			}
 		}
 		break;
 	case OTrap:
