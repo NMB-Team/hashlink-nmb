@@ -462,9 +462,12 @@ struct hl_type {
 		hl_type_virtual *virt;
 		hl_type	*tparam;
 	};
-	void **vobj_proto;
+	void **vobj_table;
 	unsigned int *mark_bits;
 };
+
+#define hl_vobj_proto(t)			((void**)((hl_type*)(t) + 1))
+#define hl_type_proto_slots(nproto)	(1 + ((nproto) * sizeof(void*) + sizeof(hl_type) - 1) / sizeof(hl_type))
 
 C_FUNCTION_BEGIN
 

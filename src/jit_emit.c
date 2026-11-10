@@ -173,7 +173,7 @@ struct _emit_ctx {
 #define LOAD_MEM(v, offs, t) emit_load_mem(ctx, v, offs, t, t)
 #define LOAD_MEM_PTR(v, offs) LOAD_MEM(v, offs, &hlt_bytes)
 #define STORE_MEM(to, offs, v) emit_store_mem(ctx, to, offs, v)
-#define LOAD_OBJ_METHOD(obj,id) LOAD_MEM_PTR(LOAD_MEM_PTR(LOAD_MEM_PTR(obj,0),HL_WSIZE*2),HL_WSIZE*(id))
+#define LOAD_OBJ_METHOD(obj,id) LOAD_MEM_PTR(LOAD_MEM_PTR(obj,0),sizeof(hl_type)+HL_WSIZE*(id))
 #define OFFSET(base,index,mult,offset) emit_gen_ext(ctx, LEA, base, index, M_PTR, (mult) | ((offset) << 8))
 #define BREAK() emit_gen(ctx, DEBUG_BREAK, UNUSED, UNUSED, 0)
 #define GET_MODE(r) emit_get_mode(ctx,r)
@@ -828,9 +828,24 @@ static void emit_call_fun( emit_ctx *ctx, vreg *dst, int findex, int count, int 
 	ereg *args = get_tmp_args(ctx, count);
 	for(int i=0;i<count;i++)
 		args[i] = LOAD(R(args_regs[i]));
-	if( isNative )
-		STORE(dst, emit_native_call(ctx, m->functions_ptrs[findex], args, count, dst->t));
-	else {
+	if( isNative ) {
+		hl_native *n = m->code->natives + (fid - m->code->nfunctions);
+		int fm = -1;
+		if( count == 1 && R(args_regs[0])->t->kind == HF64 && strcmp(n->lib,"std") == 0 ) {
+			hl_type_kind rk = HVOID;
+			if( strcmp(n->name,"math_sqrt") == 0 ) { fm = FM_SQRT; rk = HF64; }
+			else if( strcmp(n->name,"math_abs") == 0 ) { fm = FM_ABS; rk = HF64; }
+			else if( strcmp(n->name,"math_isnan") == 0 ) { fm = FM_ISNAN; rk = HBOOL; }
+			else if( strcmp(n->name,"math_floor") == 0 ) { fm = FM_FLOOR; rk = HI32; }
+			else if( strcmp(n->name,"math_ceil") == 0 ) { fm = FM_CEIL; rk = HI32; }
+			if( fm >= 0 && (dst->t->kind != rk || !(ctx->jit->cfg.fmath_ops & (1 << fm))) )
+				fm = -1;
+		}
+		if( fm >= 0 )
+			STORE(dst, emit_gen_ext(ctx, FMATH, args[0], UNUSED, hl_type_mode(dst->t), fm));
+		else
+			STORE(dst, emit_native_call(ctx, m->functions_ptrs[findex], args, count, dst->t));
+	} else {
 		ereg out;
 		if( !emit_inline_call(ctx,m->code->functions + fid,args,count,&out) )
 			out = emit_call_fid(ctx,findex,args,count,hl_type_mode(dst->t));
@@ -1060,6 +1075,18 @@ static void emit_dyn_cast( emit_ctx *ctx, ereg v, hl_type *t, vreg *dst ) {
 		return;
 	}
 	bool need_dyn = dyn_need_type(dt);
+	int jend = -1, jnull = -1, jtype = -1;
+	if( get_dyncast(dt) == (void*)hl_dyn_castp && hl_is_ptr(dt) && dt->kind != HNULL && dt->kind != HDYN && hl_is_dynamic(t) ) {
+		emit_test(ctx, v, OJNull);
+		jnull = emit_jump(ctx, true);
+		emit_cmp(ctx, LOAD_MEM_PTR(v,0), LOAD_CONST_PTR(dt), OJNotEq);
+		jtype = emit_jump(ctx, true);
+		bool unbox = (t->kind == HDYN || t->kind == HNULL) && !hl_is_dynamic(dt);
+		STORE(dst, unbox ? LOAD_MEM_PTR(v,HDYN_VALUE) : emit_gen(ctx,MOV,v,UNUSED,M_PTR));
+		jend = emit_jump(ctx, false);
+		patch_jump(ctx, jnull);
+		patch_jump(ctx, jtype);
+	}
 	ereg st = emit_gen_size(ctx, ALLOC_STACK, HL_WSIZE);
 	STORE_MEM(st, 0, v);
 	ereg args[3];
@@ -1068,6 +1095,7 @@ static void emit_dyn_cast( emit_ctx *ctx, ereg v, hl_type *t, vreg *dst ) {
 	if( need_dyn ) args[2] = LOAD_CONST_PTR(dt);
 	ereg r = emit_native_call(ctx, get_dyncast(dt), args, need_dyn ? 3 : 2, dt);
 	STORE(dst, r);
+	if( jend >= 0 ) patch_jump(ctx, jend);
 }
 
 static void emit_opcode( emit_ctx *ctx, hl_opcode *o );
@@ -2416,7 +2444,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 		}
 		break;
 	case OType:
-		STORE(dst, LOAD_CONST_PTR(m->code->types + o->p2));
+		STORE(dst, LOAD_CONST_PTR(m->code->types[o->p2]));
 		break;
 	case OGetType:
 		{
