@@ -453,6 +453,18 @@ if(BUILD_TESTING)
         target_link_libraries(jit_args_test libhl)
         add_test(NAME jit_arguments COMMAND jit_args_test)
 
+        add_executable(jit_alloc_test
+            other/tests/jit_alloc_test.c
+            src/code.c
+            src/jit.c
+            src/jit_emit.c
+            src/jit_regs.c
+            src/jit_x86_64.c
+            src/jit_dump.c
+        )
+        target_link_libraries(jit_alloc_test libhl)
+        add_test(NAME jit_allocations COMMAND jit_alloc_test)
+
         add_executable(jit_dynfield_test
             other/tests/jit_dynfield_test.c
             src/code.c

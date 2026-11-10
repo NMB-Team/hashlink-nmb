@@ -137,6 +137,7 @@ struct _emit_ctx {
 	int phi_depth;
 	bool flushed;
 	bool optimize;
+	ereg **scalar_values;
 
 	ereg *tmp_args;
 	int max_tmp_args;
@@ -1355,6 +1356,115 @@ static void emit_null_checks( emit_ctx *ctx ) {
 	}
 }
 
+// only fixed-operand, straight-line functions are admitted by this pass
+#undef R
+#define OP_BEGIN static const unsigned char scalar_operands[][3] = {
+#define OP_END };
+#define OP(o,a,b,c) { a == 1 || a == 2, b == 1 || b == 2, c == 1 || c == 2 },
+#include "opcodes.h"
+#define R(r) (ctx->vregs + (r))
+
+static bool scalar_primitive( hl_type *t ) {
+	return t->kind == HI32 || t->kind == HI64 || t->kind == HF32 || t->kind == HF64 || t->kind == HBOOL;
+}
+
+static void emit_analyze_allocations( emit_ctx *ctx ) {
+	hl_function *f = ctx->fun;
+	ctx->scalar_values = nullptr;
+
+	if( !ctx->optimize || ctx->mod->hash || f->nops > 512 || f->nregs > 256 ) return;
+
+	for(int i=0;i<f->nops;i++) {
+		switch( f->ops[i].op ) {
+		case OMov: case OInt: case OFloat: case OBool: case ONull:
+		case OAdd: case OSub: case OMul: case OAnd: case OOr: case OXor:
+		case ONeg: case ONot: case OIncr: case ODecr:
+		case ONew: case OField: case OSetField: case ONullCheck:
+		case OToDyn: case OSafeCast: case ORet: case ONop:
+			break;
+		default:
+			return;
+		}
+	}
+
+	ctx->scalar_values = hl_zalloc(&ctx->jit->falloc, sizeof(ereg*) * f->nregs);
+	for(int i=0;i<f->nops;i++) {
+		hl_opcode *alloc = f->ops + i;
+		int r = alloc->p1;
+		if( alloc->op != ONew && alloc->op != OToDyn ) continue;
+		if( r < f->type->fun->nargs ) continue;
+
+		hl_type *t = f->regs[r];
+		bool box = alloc->op == OToDyn;
+		if( box ) {
+			if( !scalar_primitive(f->regs[alloc->p2]) || t->kind != HDYN ) continue;
+		} else {
+			if( t->kind != HOBJ || t->obj->super || t->obj->nbindings || t->obj->nproto ) continue;
+			bool eligible = true;
+			for(int j=0;j<t->obj->nfields;j++)
+				if( !scalar_primitive(t->obj->fields[j].t) ) eligible = false;
+			if( !eligible ) continue;
+		}
+
+		bool eligible = true;
+		for(int j=0;j<f->nops && eligible;j++) {
+			hl_opcode *o = f->ops + j;
+			if( i == j ) continue;
+			int args[] = { o->p1, o->p2, o->p3 };
+			for(int k=0;k<3;k++) {
+				if( !scalar_operands[o->op][k] || args[k] != r ) continue;
+				bool allowed = j > i && o->op == ONullCheck;
+				if( box ) {
+					allowed |= j > i && o->op == OSafeCast && k == 1 && f->regs[o->p1] == f->regs[alloc->p2];
+				} else {
+					int field = o->op == OField ? o->p3 : o->p2;
+					allowed |= j > i && ((o->op == OField && k == 1) || (o->op == OSetField && k == 0))
+						&& field >= 0 && field < t->obj->nfields
+						&& f->regs[o->op == OField ? o->p1 : o->p3] == t->obj->fields[field].t;
+				}
+				if( !allowed ) eligible = false;
+			}
+		}
+
+		if( eligible )
+			ctx->scalar_values[r] = hl_malloc(&ctx->jit->falloc, sizeof(ereg) * (box ? 1 : t->obj->nfields + 1));
+	}
+}
+
+static bool emit_scalar_opcode( emit_ctx *ctx, hl_opcode *o ) {
+	if( !ctx->scalar_values ) return false;
+
+	ereg *values;
+	switch( o->op ) {
+	case ONew:
+		values = ctx->scalar_values[o->p1];
+		if( !values ) return false;
+		for(int i=0;i<R(o->p1)->t->obj->nfields;i++)
+			values[i] = LOAD_CONST(0, R(o->p1)->t->obj->fields[i].t);
+		return true;
+	case OToDyn:
+		values = ctx->scalar_values[o->p1];
+		if( !values ) return false;
+		values[0] = LOAD(R(o->p2));
+		return true;
+	case OSafeCast:
+	case OField:
+		values = ctx->scalar_values[o->p2];
+		if( !values ) return false;
+		STORE(R(o->p1), values[o->op == OField ? o->p3 : 0]);
+		return true;
+	case OSetField:
+		values = ctx->scalar_values[o->p1];
+		if( !values ) return false;
+		values[o->p2] = LOAD(R(o->p3));
+		return true;
+	case ONullCheck:
+		return ctx->scalar_values[o->p1] != nullptr;
+	default:
+		return false;
+	}
+}
+
 void hl_emit_function( jit_ctx *jit ) {
 	emit_ctx *ctx = jit->emit;
 	hl_function *f = jit->fun;
@@ -1372,6 +1482,7 @@ void hl_emit_function( jit_ctx *jit ) {
 		// addressable locals and trap snapshots can change SSA storage
 		if( f->ops[i].op == ORef || f->ops[i].op == OTrap ) ctx->optimize = false;
 	}
+	emit_analyze_allocations(ctx);
 	int_arr_free(&ctx->args_data);
 	int_arr_free(&ctx->jump_regs);
 	int_arr_free(&ctx->values);
@@ -1454,7 +1565,8 @@ void hl_emit_function( jit_ctx *jit ) {
 			if( ctx->mod->debug && f->ops[op_pos].op != OLabel && blocks_count(ctx->current_block->preds) > 1 )
 				emit_debug_scope_phis(ctx);
 		}
-		emit_opcode(ctx,f->ops + op_pos);
+		if( !emit_scalar_opcode(ctx,f->ops + op_pos) )
+			emit_opcode(ctx,f->ops + op_pos);
 	}
 	// emit a break if we're not supposed to reach here : will fix RtlUnwind on windows too.
 	if( f->nops == 0 || f->ops[f->nops-1].op != ORet )
