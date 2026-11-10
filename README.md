@@ -9,6 +9,9 @@
 
 ### HashLink is a virtual machine for Haxe <https://hashlink.haxe.org>
 
+> [!NOTE]
+> Darwin/macOS builds and tests are temporarily disabled in the GitHub Actions workflow. macOS release artifacts are temporarily unavailable.
+
 ## Building on Linux/OSX
 
 HashLink and generated HLC applications require C23 mode. CMake builds require CMake 3.21 or newer. Make builds detect `-std=c23` or the older `-std=c2x` spelling and fail if neither supports `nullptr`.

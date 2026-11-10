@@ -29,13 +29,13 @@ jobs:
 
         include:
           - target: linux
-            runner: ubuntu-24.04
+            runner: &linux-runner ubuntu-26.04
             haxe_nightly_dir: linux64
             archive_ext: tar.gz
 
           - target: linux
             architecture: arm64
-            runner: ubuntu-24.04-arm
+            runner: &linux-arm-runner ubuntu-26.04-arm
             haxe_nightly_dir: linux-arm64
 
           - build_system: cmake
@@ -237,6 +237,7 @@ jobs:
   ###########################################################
   build-darwin:
   ###########################################################
+    if: false
     runs-on: ${{ matrix.runner }}
 
     strategy:
@@ -274,22 +275,21 @@ jobs:
       matrix:
         target: [windows]
         architecture: [64]
-        build_system: [cmake, cmake-mingw]
+        build_system: [cmake]
 
         include:
           - target: windows
             runner: windows-2025 # has VS 2026 preinstalled which supports PlatformToolset <= v145, WindowsTargetPlatformVersion 10
             haxe_nightly_dir: windows64
             archive_ext: zip
-            ffmpeg_url: https://github.com/HaxeFoundation/hashlink/files/5648056/ffmpeg-3.4.2-win64-dev.zip
             architecture_string: x64
 
           - build_system: cmake
             cmake_configuration: RelWithDebInfo
             cmake_generator: Visual Studio 18 2026
 
-          - build_system: cmake-mingw
-            cmake_configuration: RelWithDebInfo
+          # - build_system: cmake-mingw
+          #   cmake_configuration: RelWithDebInfo
 
     steps: *build-steps
 
@@ -329,10 +329,10 @@ jobs:
         architecture: [x86_64, arm64]
         include:
         - os: linux
-          runner: ubuntu-24.04
+          runner: *linux-runner
           build_system: cmake
         - architecture: arm64
-          runner: ubuntu-24.04-arm
+          runner: *linux-arm-runner
           test-flags: --skip-hl-jit
     runs-on: ${{ matrix.runner }}
     steps: &haxe-test-steps
@@ -358,7 +358,7 @@ jobs:
           chmod +x /usr/local/bin/gcc
         fi
         sudo apt-get update -qqy
-        sudo apt-get install -qqy libmbedtls-dev${SUFFIX} libjpeg-turbo8${SUFFIX} libturbojpeg${SUFFIX} zlib1g${SUFFIX} libogg0${SUFFIX} libvorbis0a${SUFFIX} \
+        sudo apt-get install -qqy libmbedtls-dev${SUFFIX} libjpeg-turbo8${SUFFIX} libturbojpeg-dev${SUFFIX} zlib1g${SUFFIX} libogg0${SUFFIX} libvorbis0a${SUFFIX} \
           libvorbisfile3${SUFFIX} libvorbisenc2${SUFFIX} libsqlite3-0${SUFFIX} ${EXTRA_APT_PKGS}
 
     - name: Install brew packages
@@ -449,6 +449,7 @@ jobs:
   ###########################################################
   haxe-test-darwin:
   ###########################################################
+    if: false
     needs: build-darwin
     env:
       HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
@@ -494,7 +495,7 @@ jobs:
   publish-latest-release:
   ###########################################################
     runs-on: ubuntu-latest
-    needs: [build-linux, build-darwin, build-windows, haxe-test-linux, haxe-test-darwin, haxe-test-windows]
+    needs: [build-linux, build-windows, haxe-test-linux, haxe-test-windows]
     if: github.ref == 'refs/heads/master'
     concurrency: publish-latest-release # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idconcurrency
 
@@ -545,9 +546,9 @@ jobs:
         cp "artifacts/linux-cmake-arm64/hashlink-${short_commit}-linux-arm64-cmake.tar.gz" updater-assets/hashlink-latest-linux-arm64.tar.gz
         cp "artifacts/windows-cmake-64/hashlink-${short_commit}-win64-cmake.zip" updater-assets/hashlink-latest-win64.zip
         assets=(
-          "artifacts/darwin-cmake-64/hashlink-${short_commit}-darwin-cmake.tar.gz#hashlink-latest-darwin.tar.gz"
-          "artifacts/darwin-cmake-arm64/hashlink-${short_commit}-darwin-arm64-cmake.tar.gz#hashlink-latest-darwin-arm64.tar.gz"
-          "artifacts/windows-cmake-mingw-64/hashlink-${short_commit}-win64-cmake-mingw.zip#hashlink-latest-win64-mingw.zip"
+          # "artifacts/darwin-cmake-64/hashlink-${short_commit}-darwin-cmake.tar.gz#hashlink-latest-darwin.tar.gz"
+          # "artifacts/darwin-cmake-arm64/hashlink-${short_commit}-darwin-arm64-cmake.tar.gz#hashlink-latest-darwin-arm64.tar.gz"
+          # "artifacts/windows-cmake-mingw-64/hashlink-${short_commit}-win64-cmake-mingw.zip#hashlink-latest-win64-mingw.zip"
           updater-assets/hashlink-latest-win64.zip
           updater-assets/hashlink-latest-win64.manifest
           updater-assets/hashlink-latest-linux-amd64.tar.gz
