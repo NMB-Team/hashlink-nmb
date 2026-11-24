@@ -383,7 +383,12 @@ static void regs_compute_liveness( regs_ctx *ctx ) {
 				if( v && IS_NULL(v->pref_reg) )
 					v->pref_reg = r;
 			}
-			if( !needs_push && e->mode != M_NORET ) ctx->has_direct_call = true;
+			if( IS_WINCALL64 && !ctx->has_direct_call && !needs_push ) {
+				// null-access jumps land in stubs that reserve their own shadow space
+				bool null_stub = e->op == CALL_PTR &&
+					(e->value == (uint64)hl_null_access || e->value == (uint64)hl_jit_null_field_access);
+				ctx->has_direct_call = !null_stub;
+			}
 			if( write && IS_NULL(write->pref_reg) )
 				write->pref_reg = REG_CFG(REG_MODE(e->mode))->ret;
 		} else switch( e->op ) {

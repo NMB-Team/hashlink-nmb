@@ -542,6 +542,18 @@ if(BUILD_TESTING)
         set_tests_properties(jit_lazy PROPERTIES TIMEOUT 180)
     endif()
 
+    if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND WITH_VM AND HAXE_COMPILER)
+        set(JIT_THROW_HL ${CMAKE_CURRENT_BINARY_DIR}/jit_throw.hl)
+        add_custom_command(OUTPUT ${JIT_THROW_HL}
+            COMMAND ${HAXE_COMPILER} -cp ${CMAKE_CURRENT_SOURCE_DIR}/other/tests
+                -main JitThrow -D hl-ver=1.15.0 -hl ${JIT_THROW_HL}
+            DEPENDS other/tests/JitThrow.hx
+            VERBATIM)
+        add_custom_target(jit_throw_bytecode ALL DEPENDS ${JIT_THROW_HL})
+        add_test(NAME jit_throw_eager COMMAND hl --eager-jit ${JIT_THROW_HL})
+        add_test(NAME jit_throw_lazy COMMAND hl --lazy-jit ${JIT_THROW_HL})
+    endif()
+
     if(CMAKE_SIZEOF_VOID_P EQUAL 4)
         SET(HAXE_HL_FLAGS -D hl-legacy32)
     endif()
