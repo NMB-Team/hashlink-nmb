@@ -25,12 +25,6 @@
 #include <hlmodule.h>
 #include <math.h>
 
-#ifdef HL_MINGW
-#	define SETJMP_FUN	_setjmp
-#else
-#	define SETJMP_FUN	setjmp
-#endif
-
 typedef enum {
 	LOAD_ADDR,
 	LOAD_CONST,
@@ -271,7 +265,6 @@ struct _jit_ctx {
 int hl_jit_lazy_stub( jit_ctx *ctx, void **target, hl_module *m, int index, void *(*resolve)(hl_module *, int) );
 jit_ctx *hl_jit_alloc();
 void hl_jit_free( jit_ctx *ctx, h_bool can_reset );
-void hl_jit_reset( jit_ctx *ctx, hl_module *m );
 void hl_jit_init( jit_ctx *ctx, hl_module *m );
 int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f );
 void hl_jit_define_function( jit_ctx *ctx, int start, int size );
@@ -316,7 +309,7 @@ static void __ignore( void *value ) {}
 void hl_jit_error( const char *msg, const char *func, int line );
 
 void *hl_jit_code( jit_ctx *ctx, hl_module *m, int *codesize, hl_debug_infos **debug, hl_module *previous );
-void hl_jit_patch_method( void *old_fun, void **new_fun_table );
+void hl_jit_patch_method( void *old_fun, void **slot );
 
 static ereg _reg_chk( ereg r, rkind k, ereg ret ) {
 	if( REG_KIND(r) != k ) jit_assert();

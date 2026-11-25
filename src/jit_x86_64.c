@@ -2023,6 +2023,7 @@ void hl_codegen_init( jit_ctx *jit ) {
 		jit->code_funs.trampoline = jit->out_pos + byte_count(ctx->code);
 
 		EMIT(_PUSH,R(RBP),UNUSED,M_PTR);
+		EMIT(_MOV,R(RBP),R(RSP),M_PTR);
 		EMIT(SUB,R(RSP),MK_CONST(frame),M_PTR);
 		for(int i=0;i<nregs;i++) {
 			bool is_float = i >= cfg->regs.npersists;
@@ -2034,7 +2035,7 @@ void hl_codegen_init( jit_ctx *jit ) {
 			emit_mov(ctx, MK_ADDR(RSP,shadow + i), R(R10), M_PTR);
 		}
 		EMIT(_CALL,RTMP,UNUSED,M_PTR);
-		hl_jit_trampoline = jit->out_pos + byte_count(ctx->code);
+		if( hl_jit_trampoline < 0 ) hl_jit_trampoline = jit->out_pos + byte_count(ctx->code);
 		emit_mov(ctx, MK_ADDR(RSP,-HL_WSIZE), R(RBP), M_PTR);
 		EMIT(ADD,R(RSP),MK_CONST(frame),M_PTR);
 		EMIT(_POP,R(RBP),UNUSED,M_PTR);

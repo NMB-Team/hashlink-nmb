@@ -443,6 +443,7 @@ typedef struct {
 	int size;
 	bool hasptr;
 	int *offsets;
+	const uchar **pnames;
 } hl_enum_construct;
 
 typedef struct {
@@ -622,6 +623,23 @@ typedef char pchar;
 
 #include <setjmp.h>
 
+// On macOS, setjmp/longjmp also save and restore the signal mask (two syscalls),
+// which HashLink does not need for traps or for saving GC registers.
+#ifdef HL_MAC
+#	define hl_setjmp	_setjmp
+#	define hl_longjmp	_longjmp
+#else
+#	define hl_setjmp	setjmp
+#	define hl_longjmp	longjmp
+#endif
+
+// Address of the setjmp function called by the JIT: on MinGW, setjmp is a macro.
+#ifdef HL_MINGW
+#	define SETJMP_FUN	_setjmp
+#else
+#	define SETJMP_FUN	hl_setjmp
+#endif
+
 typedef struct {
 	pchar* file_path;
 	pchar** sys_args;
@@ -642,6 +660,8 @@ typedef struct {
 	int closure_stack_capture;
 	bool is_debugger_enabled;
 	bool is_debugger_attached;
+	int (*hot_sync_statics)( hl_type *t, int word );
+	bool hot_reload;
 } hl_setup_t;
 
 HL_API hl_setup_t hl_setup;
@@ -960,7 +980,7 @@ struct _hl_trap_ctx {
 	hl_trap_ctx *prev;
 	vdynamic *tcheck;
 };
-#define hl_trap(ctx,r,label) { hl_thread_info *__tinf = hl_get_thread(); ctx.tcheck = nullptr; ctx.prev = __tinf->trap_current; __tinf->trap_current = &ctx; if( setjmp(ctx.buf) ) { r = __tinf->exc_value; goto label; } }
+#define hl_trap(ctx,r,label) { hl_thread_info *__tinf = hl_get_thread(); ctx.tcheck = NULL; ctx.prev = __tinf->trap_current; __tinf->trap_current = &ctx; if( hl_setjmp(ctx.buf) ) { r = __tinf->exc_value; goto label; } }
 #define hl_endtrap(ctx)	hl_get_thread()->trap_current = ctx.prev
 
 #define HL_EXC_MAX_STACK	0x100
@@ -970,6 +990,7 @@ struct _hl_trap_ctx {
 #define HL_THREAD_INVISIBLE	16
 #define HL_THREAD_PROFILER_PAUSED 32
 #define HL_EXC_KILL			64
+#define HL_EXC_STACK_OVERFLOW	128
 #define HL_TREAD_TRACK_SHIFT 16
 
 #define HL_TRACK_ALLOC		1

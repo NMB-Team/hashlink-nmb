@@ -387,6 +387,7 @@ if (WITH_VM)
         src/main.c
         ${UPDATER_SOURCES}
         src/module.c
+        src/reload.c
         src/debugger.c
         src/profile.c
     )

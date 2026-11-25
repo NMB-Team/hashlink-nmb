@@ -168,9 +168,6 @@ void hl_jit_free( jit_ctx *ctx, h_bool can_reset ) {
 	free(ctx);
 }
 
-void hl_jit_reset( jit_ctx *ctx, hl_module *m ) {
-}
-
 int hl_jit_function( jit_ctx *ctx, hl_module *m, hl_function *f ) {
 	hl_trace_jit_begin(f->findex,f->field.name);
 	hl_free(&ctx->falloc);
@@ -379,8 +376,15 @@ void *hl_jit_code( jit_ctx *ctx, hl_module *m, int *codesize, hl_debug_infos **d
 	return code;
 }
 
-void hl_jit_patch_method( void*fun, void**newt ) {
-	jit_assert();
+void hl_jit_patch_method( void *old_fun, void **slot ) {
+	unsigned char *b = (unsigned char*)old_fun;
+	unsigned long long addr = (unsigned long long)(int_val)slot;
+	*b++ = 0x48;
+	*b++ = 0xB8;
+	for(int i=0;i<8;i++)
+		*b++ = (unsigned char)(addr >> (i * 8));
+	*b++ = 0xFF;
+	*b++ = 0x20;
 }
 
 void hl_jit_append_stub( jit_ctx *ctx ) {

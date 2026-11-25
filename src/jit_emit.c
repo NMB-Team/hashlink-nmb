@@ -145,6 +145,7 @@ struct _emit_ctx {
 	int *pos_map;
 	int pos_map_size;
 	int trap_count;
+	int trap_pops;
 
 	int_arr args_data;
 	int_arr jump_regs;
@@ -821,6 +822,20 @@ static bool emit_inline_call( emit_ctx *ctx, hl_function *f, ereg *args, int cou
 	return false;
 }
 
+static void *fun_extern( hl_module *m, int findex ) {
+	return m->functions_extern ? m->functions_extern[findex] : nullptr;
+}
+
+static ereg emit_compare_call( emit_ctx *ctx, hl_type *t, ereg args[] ) {
+	if( ctx->mod->lazy )
+		return emit_native_call(ctx, hl_get_obj_proto(t)->compareFun, args, 2, &hlt_i32);
+
+	hl_runtime_obj *rt = hl_get_obj_rt(t);
+	if( t->obj->m != &ctx->mod->ctx )
+		return emit_dyn_call(ctx, LOAD_CONST_PTR(rt->compareFun), args, 2, &hlt_i32);
+	return emit_call_fid(ctx, (int)(int_val)rt->compareFun, args, 2, M_I32);
+}
+
 static void emit_call_fun( emit_ctx *ctx, vreg *dst, int findex, int count, int *args_regs ) {
 	hl_module *m = ctx->mod;
 	int fid = m->functions_indexes[findex];
@@ -845,6 +860,9 @@ static void emit_call_fun( emit_ctx *ctx, vreg *dst, int findex, int count, int 
 			STORE(dst, emit_gen_ext(ctx, FMATH, args[0], UNUSED, hl_type_mode(dst->t), fm));
 		else
 			STORE(dst, emit_native_call(ctx, m->functions_ptrs[findex], args, count, dst->t));
+	} else if( fun_extern(m, findex) ) {
+		ereg out = emit_dyn_call(ctx, LOAD_CONST_PTR(fun_extern(m, findex)), args, count, dst->t);
+		if( out ) STORE(dst, out);
 	} else {
 		ereg out;
 		if( !emit_inline_call(ctx,m->code->functions + fid,args,count,&out) )
@@ -862,6 +880,10 @@ static vclosure *alloc_static_closure( emit_ctx *ctx, int fid ) {
 		// native
 		c->t = m->code->natives[fidx - m->code->nfunctions].t;
 		c->fun = m->functions_ptrs[fid];
+		c->value = nullptr;
+	} else if( fun_extern(m, fid) ) {
+		c->t = m->code->functions[fidx].type;
+		c->fun = fun_extern(m, fid);
 		c->value = nullptr;
 	} else {
 		c->t = m->code->functions[fidx].type;
@@ -1497,6 +1519,7 @@ void hl_emit_function( jit_ctx *jit ) {
 	ctx->fun = f;
 	ctx->emit_pos = 0;
 	ctx->trap_count = 0;
+	ctx->trap_pops = 0;
 	ctx->phi_count = 0;
 	ctx->current_assign = 0;
 	ctx->in_args = false;
@@ -1589,6 +1612,8 @@ void hl_emit_function( jit_ctx *jit ) {
 			if( ctx->mod->debug && f->ops[op_pos].op != OLabel && blocks_count(ctx->current_block->preds) > 1 )
 				emit_debug_scope_phis(ctx);
 		}
+		if( f->ops[op_pos].op != OEndTrap && f->ops[op_pos].op != ONop )
+			ctx->trap_pops = 0;
 		if( !emit_scalar_opcode(ctx,f->ops + op_pos) )
 			emit_opcode(ctx,f->ops + op_pos);
 	}
@@ -1849,7 +1874,7 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 		}
 		if( hl_get_obj_rt(at)->compareFun ) {
 			ereg args[] = {a,b};
-			void *compare = ctx->mod->lazy ? hl_get_obj_proto(at)->compareFun : at->obj->rt->compareFun;
+
 
 			switch( op ) {
 			case OJEq:
@@ -1861,10 +1886,7 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 					int ja = emit_jump(ctx, true);
 					emit_test(ctx,b,OJNull);
 					int jb = emit_jump(ctx, true);
-					ereg result = ctx->mod->lazy ? emit_native_call(ctx,compare,args,2,&hlt_i32)
-						: emit_call_fid(ctx,(int)(int_val)compare,args,2,M_I32);
-
-					emit_test(ctx,result,OJNotNull);
+					emit_test(ctx, emit_compare_call(ctx,at,args),OJNotNull);
 					int jcmp = emit_jump(ctx, true);
 					patch_jump(ctx, jeq);
 					register_block_jump(ctx, offset, false);
@@ -1886,10 +1908,7 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 					emit_test(ctx,b,OJEq);
 					register_block_jump(ctx,offset,true);
 					split_block(ctx);
-					ereg result = ctx->mod->lazy ? emit_native_call(ctx,compare,args,2,&hlt_i32)
-						: emit_call_fid(ctx,(int)(int_val)compare,args,2,M_I32);
-
-					emit_test(ctx,result,OJNotNull);
+					emit_test(ctx, emit_compare_call(ctx,at,args),OJNotNull);
 					register_block_jump(ctx,offset,true);
 					patch_jump(ctx,jeq);
 				}
@@ -1901,10 +1920,7 @@ static void emit_jump_dyn( emit_ctx *ctx, hl_op op, hl_type *at, ereg a, hl_type
 					int ja = emit_jump(ctx, true);
 					emit_test(ctx,b,OJNull);
 					int jb = emit_jump(ctx, true);
-					ereg result = ctx->mod->lazy ? emit_native_call(ctx,compare,args,2,&hlt_i32)
-						: emit_call_fid(ctx,(int)(int_val)compare,args,2,M_I32);
-
-					emit_cmp(ctx,result,LOAD_CONST(0,&hlt_i32),op);
+					emit_cmp(ctx, emit_compare_call(ctx,at,args), LOAD_CONST(0,&hlt_i32),op);
 					register_block_jump(ctx,offset,true);
 					patch_jump(ctx,ja);
 					patch_jump(ctx,jb);
@@ -2125,10 +2141,14 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 		{
 			ereg args[3];
 			args[0] = LOAD_CONST_PTR(m->code->functions[m->functions_indexes[o->p2]].type);
-			einstr *e = emit_instr(ctx, LOAD_FUN);
-			e->mode = M_PTR;
-			e->size_offs = o->p2;
-			args[1] = new_value(ctx);
+			if( fun_extern(m, o->p2) )
+				args[1] = LOAD_CONST_PTR(fun_extern(m, o->p2));
+			else {
+				einstr *e = emit_instr(ctx, LOAD_FUN);
+				e->mode = M_PTR;
+				e->size_offs = o->p2;
+				args[1] = new_value(ctx);
+			}
 			args[2] = LOAD(rb);
 			STORE(dst, emit_native_call(ctx,hl_alloc_closure_ptr,args,3,dst->t));
 		}
@@ -2142,7 +2162,7 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 				for(i=0;i<ot->obj->nproto;i++) {
 					hl_obj_proto *pp = ot->obj->proto + i;
 					if( pp->pindex == o->p3 ) {
-						t = m->code->functions[m->functions_indexes[pp->findex]].type;
+						t = ot->obj->m->functions_types[pp->findex];
 						break;
 					}
 				}
@@ -2731,8 +2751,9 @@ static void emit_opcode( emit_ctx *ctx, hl_opcode *o ) {
 		break;
 	case OEndTrap:
 		{
-			if( ctx->trap_count == 0 ) jit_assert();
-			ereg st = ctx->traps[ctx->trap_count - 1].stack;
+			if( ctx->trap_pops >= ctx->trap_count ) jit_assert();
+			ereg st = ctx->traps[ctx->trap_count - 1 - ctx->trap_pops].stack;
+			ctx->trap_pops++;
 
 			ereg thread, current_addr;
 			static hl_thread_info *tinf = nullptr;

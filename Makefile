@@ -53,7 +53,7 @@ else
 MINIZIP_OBJ += include/minizip-ng/mz_os_posix.o include/minizip-ng/mz_strm_os_posix.o
 $(MINIZIP_OBJ): CPPFLAGS += -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 endif
-HL_OBJ = src/code.o src/jit.o src/jit_emit.o src/jit_regs.o src/jit_x86_64.o src/jit_dump.o src/main.o src/module.o src/debugger.o src/profile.o \
+HL_OBJ = src/code.o src/jit.o src/jit_emit.o src/jit_regs.o src/jit_x86_64.o src/jit_dump.o src/main.o src/module.o src/reload.o src/debugger.o src/profile.o \
 	$(UPDATER_OBJ) $(MINIZIP_OBJ) $(ZLIB_NG_OBJ)
 $(UPDATER_OBJ): CPPFLAGS += -I include/zlib-ng-compat -I include/zlib-ng
 $(MINIZIP_OBJ): CPPFLAGS += -I src/update -I include/minizip-ng -I include/zlib-ng-compat -I include/zlib-ng

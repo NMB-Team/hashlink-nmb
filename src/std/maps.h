@@ -14,6 +14,9 @@
 #endif
 
 typedef struct {
+#	ifdef _MTYPE
+	hl_type *t;
+#	endif
 	t_entry *entries;
 	t_value *values;
 	int *psl;
@@ -28,6 +31,10 @@ HL_PRIM
 t_map *_MNAME(alloc)() {
 	t_map *m = (t_map*)hl_gc_alloc_raw(sizeof(t_map));
 	memset(m,0,sizeof(t_map));
+#	ifdef _MTYPE
+	m->t = _MTYPE;
+	_MALLOC_HOOK();
+#	endif
 	return m;
 }
 
@@ -47,32 +54,29 @@ _MSTATIC _MVAL_TYPE *_MNAME(find)( t_map *m, t_key key ) {
 	return nullptr;
 }
 
-static void _MNAME(resize)( t_map *m );
+static void _MNAME(resize)( t_map *map, int nbuckets );
 
 _MSTATIC void _MNAME(set_impl)( t_map *m, t_key key, _MVAL_TYPE value ) {
-	int c = -1, prev = -1, dc = 0;
-	unsigned int hash = _MNAME(hash)(key);
-	if( m->nbuckets > 0 ) {
-		c = hash & ((unsigned)m->nbuckets - 1);
-		while (m->psl[c] >= 0 && dc <= m->psl[c]) {
-			if (_MMATCH(c)) {
-				m->values[c].value = value;
-				return;
-			}
-			dc++;
-			prev = c;
-			c = (c + 1) & (m->nbuckets - 1);
-		}
-		if (prev > 0) {
-			dc--;
-			c = prev;
-		}
-	}
-	if (m->nentries >= m->maxentries) {
-		_MNAME(resize)(m);
+	int c, dc;
+	unsigned int hash;
+	for(;;) {
+		hash = _MNAME(hash)(key);
 		dc = 0;
-		c = hash & ((unsigned)m->nbuckets - 1);
+		if( m->nbuckets ) {
+			c = hash & ((unsigned)m->nbuckets - 1);
+			while( m->psl[c] >= dc ) {
+				if( _MMATCH(c) ) {
+					m->values[c].value = value;
+					return;
+				}
+				dc++;
+				c = (c + 1) & (m->nbuckets - 1);
+			}
+			if( m->nentries < m->maxentries ) break;
+		}
+		_MNAME(resize)(m, m->nbuckets ? m->nbuckets << 1 : H_SIZE_INIT);
 	}
+
 	while (m->psl[c] >= 0) {
 		if (dc > m->psl[c]) {
 			t_key key_tmp = _MKEY(m, c);
@@ -95,15 +99,11 @@ _MSTATIC void _MNAME(set_impl)( t_map *m, t_key key, _MVAL_TYPE value ) {
 	m->nentries++;
 }
 
-static void _MNAME(resize)( t_map *m ) {
-	// save
-	t_map old = *m;
+static void _MNAME(resize)( t_map *map, int nbuckets ) {
+	t_map old = *map;
+	t_map cur = old;
+	t_map *m = &cur;
 
-	if( m->nentries != m->maxentries ) hl_error("assert");
-
-	// resize
-	// bucket counts stay powers of two for masked probing
-	int nbuckets = old.nbuckets ? old.nbuckets << 1 : H_SIZE_INIT;
 	m->entries = (t_entry *)hl_gc_alloc_noptr(nbuckets * sizeof(t_entry));
 	m->values = (t_value *)hl_gc_alloc_raw(nbuckets * sizeof(t_value));
 	m->psl = (int *)hl_gc_alloc_noptr(nbuckets * sizeof(int));
@@ -119,6 +119,8 @@ static void _MNAME(resize)( t_map *m ) {
 			_MNAME(set_impl)(m, _MKEY((&old), c), old.values[c].value);
 		}
 	}
+
+	if( map->values == old.values ) *map = cur;
 }
 
 #ifndef _MNO_EXPORTS
@@ -198,6 +200,9 @@ HL_PRIM varray* _MNAME(values)( t_map *m ) {
 
 HL_PRIM void _MNAME(clear)( t_map *m ) {
 	memset(m,0,sizeof(t_map));
+#	ifdef _MTYPE
+	m->t = _MTYPE;
+#	endif
 }
 
 HL_PRIM int _MNAME(size)( t_map *m ) {
@@ -214,7 +219,6 @@ HL_PRIM int _MNAME(size)( t_map *m ) {
 #undef _MKEY
 #undef _MSET
 #undef _MERASE
-#undef _MOLD_KEY
-#undef _MINDEX
-#undef _MNEXT
+#undef _MTYPE
+#undef _MALLOC_HOOK
 #undef _MSTATIC

@@ -78,22 +78,9 @@ typedef struct {
 	hl_code *code;
 	hl_module *m;
 	vdynamic *ret;
-	int file_time;
 } main_context;
 
-static int pfiletime( pchar *file )	{
-#ifdef HL_WIN
-	struct _stat32 st;
-	_wstat32(file,&st);
-	return (int)st.st_mtime;
-#else
-	struct stat st;
-	stat(file,&st);
-	return (int)st.st_mtime;
-#endif
-}
-
-static hl_code *load_code( const pchar *file, char **error_msg, bool print_errors ) {
+static hl_code *load_code( const pchar *file, char **error_msg, bool print_errors, bool keep_data ) {
 	hl_code *code;
 	FILE *f = pfopen(file,"rb");
 	int pos, size;
@@ -117,7 +104,12 @@ static hl_code *load_code( const pchar *file, char **error_msg, bool print_error
 	}
 	fclose(f);
 	code = hl_code_read((unsigned char*)fdata, size, error_msg);
-	free(fdata);
+	if( code && keep_data ) {
+		code->raw_data = (unsigned char*)fdata;
+		code->raw_size = size;
+	} else {
+		free(fdata);
+	}
 	return code;
 }
 
@@ -126,23 +118,26 @@ static main_context* main_ctx = nullptr;
 static bool check_reload( vbyte *alt_file ) {
 	main_context* m = main_ctx;
 	pchar* file = alt_file ? (pchar*)alt_file : m->file;
-	int time = pfiletime(file);
 	bool changed;
-	if( time == m->file_time )
+	if( !hl_hot_reload_file_changed(file) )
 		return false;
 	char *error_msg = nullptr;
-	hl_code *code = load_code(file, &error_msg, false);
+	hl_code *code = load_code(file, &error_msg, false, hl_setup.is_debugger_enabled);
 	if( code == nullptr )
 		return false;
 	changed = hl_module_patch(m->m, code);
-	m->file_time = time;
+	if( !changed ) {
+		free(code->raw_data);
+		code->raw_data = NULL;
+	}
+	hl_hot_reload_file_loaded(code);
 	hl_code_free(code);
 	return changed;
 }
 
 static bool load_plugin( pchar *file ) {
 	char *error_msg = nullptr;
-	hl_code *code = load_code(file, &error_msg, false);
+	hl_code *code = load_code(file, &error_msg, false, false);
 	if( code == nullptr )
 		return false;
 	int i;
@@ -476,7 +471,8 @@ int main(int argc, pchar *argv[]) {
 	}
 	main_ctx = &ctx;
 	ctx.file = file;
-	ctx.code = load_code(file, &error_msg, true);
+	hl_setup.hot_reload = hot_reload;
+	ctx.code = load_code(file, &error_msg, true, hot_reload && debug_port > 0);
 	if( ctx.code == nullptr ) {
 		if( error_msg ) printf("%s\n", error_msg);
 		hl_trace_end();
@@ -492,7 +488,7 @@ int main(int argc, pchar *argv[]) {
 		return 3;
 	}
 	if( hot_reload ) {
-		ctx.file_time = pfiletime(ctx.file);
+		hl_hot_reload_file_init(ctx.file, ctx.code);
 		hl_setup.reload_check = check_reload;
 	}
 	hl_setup.load_plugin = load_plugin;

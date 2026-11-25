@@ -146,6 +146,23 @@ static vdynamic *hl_hofilter( vdynamic *key ) {
 	return key;
 }
 
+HL_API void hl_gc_set_remap_hook( hl_type *t, void (*hook)( void *value ) );
+HL_PRIM int hl_atomic_load32( int *a );
+HL_PRIM int hl_atomic_store32( int *a, int value );
+
+static hl_type hlt_homap = { HABSTRACT, { USTR("ObjectMap") } };
+static void hl_ho_rehash( void *m );
+
+static void hl_ho_register() {
+	static int registered = 0;
+	if( !hl_setup.hot_reload || hl_atomic_load32(&registered) ) return;
+
+	hl_gc_set_remap_hook(&hlt_homap, hl_ho_rehash);
+	hl_atomic_store32(&registered, 1);
+}
+
+#define _MTYPE			&hlt_homap
+#define _MALLOC_HOOK()	hl_ho_register()
 #define hlt_key		hlt_dyn
 #define hl_hohash(key)	hl_map_pointer_hash(key)
 #define _MKEY_TYPE	vdynamic*
@@ -156,6 +173,12 @@ static vdynamic *hl_hofilter( vdynamic *key ) {
 #define _MERASE(c)  m->values[c].key = nullptr
 
 #include "maps.h"
+
+static void hl_ho_rehash( void *map ) {
+	hl_ho_map *m = (hl_ho_map*)map;
+	if( !m->values ) return;
+	hl_horesize(m, m->nbuckets);
+}
 
 // ----- LOOKUP MAP ---------------------------------
 
