@@ -143,7 +143,7 @@ HEAPS += include/meshoptimizer/allocator.o include/meshoptimizer/clusterizer.o \
 	include/meshoptimizer/indexgenerator.o include/meshoptimizer/meshletcodec.o \
 	include/meshoptimizer/meshletutils.o include/meshoptimizer/opacitymap.o \
 	include/meshoptimizer/overdrawoptimizer.o include/meshoptimizer/partition.o \
-	include/meshoptimizer/quantization.o include/meshoptimizer/rasterizer.o \
+	include/meshoptimizer/quantization.o include/meshoptimizer/rasterizer.o include/meshoptimizer/remesher.o \
 	include/meshoptimizer/simplifier.o include/meshoptimizer/spatialorder.o \
 	include/meshoptimizer/stripifier.o include/meshoptimizer/tangentspace.o \
 	include/meshoptimizer/vcacheoptimizer.o include/meshoptimizer/vertexcodec.o \

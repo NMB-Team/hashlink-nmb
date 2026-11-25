@@ -31,6 +31,7 @@
     <ClCompile Include="..\..\include\meshoptimizer\partition.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\quantization.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\rasterizer.cpp" />
+    <ClCompile Include="..\..\include\meshoptimizer\remesher.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\simplifier.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\spatialorder.cpp" />
     <ClCompile Include="..\..\include\meshoptimizer\stripifier.cpp" />

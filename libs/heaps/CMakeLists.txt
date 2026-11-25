@@ -20,6 +20,7 @@ add_library(heaps.hdll
     ${INCLUDES_BASE_DIR}/meshoptimizer/partition.cpp
     ${INCLUDES_BASE_DIR}/meshoptimizer/quantization.cpp
     ${INCLUDES_BASE_DIR}/meshoptimizer/rasterizer.cpp
+    ${INCLUDES_BASE_DIR}/meshoptimizer/remesher.cpp
     ${INCLUDES_BASE_DIR}/meshoptimizer/simplifier.cpp
     ${INCLUDES_BASE_DIR}/meshoptimizer/spatialorder.cpp
     ${INCLUDES_BASE_DIR}/meshoptimizer/stripifier.cpp
