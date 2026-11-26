@@ -453,7 +453,7 @@ if(BUILD_TESTING)
             src/jit.c
             src/jit_emit.c
             src/jit_regs.c
-            src/jit_x86_64.c
+            ${HL_JIT_BACKEND}
             src/jit_dump.c
         )
         target_link_libraries(jit_args_test libhl)
@@ -465,7 +465,7 @@ if(BUILD_TESTING)
             src/jit.c
             src/jit_emit.c
             src/jit_regs.c
-            src/jit_x86_64.c
+            ${HL_JIT_BACKEND}
             src/jit_dump.c
         )
         target_link_libraries(jit_alloc_test libhl)
@@ -477,7 +477,7 @@ if(BUILD_TESTING)
             src/jit.c
             src/jit_emit.c
             src/jit_regs.c
-            src/jit_x86_64.c
+            ${HL_JIT_BACKEND}
             src/jit_dump.c
         )
         target_link_libraries(jit_dynfield_test libhl)
