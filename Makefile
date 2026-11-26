@@ -43,6 +43,12 @@ STD = src/std/array.o src/std/buffer.o src/std/bytes.o src/std/cast.o src/std/da
 	src/std/socket.o src/std/string.o src/std/sys.o src/std/types.o src/std/ucs2.o src/std/thread.o src/std/process.o \
 	src/std/track.o
 
+ifneq (,$(filter aarch64 arm64,$(ARCH)))
+HL_JIT_BACKEND_OBJ = src/jit_aarch64.o src/jit_aarch64_emit.o
+else
+HL_JIT_BACKEND_OBJ = src/jit_x86_64.o
+endif
+
 UPDATER_OBJ = src/update/update.o src/update/update_util.o src/update/limen_update.o src/update/update_core.o src/update/update_http.o src/update/update_sha256.o
 MINIZIP_OBJ = include/minizip-ng/mz_crypt.o include/minizip-ng/mz_os.o include/minizip-ng/mz_strm.o \
 	include/minizip-ng/mz_strm_buf.o include/minizip-ng/mz_strm_mem.o include/minizip-ng/mz_strm_split.o \
@@ -53,7 +59,7 @@ else
 MINIZIP_OBJ += include/minizip-ng/mz_os_posix.o include/minizip-ng/mz_strm_os_posix.o
 $(MINIZIP_OBJ): CPPFLAGS += -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 endif
-HL_OBJ = src/code.o src/jit.o src/jit_emit.o src/jit_regs.o src/jit_x86_64.o src/jit_dump.o src/main.o src/module.o src/reload.o src/debugger.o src/profile.o \
+HL_OBJ = src/code.o src/jit.o src/jit_emit.o src/jit_regs.o $(HL_JIT_BACKEND_OBJ) src/jit_dump.o src/main.o src/module.o src/reload.o src/debugger.o src/profile.o \
 	$(UPDATER_OBJ) $(MINIZIP_OBJ) $(ZLIB_NG_OBJ)
 $(UPDATER_OBJ): CPPFLAGS += -I include/zlib-ng-compat -I include/zlib-ng
 $(MINIZIP_OBJ): CPPFLAGS += -I src/update -I include/minizip-ng -I include/zlib-ng-compat -I include/zlib-ng
@@ -221,13 +227,9 @@ USE_LIBHL_LDFLAGS = -rpath @executable_path -rpath $(INSTALL_LIB_DIR)
 HDLL_LDFLAGS += -install_name @rpath/$@
 else
 
-ifeq ($(ARCH),aarch64)
-ARCH = arm64
-endif
-
 # Linux
 hl_LDLIBS += -lcurl
-ifneq ($(ARCH),arm64)
+ifeq (,$(filter aarch64 arm64,$(ARCH)))
 CFLAGS += -m$(MARCH)
 endif
 CFLAGS += -fPIC -pthread -fno-omit-frame-pointer
@@ -263,9 +265,6 @@ LIBHL = libhl.$(LIBEXT)
 HL = hl$(EXE_SUFFIX)
 HLC = hlc$(EXE_SUFFIX)
 
-ifeq ($(ARCH),arm64)
-HL_OBJ = src/update/update_main.o $(UPDATER_OBJ) $(MINIZIP_OBJ) $(ZLIB_NG_OBJ)
-endif
 
 all: $(LIBHL) libs $(HL)
 

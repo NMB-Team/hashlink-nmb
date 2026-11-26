@@ -50,7 +50,7 @@ struct _hl_lazy_jit {
 	hl_module **chunks;
 };
 
-#if defined(HL_WIN) && defined(HL_64)
+#if defined(HL_WIN) && defined(HL_64) && !defined(__aarch64__) && !defined(_M_ARM64)
 static SRWLOCK lazy_compile_lock = SRWLOCK_INIT;
 #endif
 
@@ -58,7 +58,7 @@ static hl_module *module_code_region( hl_module *m, void *addr ) {
 	if( addr >= m->jit_code && addr < (void*)((char*)m->jit_code + m->codesize) )
 		return m;
 
-#if defined(HL_WIN) && defined(HL_64)
+#if defined(HL_WIN) && defined(HL_64) && !defined(__aarch64__) && !defined(_M_ARM64)
 	if( m->lazy && !m->lazy_child ) {
 		for(int i=0;i<m->code->nfunctions;i++) {
 			hl_module *chunk = InterlockedCompareExchangePointer((void *volatile*)(m->lazy->chunks + i),nullptr,nullptr);
@@ -71,7 +71,7 @@ static hl_module *module_code_region( hl_module *m, void *addr ) {
 }
 
 static void *hl_jit_lazy_resolve( hl_module *m, int index ) {
-#if defined(HL_WIN) && defined(HL_64)
+#if defined(HL_WIN) && defined(HL_64) && !defined(__aarch64__) && !defined(_M_ARM64)
 	if( !TryAcquireSRWLockExclusive(&lazy_compile_lock) ) {
 		hl_blocking(true);
 		AcquireSRWLockExclusive(&lazy_compile_lock);
@@ -636,7 +636,7 @@ int hl_module_capture_stack( void **stack, int size ) {
 	while( depth++ < 64 ) {
 		void **next;
 		void *ret;
-		if( (void*)cur < (void*)&stack || (void*)(cur + 2) > stack_top || (((int_val)cur) & (sizeof(void*) - 1)) ) break;
+		if( (void*)(cur + 2) > stack_top || (((int_val)cur) & (sizeof(void*) - 1)) ) break;
 		next = (void**)cur[0];
 		ret = cur[1];
 		if( next <= cur || (void*)next >= stack_top ) break;
@@ -1162,7 +1162,7 @@ int hl_module_init( hl_module *m, int flags ) {
 		return 0;
 	}
 	bool dump = (flags & HL_MODULE_DUMP) != 0;
-#if defined(HL_WIN) && defined(HL_64)
+#if defined(HL_WIN) && defined(HL_64) && !defined(__aarch64__) && !defined(_M_ARM64)
 	if( (flags & HL_MODULE_LAZY_JIT) && !(flags & (HL_MODULE_DEBUG | HL_MODULE_HOT_RELOAD | HL_MODULE_DUMP)) ) {
 		m->lazy = calloc(1,sizeof(hl_lazy_jit));
 		m->lazy->bytecode = m->code->falloc;
@@ -1175,7 +1175,11 @@ int hl_module_init( hl_module *m, int flags ) {
 	hl_jit_init(ctx, m);
 	for(i=0;i<m->code->nfunctions;i++) {
 		hl_function *f = m->code->functions + i;
+#if defined(HL_WIN) && defined(HL_64) && !defined(__aarch64__) && !defined(_M_ARM64)
 		int fpos = m->lazy ? hl_jit_lazy_stub(ctx,m->lazy->targets + i,m,i,hl_jit_lazy_resolve) : hl_jit_function(ctx, m, f);
+#else
+		int fpos = hl_jit_function(ctx, m, f);
+#endif
 		if( fpos < 0 ) {
 			hl_jit_free(ctx, false);
 			hl_trace_end_event("jit");

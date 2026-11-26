@@ -164,23 +164,21 @@ jobs:
             ${{ env.WINDOWS_BUILD_FOLDER }}/hl.exe --version
             ;;
           make*)
-            if [[ ${{ matrix.architecture }} != arm64 ]]; then
-              ./hl --version
-              case ${{ matrix.target }} in
-                linux)  ldd -v ./hl ;;
-                darwin) otool -L ./hl ;;
-              esac
+            ./hl --version
+            case ${{ matrix.target }} in
+              linux)  ldd -v ./hl ;;
+              darwin) otool -L ./hl ;;
+            esac
 
-              haxe -hl hello.hl -cp other/tests -main HelloWorld -D interp \
-                ${{ matrix.architecture == 32 && '-D hl-legacy32' || '' }}
-              ./hl hello.hl
+            haxe -hl hello.hl -cp other/tests -main HelloWorld -D interp \
+              ${{ matrix.architecture == 32 && '-D hl-legacy32' || '' }}
+            ./hl hello.hl
 
-              # ensure the executable still works when installed globally
-              cp hello.hl /tmp
-              pushd /tmp
-              hl hello.hl
-              popd
-            fi
+            # ensure the executable still works when installed globally
+            cp hello.hl /tmp
+            pushd /tmp
+            hl hello.hl
+            popd
 
             haxe -hl src/_main.c -cp other/tests -main HelloWorld
             make hlc
@@ -388,12 +386,7 @@ jobs:
           library_dir="$package_dir/lib"
         fi
         sudo mkdir -p /usr/local/{bin,lib,include}
-        if [[ "${{ matrix.architecture }}" == "arm64" ]]; then
-          printf "#!/bin/sh\necho Jit is not supported on arm64\n" > /usr/local/bin/hl
-          chmod +x /usr/local/bin/hl
-        else
-          sudo cp "$binary_dir/hl" /usr/local/bin/
-        fi
+        sudo cp "$binary_dir/hl" /usr/local/bin/
         sudo cp "$library_dir"/libhl.* "$library_dir"/*.hdll /usr/local/lib/
         if [[ "${{ matrix.os }}" == "darwin" ]]; then
           sudo cp "$library_dir"/*.hdll "$library_dir"/*.dylib /usr/local/bin/
@@ -459,9 +452,6 @@ jobs:
         os: [darwin]
         architecture: [x86_64, arm64]
         include:
-        - architecture: arm64
-          test-flags: --skip-hl-jit # not yet supported
-
         - os: darwin
           runner: macos-15-intel
           build_system: cmake
